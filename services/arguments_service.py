@@ -21,3 +21,7 @@ class ArgumentsService(ArgumentsServiceBase):
                             "If default none is used automatic check will be done")
         parser.add_argument("--seed", type=int, default=42,
                             metavar="S", help="random seed (default: 42)")
+        parser.add_argument("--evaluate", action='store_true',
+                            help="run in evaluation mode")
+        parser.add_argument("--patience", type=int, default=30,
+                            help="how long will the model wait for improvement before stopping training")

@@ -15,6 +15,9 @@ class ArgumentsServiceBase:
         self.print_arguments()
 
     def get_argument(self, key: str):
+        if key not in self._arguments.keys():
+            raise Exception(f'{key} not found in arguments')
+
         return self._arguments[key]
 
     def print_arguments(self):
