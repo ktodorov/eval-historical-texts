@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{678e41f9-1426-4aba-a9bf-8dcfa59d6cba}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>eval.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="datasets\dataset_base.py" />
+    <Compile Include="datasets\kbert_dataset.py" />
+    <Compile Include="dependency_injection\ioc_container.py" />
+    <Compile Include="enums\run_type.py" />
+    <Compile Include="eval.py" />
+    <Compile Include="losses\loss_base.py" />
+    <Compile Include="main.py" />
+    <Compile Include="models\kbert_model.py" />
+    <Compile Include="models\model_base.py" />
+    <Compile Include="preprocessing\preprocess_normalize_frequency.py" />
+    <Compile Include="preprocessing\semeval_dataset.py" />
+    <Compile Include="run.py" />
+    <Compile Include="services\arguments_service.py" />
+    <Compile Include="services\arguments_service_base.py" />
+    <Compile Include="services\config_service.py" />
+    <Compile Include="services\dataloader_service.py" />
+    <Compile Include="services\dataset_service.py" />
+    <Compile Include="services\data_service.py" />
+    <Compile Include="services\optimizer_service.py" />
+    <Compile Include="services\train_service.py" />
+    <Compile Include="utils\constants.py" />
+    <Compile Include="utils\path_utils.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="data\semeval_trial_data\answer\task1\english.txt" />
+    <Content Include="data\semeval_trial_data\answer\task1\german.txt" />
+    <Content Include="data\semeval_trial_data\answer\task1\latin.txt" />
+    <Content Include="data\semeval_trial_data\answer\task1\swedish.txt" />
+    <Content Include="data\semeval_trial_data\answer\task2\english.txt" />
+    <Content Include="data\semeval_trial_data\answer\task2\german.txt" />
+    <Content Include="data\semeval_trial_data\answer\task2\latin.txt" />
+    <Content Include="data\semeval_trial_data\answer\task2\swedish.txt" />
+    <Content Include="data\semeval_trial_data\corpora\english\corpus1\corpus.txt" />
+    <Content Include="data\semeval_trial_data\corpora\english\corpus2\corpus.txt" />
+    <Content Include="data\semeval_trial_data\targets\english.txt" />
+    <Content Include="data\semeval_trial_data\targets\german.txt" />
+    <Content Include="data\semeval_trial_data\targets\latin.txt" />
+    <Content Include="data\semeval_trial_data\targets\swedish.txt" />
+    <Content Include="data\semeval_trial_data\truth\task1\english.txt" />
+    <Content Include="data\semeval_trial_data\truth\task1\german.txt" />
+    <Content Include="data\semeval_trial_data\truth\task1\latin.txt" />
+    <Content Include="data\semeval_trial_data\truth\task1\swedish.txt" />
+    <Content Include="data\semeval_trial_data\truth\task2\english.txt" />
+    <Content Include="data\semeval_trial_data\truth\task2\german.txt" />
+    <Content Include="data\semeval_trial_data\truth\task2\latin.txt" />
+    <Content Include="data\semeval_trial_data\truth\task2\swedish.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="datasets" />
+    <Folder Include="data\" />
+    <Folder Include="data\semeval_trial_data\" />
+    <Folder Include="data\semeval_trial_data\answer\" />
+    <Folder Include="data\semeval_trial_data\answer\task1" />
+    <Folder Include="data\semeval_trial_data\answer\task2" />
+    <Folder Include="data\semeval_trial_data\corpora\" />
+    <Folder Include="data\semeval_trial_data\corpora\english\" />
+    <Folder Include="data\semeval_trial_data\corpora\english\corpus1" />
+    <Folder Include="data\semeval_trial_data\corpora\english\corpus2" />
+    <Folder Include="data\semeval_trial_data\targets" />
+    <Folder Include="data\semeval_trial_data\truth\" />
+    <Folder Include="data\semeval_trial_data\truth\task1" />
+    <Folder Include="data\semeval_trial_data\truth\task2" />
+    <Folder Include="dependency_injection" />
+    <Folder Include="enums" />
+    <Folder Include="losses" />
+    <Folder Include="models" />
+    <Folder Include="preprocessing" />
+    <Folder Include="services" />
+    <Folder Include="utils" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

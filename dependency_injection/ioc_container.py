@@ -4,17 +4,26 @@ import dependency_injector.providers as providers
 import main
 
 from losses.loss_base import LossBase
+from losses.kbert_loss import KBertLoss
+from losses.joint_kbert_loss import JointKBertLoss
 
 from models.model_base import ModelBase
+from models.kbert_model import KBertModel
+from models.joint_kbert_model import JointKBertModel
 
-from services import config_service as config_service_namespace
-from services import data_service as data_service_namespace
-from services import dataset_service as dataset_service_namespace
-from services import arguments_service as arguments_service_namespace
-from services import dataloader_service as dataloader_service_namespace
-from services import optimizer_service as optimizer_service_namespace
-from services import train_service as train_service_namespace
+from optimizers.optimizer_base import OptimizerBase
+from optimizers.adamw_optimizer import AdamWOptimizer
+from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
 
+from services.config_service import ConfigService
+from services.data_service import DataService
+from services.dataset_service import DatasetService
+from services.arguments_service import ArgumentsService
+from services.dataloader_service import DataLoaderService
+from services.train_service import TrainService
+from services.tokenizer_service import TokenizerService
+from services.log_service import LogService
+from services.mask_service import MaskService
 
 import logging
 
@@ -27,51 +36,89 @@ class IocContainer(containers.DeclarativeContainer):
 
     # Services
 
+    log_service = providers.Singleton(
+        LogService
+    )
+
     config_service = providers.Singleton(
-        config_service_namespace.ConfigService,
+        ConfigService,
         config=config
     )
 
     data_service = providers.Factory(
-        data_service_namespace.DataService,
+        DataService,
         config_service=config_service,
         logger=logger,
     )
 
     arguments_service = providers.Singleton(
-        arguments_service_namespace.ArgumentsService
+        ArgumentsService
+    )
+
+    tokenizer_service = providers.Singleton(
+        TokenizerService,
+        arguments_service=arguments_service,
+    )
+
+    mask_service = providers.Factory(
+        MaskService,
+        tokenizer_service=tokenizer_service,
+        arguments_service=arguments_service
     )
 
     dataset_service = providers.Factory(
-        dataset_service_namespace.DatasetService
+        DatasetService,
+        arguments_service=arguments_service,
+        mask_service=mask_service
     )
 
     dataloader_service = providers.Factory(
-        dataloader_service_namespace.DataLoaderService,
+        DataLoaderService,
         arguments_service=arguments_service,
         dataset_service=dataset_service
     )
 
-    loss_function = providers.Singleton(
-        LossBase
-    )
+    configuration = arguments_service().get_argument('configuration')
+    if configuration == 'kbert':
+        loss_function = providers.Singleton(
+            KBertLoss
+        )
 
-    model = providers.Singleton(
-        ModelBase
-    )
+        model = providers.Singleton(
+            KBertModel,
+            arguments_service=arguments_service
+        )
 
-    optimizer_service = providers.Singleton(
-        optimizer_service_namespace.OptimizerService,
-        arguments_service=arguments_service,
-        model=model
-    )
+        optimizer = providers.Singleton(
+            AdamWOptimizer,
+            arguments_service=arguments_service,
+            model=model
+        )
+    elif configuration == 'joint-kbert':
+        loss_function = providers.Singleton(
+            JointKBertLoss
+        )
+
+        model = providers.Singleton(
+            JointKBertModel,
+            arguments_service=arguments_service
+        )     
+        
+        optimizer = providers.Singleton(
+            JointAdamWOptimizer,
+            arguments_service=arguments_service,
+            model=model
+        )
+    else:
+        raise Exception('Unsupported configuration')
 
     train_service = providers.Factory(
-        train_service_namespace.TrainService,
+        TrainService,
         arguments_service=arguments_service,
         dataloader_service=dataloader_service,
         loss_function=loss_function,
-        optimizer=optimizer_service().optimizer,
+        optimizer=optimizer,
+        log_service=log_service,
         model=model
     )
 

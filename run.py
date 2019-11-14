@@ -14,7 +14,5 @@ if __name__ == '__main__':
 
     container.logger().addHandler(logging.StreamHandler(sys.stdout))
 
-    container.arguments_service().parse_arguments()
-
     # Run application:
     container.main()
