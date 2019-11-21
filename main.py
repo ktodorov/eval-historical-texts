@@ -7,19 +7,21 @@ from transformers import *
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 from services.train_service import TrainService
+from services.test_service import TestService
 
 
 def main(
         data_service: DataService,
         arguments_service: ArgumentsServiceBase,
-        train_service: TrainService):
+        train_service: TrainService,
+        test_service: TestService):
 
     initialize_seed(
         arguments_service.get_argument('seed'),
         arguments_service.get_argument('device'))
 
     if arguments_service.get_argument('evaluate'):
-        pass
+        test_service.test()
     else:
         train_service.train()
 

@@ -21,6 +21,7 @@ from services.dataset_service import DatasetService
 from services.arguments_service import ArgumentsService
 from services.dataloader_service import DataLoaderService
 from services.train_service import TrainService
+from services.test_service import TestService
 from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
 from services.mask_service import MaskService
@@ -47,7 +48,6 @@ class IocContainer(containers.DeclarativeContainer):
 
     data_service = providers.Factory(
         DataService,
-        config_service=config_service,
         logger=logger,
     )
 
@@ -69,7 +69,8 @@ class IocContainer(containers.DeclarativeContainer):
     dataset_service = providers.Factory(
         DatasetService,
         arguments_service=arguments_service,
-        mask_service=mask_service
+        mask_service=mask_service,
+        tokenizer_service=tokenizer_service
     )
 
     dataloader_service = providers.Factory(
@@ -86,7 +87,8 @@ class IocContainer(containers.DeclarativeContainer):
 
         model = providers.Singleton(
             KBertModel,
-            arguments_service=arguments_service
+            arguments_service=arguments_service,
+            data_service=data_service
         )
 
         optimizer = providers.Singleton(
@@ -102,8 +104,8 @@ class IocContainer(containers.DeclarativeContainer):
         model = providers.Singleton(
             JointKBertModel,
             arguments_service=arguments_service
-        )     
-        
+        )
+
         optimizer = providers.Singleton(
             JointAdamWOptimizer,
             arguments_service=arguments_service,
@@ -111,6 +113,13 @@ class IocContainer(containers.DeclarativeContainer):
         )
     else:
         raise Exception('Unsupported configuration')
+
+    test_service = providers.Factory(
+        TestService,
+        arguments_service=arguments_service,
+        dataloader_service=dataloader_service,
+        model=model
+    )
 
     train_service = providers.Factory(
         TrainService,
@@ -128,5 +137,6 @@ class IocContainer(containers.DeclarativeContainer):
         main.main,
         data_service=data_service,
         arguments_service=arguments_service,
-        train_service=train_service
+        train_service=train_service,
+        test_service=test_service
     )

@@ -5,7 +5,6 @@ import torch
 
 from datasets.dataset_base import DatasetBase
 from services.arguments_service_base import ArgumentsServiceBase
-from services.data_service import DataService
 from services.mask_service import MaskService
 
 from utils import path_utils

@@ -27,10 +27,18 @@ class ArgumentsService(ArgumentsServiceBase):
                             help="how long will the model wait for improvement before stopping training")
         parser.add_argument("--language", type=str, default='english',
                             help="which language to train on")
-        parser.add_argument("--shuffle", action='store_true',
+        parser.add_argument("--shuffle", action='store_false',
                             help="shuffle datasets while training")
         parser.add_argument("--learning-rate", type=float, default=2e-5,
                             help="learning rate for training models")
+        parser.add_argument("--checkpoint-name", type=str, default='model',
+                            help="name that will be used to create checkpoint file")
+        parser.add_argument("--resume-training", action='store_true',
+                            help="resume training using saved checkpoints")
+        parser.add_argument("--output-folder", type=str, default='results',
+                            help='folder where results and checkpoints will be saved')
+        parser.add_argument('--checkpoint-folder', type=str, default=None,
+                            help='folder where checkpoints will be saved/loaded. If it is not provided, the output folder will be used')
 
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',

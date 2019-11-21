@@ -13,6 +13,8 @@ from losses.loss_base import LossBase
 from models.model_base import ModelBase
 from optimizers.optimizer_base import OptimizerBase
 
+from entities.model_checkpoint import ModelCheckpoint
+
 from services.arguments_service_base import ArgumentsServiceBase
 from services.dataloader_service import DataLoaderService
 from services.log_service import LogService
@@ -59,11 +61,24 @@ class TrainService:
             patience = self._patience
             losses: List[float] = []
 
+            start_epoch = 0
+            start_iteration = 0
+
+            if self._arguments_service.get_argument('resume_training'):
+                model_checkpoint = self._load_model()
+                if model_checkpoint:
+                    best_metrics = model_checkpoint.best_metrics
+                    start_epoch = model_checkpoint.epoch
+                    start_iteration = model_checkpoint.iteration
+                    losses.extend([best_metrics] * start_iteration)
+
             # run
-            for epoch in range(self._arguments_service.get_argument('epochs')):
+            for epoch in range(start_epoch, self._arguments_service.get_argument('epochs')):
 
                 best_metrics, patience = self._perform_epoch_iteration(
-                    epoch, best_metrics, patience, losses)
+                    epoch, best_metrics, patience, losses, start_iteration)
+
+                start_iteration = 0 # reset the starting iteration
 
                 # write progress to pickle file (overwrite because there is no
                 # point keeping seperate versions)
@@ -82,18 +97,21 @@ class TrainService:
 
         except KeyboardInterrupt as e:
             print(f"Killed by user: {e}")
-            # save_models([self._model], f"KILLED_at_epoch_{epoch}")
+            self._model.save('results', epoch, 0, best_metrics,
+                             name_prefix=f'KILLED_at_epoch_{epoch}')
             return False
         except Exception as e:
             print(e)
-            # save_models([self._model], f"CRASH_at_epoch_{epoch}")
+            self._model.save('results', epoch, 0, best_metrics,
+                             name_prefix=f'CRASH_at_epoch_{epoch}')
             raise e
 
         # flush prints
         sys.stdout.flush()
 
         # example last save
-        # save_models([self._model], "finished")
+        self._model.save('results', epoch, 0, best_metrics,
+                         name_prefix=f'FINISHED_at_epoch_{epoch}')
         return True
 
     def _perform_epoch_iteration(
@@ -101,7 +119,8 @@ class TrainService:
             epoch_num: int,
             best_metrics: float,
             patience: int,
-            losses: List[float]) -> Tuple[float, int, float]:
+            losses: List[float],
+            start_iteration: int = 0) -> Tuple[float, int, float]:
         """
         one epoch implementation
         """
@@ -110,6 +129,9 @@ class TrainService:
         data_loader_length = len(self.data_loader_train)
 
         for i, batch in enumerate(self.data_loader_train):
+            if i < start_iteration:
+                continue
+
             self._log_service.log_progress(i, data_loader_length)
 
             loss_batch, accuracy_batch = self._perform_batch_iteration(batch)
@@ -127,8 +149,9 @@ class TrainService:
 
                 new_best = self._model.compare_metric(best_metrics, train_loss)
                 if new_best:
-                    # save_models([self._model], 'model_best')
                     best_metrics = train_loss
+                    self._model.save('results', epoch_num, i,
+                                     best_metrics, name_prefix=f'BEST_')
                     patience = self._patience
                 else:
                     patience -= 1
@@ -181,6 +204,20 @@ class TrainService:
         # accuracy = self._model.calculate_accuracy(targets, *output).item()
 
         return loss, accuracy
+
+    def _load_model(self) -> ModelCheckpoint:
+        checkpoints_path = self._get_checkpoints_path()
+        model_checkpoint = self._model.load(checkpoints_path, 'BEST_')
+        if not model_checkpoint:
+            model_checkpoint = self._model.load(checkpoints_path, 'BEST_')
+
+        return model_checkpoint
+
+    def _get_checkpoints_path(self) -> str:
+        if not self._arguments_service.get_argument('checkpoint_folder'):
+            return self._arguments_service.get_argument('output_folder')
+
+        return self._arguments_service.get_argument('checkpoint_folder')
 
     # def _evaluate(self) -> Tuple[float, float]:
     #     """
