@@ -103,7 +103,8 @@ class IocContainer(containers.DeclarativeContainer):
 
         model = providers.Singleton(
             JointKBertModel,
-            arguments_service=arguments_service
+            arguments_service=arguments_service,
+            data_service=data_service
         )
 
         optimizer = providers.Singleton(

@@ -48,4 +48,17 @@ class DataLoaderService:
         return (data_loader_train, data_loader_validation)
 
     def get_test_dataloader(self) -> DataLoader:
-        return None
+        language = self._arguments_service.get_argument('language')
+
+        test_dataset = self._dataset_service.get_dataset(
+            RunType.Test, language)
+
+        data_loader_test: DataLoader = DataLoader(
+            test_dataset,
+            batch_size=self._arguments_service.get_argument('batch_size'),
+            shuffle=False)
+
+        if test_dataset.use_collate_function():
+            data_loader_test.collate_fn = test_dataset.collate_function
+
+        return data_loader_test

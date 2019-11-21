@@ -209,7 +209,7 @@ class TrainService:
         checkpoints_path = self._get_checkpoints_path()
         model_checkpoint = self._model.load(checkpoints_path, 'BEST_')
         if not model_checkpoint:
-            model_checkpoint = self._model.load(checkpoints_path, 'BEST_')
+            model_checkpoint = self._model.load(checkpoints_path)
 
         return model_checkpoint
 

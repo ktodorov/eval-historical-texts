@@ -1,33 +1,45 @@
+import os
 import numpy as np
 import torch
+from typing import List
+
 from transformers import BertForMaskedLM
 
+from entities.model_checkpoint import ModelCheckpoint
+
 from models.model_base import ModelBase
+from models.kbert_model import KBertModel
 
 from services.arguments_service_base import ArgumentsServiceBase
+from services.data_service import DataService
 
 
 class JointKBertModel(ModelBase):
-    def __init__(self, arguments_service: ArgumentsServiceBase):
-        super(JointKBertModel, self).__init__()
+    def __init__(
+            self,
+            arguments_service: ArgumentsServiceBase,
+            data_service: DataService,
+            number_of_models: int = 2):
+        super(JointKBertModel, self).__init__(data_service, arguments_service)
 
-        self._bert_model1 = BertForMaskedLM.from_pretrained(
-            arguments_service.get_argument('pretrained_weights'))
+        self._number_of_models = 2
+        self._bert_models: List[ModelBase] = [KBertModel(
+            arguments_service, data_service) for _ in range(number_of_models)]
 
-        self._bert_model2 = BertForMaskedLM.from_pretrained(
-            arguments_service.get_argument('pretrained_weights'))
+    def forward(self, input_word, **kwargs):
 
-    def forward(self, input_batch, **kwargs):
-        ((inputs1, labels1), (inputs2, labels2)) = input_batch
-        outputs1 = self._bert_model1.forward(inputs1, masked_lm_labels=labels1)
-        outputs2 = self._bert_model2.forward(inputs2, masked_lm_labels=labels2)
-        return (outputs1, outputs2)
+        result = []
+        for i, model in enumerate(self._bert_models):
+            outputs = model.forward(input_word)
+            result.append(outputs)
+
+        return result
 
     def named_parameters(self):
-        return (self._bert_model1.named_parameters(), self._bert_model2.named_parameters())
+        return [model.named_parameters() for model in self._bert_models]
 
     def parameters(self):
-        return (self._bert_model1.parameters(), self._bert_model2.parameters())
+        return [model.parameters() for model in self._bert_models]
 
     def calculate_accuracy(self, predictions, targets) -> int:
         return 0
@@ -37,6 +49,37 @@ class JointKBertModel(ModelBase):
             return True
 
     def clip_gradients(self):
-        (parameters1, parameters2) = self.parameters()
-        torch.nn.utils.clip_grad_norm_(parameters1, max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(parameters2, max_norm=1.0)
+        model_parameters = self.parameters()
+
+        [torch.nn.utils.clip_grad_norm_(parameters, max_norm=1.0)
+         for parameters in model_parameters]
+
+    def save(
+            self,
+            path: str,
+            epoch: int,
+            iteration: int,
+            best_metrics: object,
+            name_prefix: str = None) -> bool:
+
+        saved = super().save(path, epoch, iteration, best_metrics,
+                             name_prefix, save_model_dict=False)
+
+        if not saved:
+            return saved
+
+        for i, model in enumerate(self._bert_models):
+            model.save(path, epoch, iteration, best_metrics, f'{name_prefix}_{i}_')
+
+        return saved
+
+    def load(self, path: str, name_prefix: str = None) -> ModelCheckpoint:
+
+        # model_checkpoint = super().load(path, name_prefix, load_model_dict=False)
+        # if not model_checkpoint:
+        #     return None
+
+        for i, model in enumerate(self._bert_models):
+            model._load_kbert_model(path, f'{name_prefix}_{i+1}_')
+
+        return None#model_checkpoint

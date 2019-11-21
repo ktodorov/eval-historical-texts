@@ -20,8 +20,13 @@ class KBertModel(ModelBase):
             arguments_service.get_argument('pretrained_weights'))
 
     def forward(self, input_batch, **kwargs):
-        (inputs, labels) = input_batch
-        outputs = self._bert_model.forward(inputs, masked_lm_labels=labels)
+        if isinstance(input_batch, tuple):
+            (inputs, labels) = input_batch
+            outputs = self._bert_model.forward(inputs, masked_lm_labels=labels)
+        else:
+            inputs = input_batch
+            outputs = self._bert_model.forward(inputs)
+
         return outputs
 
     def named_parameters(self):
@@ -63,12 +68,15 @@ class KBertModel(ModelBase):
         if not model_checkpoint:
             return None
 
+        self._load_kbert_model(path, name_prefix)
+
+        return model_checkpoint
+
+    def _load_kbert_model(self, path: str, name_prefix: str):
         pretrained_weights_path = self._get_pretrained_path(path, name_prefix)
 
         self._bert_model = BertForMaskedLM.from_pretrained(
             pretrained_weights_path).to(self._arguments_service.get_argument('device'))
-
-        return model_checkpoint
 
     def _get_pretrained_path(self, path: str, name_prefix: str, create_if_missing: bool = False):
         pretrained_weights_path = os.path.join(
