@@ -27,7 +27,7 @@ class KBertModel(ModelBase):
             inputs = input_batch
             outputs = self._bert_model.forward(inputs)
 
-        return outputs
+        return outputs[0]
 
     def named_parameters(self):
         return self._bert_model.named_parameters()

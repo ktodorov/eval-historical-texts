@@ -2,6 +2,7 @@ import argparse
 
 from services.arguments_service_base import ArgumentsServiceBase
 
+from enums.evaluation_type import EvaluationType
 
 class ArgumentsService(ArgumentsServiceBase):
     def __init__(self):
@@ -39,6 +40,8 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='folder where results and checkpoints will be saved')
         parser.add_argument('--checkpoint-folder', type=str, default=None,
                             help='folder where checkpoints will be saved/loaded. If it is not provided, the output folder will be used')
+        parser.add_argument('--evaluation-type', type=EvaluationType, choices=list(EvaluationType), nargs='*',
+                            help='what type of evaluations should be performed')
 
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',

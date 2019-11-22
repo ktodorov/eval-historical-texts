@@ -15,16 +15,17 @@ from optimizers.optimizer_base import OptimizerBase
 from optimizers.adamw_optimizer import AdamWOptimizer
 from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
 
+from services.arguments_service import ArgumentsService
 from services.config_service import ConfigService
 from services.data_service import DataService
-from services.dataset_service import DatasetService
-from services.arguments_service import ArgumentsService
 from services.dataloader_service import DataLoaderService
-from services.train_service import TrainService
-from services.test_service import TestService
-from services.tokenizer_service import TokenizerService
+from services.dataset_service import DatasetService
+from services.evaluation_service import EvaluationService
 from services.log_service import LogService
 from services.mask_service import MaskService
+from services.test_service import TestService
+from services.tokenizer_service import TokenizerService
+from services.train_service import TrainService
 
 import logging
 
@@ -79,6 +80,10 @@ class IocContainer(containers.DeclarativeContainer):
         dataset_service=dataset_service
     )
 
+    evaluation_service = providers.Factory(
+        EvaluationService
+    )
+
     configuration = arguments_service().get_argument('configuration')
     if configuration == 'kbert':
         loss_function = providers.Singleton(
@@ -119,6 +124,7 @@ class IocContainer(containers.DeclarativeContainer):
         TestService,
         arguments_service=arguments_service,
         dataloader_service=dataloader_service,
+        evaluation_service=evaluation_service,
         model=model
     )
 

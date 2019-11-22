@@ -5,11 +5,10 @@ class KBertLoss(nn.Module):
         super(KBertLoss, self).__init__()
 
     def backward(self, model_output):
-        loss = model_output[0]
-        loss.backward()
+        model_output.backward()
 
-        return loss.item()
+        return model_output.item()
 
     def calculate_loss(self, model_output):
-        loss = model_output[0]
+        loss = model_output
         return loss.item()
