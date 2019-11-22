@@ -8,7 +8,16 @@ from enums.evaluation_type import EvaluationType
 
 class EvaluationService:
 
-    def evaluate(self, output, evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
+    def evaluate(self, output: torch.Tensor, evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
+        """Evaluates the generated output based on the chosen evaluation types
+
+        :param output: the generated output from the model
+        :type output: torch.Tensor
+        :param evaluation_types: list of different types of evaluations that should be performed
+        :type evaluation_types: List[EvaluationType]
+        :return: a dictionary with evaluation scores for every type
+        :rtype: Dict[EvaluationType, List]
+        """
         output_numpy = [x.cpu().detach().numpy() for x in output]
 
         evaluation_results = {}

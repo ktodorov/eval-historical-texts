@@ -16,6 +16,9 @@ def main(
         train_service: TrainService,
         test_service: TestService):
 
+    # print the arguments that the program was initialized with
+    arguments_service.print_arguments()
+
     initialize_seed(
         arguments_service.get_argument('seed'),
         arguments_service.get_argument('device'))

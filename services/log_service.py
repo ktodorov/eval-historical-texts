@@ -33,10 +33,6 @@ class LogService:
         """
         logs progress to user through tensorboard and terminal
         """
-        # self.writer.add_scalar("Accuracy_validation",
-        #                        acc_validation, batches_done, time_passed)
-        # self.writer.add_scalar("Accuracy_train", acc_train,
-        #                        batches_done, time_passed)
 
         time_passed = self.get_time_passed()
         print(colored(

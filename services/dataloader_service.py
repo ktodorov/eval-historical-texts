@@ -25,6 +25,12 @@ class DataLoaderService:
         self._arguments_service = arguments_service
 
     def get_train_dataloaders(self) -> Tuple[DataLoader, DataLoader]:
+        """Loads and returns train and validation(if available) dataloaders
+
+        :return: the dataloaders
+        :rtype: Tuple[DataLoader, DataLoader]
+        """
+
         language = self._arguments_service.get_argument('language')
 
         train_dataset = self._dataset_service.get_dataset(
@@ -48,6 +54,11 @@ class DataLoaderService:
         return (data_loader_train, data_loader_validation)
 
     def get_test_dataloader(self) -> DataLoader:
+        """Loads and returns the test dataloader
+
+        :return: the test dataloader
+        :rtype: DataLoader
+        """
         language = self._arguments_service.get_argument('language')
 
         test_dataset = self._dataset_service.get_dataset(

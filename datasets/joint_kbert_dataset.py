@@ -92,7 +92,7 @@ class JointKBertDataset(DatasetBase):
                 self._arguments_service.get_argument('device')),
             torch.tensor(lengths[:, 1]).to(self._arguments_service.get_argument('device'))))
 
-    def _sort_batch(self, batch, lengths):
+    def _sort_batch(self, batch: torch.Tensor, lengths: torch.Tensor):
         seq_lengths, perm_idx = lengths.sort(0, descending=True)
         seq_tensor = batch[perm_idx]
         return self._mask_service.mask_tokens(seq_tensor)

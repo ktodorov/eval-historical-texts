@@ -22,6 +22,16 @@ class DatasetService:
         self._tokenizer_service = tokenizer_service
 
     def get_dataset(self, run_type: RunType, language: str) -> DatasetBase:
+        """Loads and returns the dataset based on run type ``(Train, Validation, Test)`` and the language
+
+        :param run_type: used to distinguish which dataset should be returned
+        :type run_type: RunType
+        :param language: language of the text that will be used
+        :type language: str
+        :raises Exception: if the chosen configuration is not supported, exception will be thrown
+        :return: the dataset
+        :rtype: DatasetBase
+        """
         if run_type == RunType.Test:
             return SemEvalTestDataset(
                 language,

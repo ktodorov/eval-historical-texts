@@ -1,4 +1,7 @@
 import torch
+
+from typing import Tuple
+
 from services.tokenizer_service import TokenizerService
 from services.arguments_service_base import ArgumentsServiceBase
 
@@ -12,8 +15,16 @@ class MaskService:
         self._tokenizer_service = tokenizer_service
         self._arguments_service = arguments_service
 
-    def mask_tokens(self, inputs, mlm_probability=0.15):
-        """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
+    def mask_tokens(self, inputs: torch.Tensor, mlm_probability=0.15) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
+
+        :param inputs: inputs that will be masked and then forwarded to the model
+        :type inputs: torch.Tensor
+        :param mlm_probability: the probability for masking a token, defaults to 0.15
+        :type mlm_probability: float, optional
+        :return: returns the masked inputs as well as the labels for the masks
+        :rtype: Tuple[torch.Tensor, torch.Tensor]
+        """
         tokenizer = self._tokenizer_service.tokenizer
         labels = inputs.clone()
         # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
