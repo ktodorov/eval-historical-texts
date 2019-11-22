@@ -60,4 +60,4 @@ class KBertDataset(DatasetBase):
     def _sort_batch(self, batch, lengths):
         seq_lengths, perm_idx = lengths.sort(0, descending=True)
         seq_tensor = batch[perm_idx]
-        return self._mask_service.mask_tokens(seq_tensor)
+        return self._mask_service.mask_tokens(seq_tensor, seq_lengths)

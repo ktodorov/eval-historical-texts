@@ -4,8 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 import time
 import logging
-
-from typing import List
+from typing import List, Callable
 
 import matplotlib.pyplot as plt
 from services.config_service import ConfigService
@@ -133,7 +132,7 @@ class DataService:
     def duplicate_default_dict(
             self,
             dfdc: defaultdict,
-            type_func: function,
+            type_func: Callable,
             dictionary_type: type) -> defaultdict:
         """shallow copies a default dictionary but gives the chance to also shallow copy its members
 

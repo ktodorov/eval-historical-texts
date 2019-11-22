@@ -15,7 +15,11 @@ class MaskService:
         self._tokenizer_service = tokenizer_service
         self._arguments_service = arguments_service
 
-    def mask_tokens(self, inputs: torch.Tensor, mlm_probability=0.15) -> Tuple[torch.Tensor, torch.Tensor]:
+    def mask_tokens(
+            self,
+            inputs: torch.Tensor,
+            lengths: torch.Tensor,
+            mlm_probability=0.15) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
 
         :param inputs: inputs that will be masked and then forwarded to the model
@@ -35,6 +39,10 @@ class MaskService:
             special_tokens_mask, dtype=torch.bool), value=0.0)
         masked_indices = torch.bernoulli(probability_matrix).bool()
         labels[~masked_indices] = -1  # We only compute loss on masked tokens
+
+        # Padded tokens must not be used to compute loss
+        for length in lengths:
+            labels[length:] = -1
 
         # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
         indices_replaced = torch.bernoulli(torch.full(
