@@ -24,13 +24,13 @@ class SemEvalTestDataset(DatasetBase):
             'data', 'semeval_trial_data', 'targets', f'{language}.txt')
 
         with open(targets_path, 'r', encoding='utf-8') as targets_file:
-            target_words = targets_file.read().splitlines()
+            self._target_words = targets_file.read().splitlines()
 
         self._target_word_ids: List[int] = [tokenizer_service.tokenizer.convert_tokens_to_ids(
-            target_word) for target_word in target_words]
+            target_word) for target_word in self._target_words]
 
     def __len__(self):
         return len(self._target_word_ids)
 
     def __getitem__(self, idx):
-        return self._target_word_ids[idx]
+        return (self._target_word_ids[idx], self._target_words[idx])

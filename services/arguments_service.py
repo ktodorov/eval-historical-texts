@@ -3,6 +3,7 @@ import argparse
 from services.arguments_service_base import ArgumentsServiceBase
 
 from enums.evaluation_type import EvaluationType
+from enums.output_format import OutputFormat
 
 class ArgumentsService(ArgumentsServiceBase):
     def __init__(self):
@@ -42,9 +43,15 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='folder where checkpoints will be saved/loaded. If it is not provided, the output folder will be used')
         parser.add_argument('--evaluation-type', type=EvaluationType, choices=list(EvaluationType), nargs='*',
                             help='what type of evaluations should be performed')
+        parser.add_argument('--output-eval-format', type=OutputFormat, choices=list(OutputFormat),
+                            help='what the format of the output after evaluation will be')
 
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',
                             help='weights to use for initializing transformer models')
         parser.add_argument('--configuration', type=str, default='kbert',
                             help='Which configuration of model to load and use')
+
+        # SemEval
+        parser.add_argument('--word-distance-threshold', type=float, default=100.0,
+                            help='The threshold which will be used to compare against word distance for the SemEval challenge')

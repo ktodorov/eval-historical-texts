@@ -1,8 +1,5 @@
-from enum import Enum
+from enums.argument_enum import ArgumentEnum
 
-class EvaluationType(Enum):
-    CosineDistance = 'CosineDistance'
-    EuclideanDistance = 'EuclideanDistance'
-
-    def __str__(self):
-        return self.value
+class EvaluationType(ArgumentEnum):
+    CosineDistance = 'cosine-distance'
+    EuclideanDistance = 'euclidean-distance'
