@@ -57,10 +57,11 @@ class ModelBase(nn.Module):
             self,
             path: str,
             name_prefix: str = None,
-            load_model_dict: bool = True) -> ModelCheckpoint:
+            load_model_dict: bool = True,
+            load_model_only: bool = False) -> ModelCheckpoint:
         checkpoint_name = self._get_model_name(name_prefix)
 
-        if not self._data_service.python_obj_exists(path, checkpoint_name):
+        if load_model_only or not self._data_service.python_obj_exists(path, checkpoint_name):
             return None
 
         model_checkpoint: ModelCheckpoint = self._data_service.load_python_obj(

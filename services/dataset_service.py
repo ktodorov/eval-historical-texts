@@ -1,8 +1,9 @@
+from enums.configuration import Configuration
 from enums.run_type import RunType
 
 from datasets.dataset_base import DatasetBase
 from datasets.kbert_dataset import KBertDataset
-from datasets.joint_kbert_dataset import JointKBertDataset
+from datasets.joint_dataset import JointDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
 
 from services.arguments_service_base import ArgumentsServiceBase
@@ -38,13 +39,30 @@ class DatasetService:
                 self._arguments_service,
                 self._tokenizer_service)
 
-        configuration = self._arguments_service.get_argument('configuration')
-        if configuration == 'kbert':
+        joint_model: bool = self._arguments_service.get_argument('joint_model')
+        configuration: Configuration = self._arguments_service.get_argument(
+            'configuration')
+        if not joint_model and configuration == Configuration.KBert:
             result = KBertDataset(
                 language, self._arguments_service, self._mask_service)
-        elif configuration == 'joint-kbert':
-            result = JointKBertDataset(
-                language, self._arguments_service, self._mask_service)
+        elif joint_model:
+            number_of_models: int = self._arguments_service.get_argument(
+                'joint_model_amount')
+            sub_datasets = self._create_datasets(language, number_of_models)
+            result = JointDataset(sub_datasets)
+        else:
+            raise Exception('Unsupported configuration')
+
+        return result
+
+    def _create_datasets(self, language, number_of_datasets: int):
+        configuration: Configuration = self._arguments_service.get_argument(
+            'configuration')
+
+        result = []
+        if configuration == Configuration.KBert:
+            result = [KBertDataset(language, self._arguments_service, self._mask_service, corpus_id=i+1)
+                      for i in range(number_of_datasets)]
         else:
             raise Exception('Unsupported configuration')
 

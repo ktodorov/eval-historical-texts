@@ -29,12 +29,13 @@ class TestService:
         self._evaluation_service = evaluation_service
 
         self._model = model.to(arguments_service.get_argument('device'))
-        self._load_model()
-        self._model.eval()
 
         self._dataloader = dataloader_service.get_test_dataloader()
 
     def test(self) -> bool:
+        self._load_model()
+        self._model.eval()
+
         evaluation: Dict[EvaluationType, List] = {}
 
         targets = []

@@ -3,43 +3,44 @@ import numpy as np
 import torch
 from typing import List
 
-from transformers import BertForMaskedLM
-
 from entities.model_checkpoint import ModelCheckpoint
 
 from models.model_base import ModelBase
-from models.kbert_model import KBertModel
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
+from services.model_service import ModelService
 
 
-class JointKBertModel(ModelBase):
+class JointModel(ModelBase):
     def __init__(
             self,
             arguments_service: ArgumentsServiceBase,
             data_service: DataService,
-            number_of_models: int = 2):
-        super(JointKBertModel, self).__init__(data_service, arguments_service)
+            model_service: ModelService):
+        super(JointModel, self).__init__(data_service, arguments_service)
 
-        self._number_of_models = 2
-        self._bert_models: List[ModelBase] = [KBertModel(
-            arguments_service, data_service) for _ in range(number_of_models)]
+        self._number_of_models: int = self._arguments_service.get_argument(
+            'joint_model_amount')
 
-    def forward(self, input_word, **kwargs):
+        self._inner_models: List[ModelBase] = [
+            model_service.create_model() for _ in range(self._number_of_models)]
+
+    def forward(self, inputs, **kwargs):
 
         result = []
-        for i, model in enumerate(self._bert_models):
-            outputs = model.forward(input_word)
+        for i, model in enumerate(self._inner_models):
+            current_input = inputs[i] if len(inputs) == len(self._inner_models) else inputs
+            outputs = model.forward(current_input)
             result.append(outputs)
 
         return result
 
     def named_parameters(self):
-        return [model.named_parameters() for model in self._bert_models]
+        return [model.named_parameters() for model in self._inner_models]
 
     def parameters(self):
-        return [model.parameters() for model in self._bert_models]
+        return [model.parameters() for model in self._inner_models]
 
     def calculate_accuracy(self, predictions, targets) -> int:
         return 0
@@ -68,18 +69,17 @@ class JointKBertModel(ModelBase):
         if not saved:
             return saved
 
-        for i, model in enumerate(self._bert_models):
-            model.save(path, epoch, iteration, best_metrics, f'{name_prefix}_{i}_')
+        for i, model in enumerate(self._inner_models):
+            model.save(path, epoch, iteration,
+                       best_metrics, f'{name_prefix}_{i}_')
 
         return saved
 
     def load(self, path: str, name_prefix: str = None) -> ModelCheckpoint:
+        for i, model in enumerate(self._inner_models):
+            model.load(
+                path,
+                f'{name_prefix}_{i+1}_',
+                load_model_only=True)
 
-        # model_checkpoint = super().load(path, name_prefix, load_model_dict=False)
-        # if not model_checkpoint:
-        #     return None
-
-        for i, model in enumerate(self._bert_models):
-            model._load_kbert_model(path, f'{name_prefix}_{i+1}_')
-
-        return None#model_checkpoint
+        return None

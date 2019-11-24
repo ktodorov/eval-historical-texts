@@ -63,12 +63,19 @@ class KBertModel(ModelBase):
 
         return saved
 
-    def load(self, path: str, name_prefix: str = None) -> ModelCheckpoint:
+    def load(
+            self,
+            path: str,
+            name_prefix: str = None,
+            load_model_dict: bool = True,
+            load_model_only: bool = False) -> ModelCheckpoint:
+
         model_checkpoint = super().load(path, name_prefix, load_model_dict=False)
-        if not model_checkpoint:
+        if not load_model_only and not model_checkpoint:
             return None
 
-        self._load_kbert_model(path, name_prefix)
+        if load_model_dict:
+            self._load_kbert_model(path, name_prefix)
 
         return model_checkpoint
 

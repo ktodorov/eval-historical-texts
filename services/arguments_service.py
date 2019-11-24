@@ -2,6 +2,7 @@ import argparse
 
 from services.arguments_service_base import ArgumentsServiceBase
 
+from enums.configuration import Configuration
 from enums.evaluation_type import EvaluationType
 from enums.output_format import OutputFormat
 
@@ -49,8 +50,13 @@ class ArgumentsService(ArgumentsServiceBase):
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',
                             help='weights to use for initializing transformer models')
-        parser.add_argument('--configuration', type=str, default='kbert',
-                            help='Which configuration of model to load and use')
+        parser.add_argument('--configuration', type=Configuration, choices=list(Configuration), default=Configuration.KBert,
+                            help='Which configuration of model to load and use. Default is kbert')
+        parser.add_argument('--joint-model', action='store_true',
+                            help='If a joint model should be used instead of a single one')
+        parser.add_argument('--joint-model-amount', type=int, default=2,
+                            help='How many models should be trained jointly')
+
 
         # SemEval
         parser.add_argument('--word-distance-threshold', type=float, default=100.0,

@@ -3,13 +3,15 @@ import dependency_injector.providers as providers
 
 import main
 
+from enums.configuration import Configuration
+
 from losses.loss_base import LossBase
 from losses.kbert_loss import KBertLoss
-from losses.joint_kbert_loss import JointKBertLoss
+from losses.joint_loss import JointLoss
 
 from models.model_base import ModelBase
 from models.kbert_model import KBertModel
-from models.joint_kbert_model import JointKBertModel
+from models.joint_model import JointModel
 
 from optimizers.optimizer_base import OptimizerBase
 from optimizers.adamw_optimizer import AdamWOptimizer
@@ -23,6 +25,7 @@ from services.dataset_service import DatasetService
 from services.evaluation_service import EvaluationService
 from services.log_service import LogService
 from services.mask_service import MaskService
+from services.model_service import ModelService
 from services.test_service import TestService
 from services.tokenizer_service import TokenizerService
 from services.train_service import TrainService
@@ -84,8 +87,15 @@ class IocContainer(containers.DeclarativeContainer):
         EvaluationService
     )
 
-    configuration = arguments_service().get_argument('configuration')
-    if configuration == 'kbert':
+    model_service = providers.Factory(
+        ModelService,
+        arguments_service=arguments_service,
+        data_service=data_service
+    )
+
+    configuration: Configuration = arguments_service().get_argument('configuration')
+    joint_model: bool = arguments_service().get_argument('joint_model')
+    if not joint_model and configuration == Configuration.KBert:
         loss_function = providers.Singleton(
             KBertLoss
         )
@@ -101,22 +111,28 @@ class IocContainer(containers.DeclarativeContainer):
             arguments_service=arguments_service,
             model=model
         )
-    elif configuration == 'joint-kbert':
-        loss_function = providers.Singleton(
-            JointKBertLoss
-        )
+    elif joint_model:
 
         model = providers.Singleton(
-            JointKBertModel,
+            JointModel,
             arguments_service=arguments_service,
-            data_service=data_service
+            data_service=data_service,
+            model_service=model_service
         )
 
-        optimizer = providers.Singleton(
-            JointAdamWOptimizer,
-            arguments_service=arguments_service,
-            model=model
-        )
+        if configuration == Configuration.KBert:
+            optimizer = providers.Singleton(
+                JointAdamWOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+
+            loss_function = providers.Singleton(
+                JointLoss
+            )
+        else:
+            raise Exception(
+                'No optimizer and loss defined for current configuration')
     else:
         raise Exception('Unsupported configuration')
 
