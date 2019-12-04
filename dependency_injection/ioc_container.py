@@ -23,6 +23,7 @@ from services.data_service import DataService
 from services.dataloader_service import DataLoaderService
 from services.dataset_service import DatasetService
 from services.evaluation_service import EvaluationService
+from services.file_service import FileService
 from services.log_service import LogService
 from services.mask_service import MaskService
 from services.model_service import ModelService
@@ -70,11 +71,17 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service
     )
 
+    file_service = providers.Factory(
+        FileService,
+        arguments_service=arguments_service
+    )
+
     dataset_service = providers.Factory(
         DatasetService,
         arguments_service=arguments_service,
         mask_service=mask_service,
-        tokenizer_service=tokenizer_service
+        tokenizer_service=tokenizer_service,
+        file_service=file_service
     )
 
     dataloader_service = providers.Factory(
@@ -141,6 +148,7 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service,
         dataloader_service=dataloader_service,
         evaluation_service=evaluation_service,
+        file_service=file_service,
         model=model
     )
 
@@ -151,7 +159,8 @@ class IocContainer(containers.DeclarativeContainer):
         loss_function=loss_function,
         optimizer=optimizer,
         log_service=log_service,
-        model=model
+        model=model,
+        file_service=file_service
     )
 
     # Misc

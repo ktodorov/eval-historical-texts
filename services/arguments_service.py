@@ -34,10 +34,12 @@ class ArgumentsService(ArgumentsServiceBase):
                             help="shuffle datasets while training")
         parser.add_argument("--learning-rate", type=float, default=2e-5,
                             help="learning rate for training models")
-        parser.add_argument("--checkpoint-name", type=str, default='model',
-                            help="name that will be used to create checkpoint file")
+        parser.add_argument("--checkpoint-name", type=str, default=None,
+                            help="name that can be used to distinguish checkpoints")
         parser.add_argument("--resume-training", action='store_true',
                             help="resume training using saved checkpoints")
+        parser.add_argument("--data-folder", type=str, default='data',
+                            help='folder where data will be taken from')
         parser.add_argument("--output-folder", type=str, default='results',
                             help='folder where results and checkpoints will be saved')
         parser.add_argument('--checkpoint-folder', type=str, default=None,
@@ -46,6 +48,8 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='what type of evaluations should be performed')
         parser.add_argument('--output-eval-format', type=OutputFormat, choices=list(OutputFormat),
                             help='what the format of the output after evaluation will be')
+        parser.add_argument("--challenge", type=str, default=None,
+                            help='Optional challenge that the model is being trained for. If given, data and output results will be put into a specific folder')
 
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',

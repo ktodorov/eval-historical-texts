@@ -76,11 +76,9 @@ class ModelBase(nn.Module):
         return model_checkpoint
 
     def _get_model_name(self, name_prefix: str = None) -> str:
-        checkpoint_name = self._arguments_service.get_argument(
-            'checkpoint_name')
-        result = f'checkpoint-{checkpoint_name}'
+        result = 'checkpoint'
 
         if name_prefix:
-            result = name_prefix + result
+            result = f'{name_prefix}_{result}'
 
         return result

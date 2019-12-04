@@ -24,23 +24,16 @@ def generate_transformer_tokens(corpus_path):
     input_ids = [tokenizer.convert_tokens_to_ids(x) for x in tokenized_texts]
     return input_ids
 
-data_folder = path_utils.combine_path('..', 'data', 'semeval_trial_data')
-english_data_folder = path_utils.combine_path(
-    data_folder, 'corpora', 'english')
+def preprocess_data(corpus_id: int, language: str, semeval_path: str, data_output_path: str):
+    english_data_folder = path_utils.combine_path(semeval_path, 'corpora', language)
+    corpus_path = path_utils.combine_path(english_data_folder, f'corpus{corpus_id}')
+    ids = generate_transformer_tokens(corpus_path)
 
-corpus1_path = path_utils.combine_path(
-    english_data_folder, 'corpus1')
-corpus2_path = path_utils.combine_path(
-    english_data_folder, 'corpus2')
+    ids_filepath = os.path.join(data_output_path, f'ids{corpus_id}.pickle')
+    with open(ids_filepath, 'wb') as handle:
+        pickle.dump(ids, handle, protocol=-1)
 
-ids1 = generate_transformer_tokens(corpus1_path)
-ids2 = generate_transformer_tokens(corpus2_path)
-
-
-ids1_filepath = os.path.join(data_folder, 'ids','english', 'ids1.pickle')
-with open(ids1_filepath, 'wb') as handle:
-    pickle.dump(ids1, handle, protocol=-1)
-
-ids2_filepath = os.path.join(data_folder, 'ids', 'english', 'ids2.pickle')
-with open(ids2_filepath, 'wb') as handle:
-    pickle.dump(ids2, handle, protocol=-1)
+if __name__ == '__main__':
+    semeval_path = path_utils.combine_path('..', 'data', 'semeval_trial_data')
+    preprocess_data(corpus_id=1, language='english', semeval_path=semeval_path, data_output_path=semeval_path)
+    preprocess_data(corpus_id=2, language='english', semeval_path=semeval_path, data_output_path=semeval_path)

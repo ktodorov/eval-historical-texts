@@ -50,6 +50,12 @@ class KBertModel(ModelBase):
             best_metrics: object,
             name_prefix: str = None) -> bool:
 
+        checkpoint_name = self._arguments_service.get_argument(
+            'checkpoint_name')
+
+        if checkpoint_name:
+            name_prefix = f'{name_prefix}_{checkpoint_name}'
+
         saved = super().save(path, epoch, iteration, best_metrics,
                              name_prefix, save_model_dict=False)
 
@@ -70,6 +76,12 @@ class KBertModel(ModelBase):
             load_model_dict: bool = True,
             load_model_only: bool = False) -> ModelCheckpoint:
 
+        checkpoint_name = self._arguments_service.get_argument(
+            'checkpoint_name')
+
+        if checkpoint_name:
+            name_prefix = f'{name_prefix}_{checkpoint_name}'
+
         model_checkpoint = super().load(path, name_prefix, load_model_dict=False)
         if not load_model_only and not model_checkpoint:
             return None
@@ -86,8 +98,8 @@ class KBertModel(ModelBase):
             pretrained_weights_path).to(self._arguments_service.get_argument('device'))
 
     def _get_pretrained_path(self, path: str, name_prefix: str, create_if_missing: bool = False):
-        pretrained_weights_path = os.path.join(
-            path, f'{name_prefix}_pretrained_weights')
+        file_name = f'{name_prefix}_pretrained_weights'
+        pretrained_weights_path = os.path.join(path, file_name)
 
         if create_if_missing and not os.path.exists(pretrained_weights_path):
             os.mkdir(pretrained_weights_path)

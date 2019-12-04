@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 import pickle
@@ -5,7 +6,10 @@ import pickle
 from datasets.dataset_base import DatasetBase
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
+from services.file_service import FileService
 from services.mask_service import MaskService
+
+from preprocessing.semeval_dataset import preprocess_data
 
 from utils import path_utils
 
@@ -16,6 +20,7 @@ class KBertDataset(DatasetBase):
             language: str,
             arguments_service: ArgumentsServiceBase,
             mask_service: MaskService,
+            file_service: FileService,
             corpus_id: int = 1,
             **kwargs):
         super(KBertDataset, self).__init__()
@@ -23,9 +28,14 @@ class KBertDataset(DatasetBase):
         self._mask_service = mask_service
         self._arguments_service = arguments_service
 
-        data_folder = path_utils.combine_path(
-            'data', 'semeval_trial_data', 'ids', language, f'ids{corpus_id}.pickle')
-        with open(data_folder, 'rb') as data_file:
+        full_data_path = file_service.get_data_path()
+        ids_path = os.path.join(full_data_path, f'ids{corpus_id}.pickle')
+
+        if not os.path.exists(ids_path):
+            semeval_data_path = os.path.join('data', 'semeval_trial_data')
+            preprocess_data(corpus_id, language, semeval_data_path, full_data_path)
+
+        with open(ids_path, 'rb') as data_file:
             self._ids = pickle.load(data_file)
 
     def __len__(self):

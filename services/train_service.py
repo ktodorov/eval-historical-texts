@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import math
@@ -17,6 +18,7 @@ from entities.model_checkpoint import ModelCheckpoint
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.dataloader_service import DataLoaderService
+from services.file_service import FileService
 from services.log_service import LogService
 
 from transformers import BertTokenizer
@@ -30,9 +32,12 @@ class TrainService:
             loss_function: LossBase,
             optimizer: OptimizerBase,
             log_service: LogService,
+            file_service: FileService,
             model: ModelBase):
 
         self._arguments_service = arguments_service
+        self._model_path = file_service.get_checkpoints_path()
+
         self._log_service = log_service
 
         self._loss_function = loss_function
@@ -78,7 +83,7 @@ class TrainService:
                 best_metrics, patience = self._perform_epoch_iteration(
                     epoch, best_metrics, patience, losses, start_iteration)
 
-                start_iteration = 0 # reset the starting iteration
+                start_iteration = 0  # reset the starting iteration
 
                 # write progress to pickle file (overwrite because there is no
                 # point keeping seperate versions)
@@ -97,12 +102,12 @@ class TrainService:
 
         except KeyboardInterrupt as e:
             print(f"Killed by user: {e}")
-            self._model.save('results', epoch, 0, best_metrics,
+            self._model.save(self._model_path, epoch, 0, best_metrics,
                              name_prefix=f'KILLED_at_epoch_{epoch}')
             return False
         except Exception as e:
             print(e)
-            self._model.save('results', epoch, 0, best_metrics,
+            self._model.save(self._model_path, epoch, 0, best_metrics,
                              name_prefix=f'CRASH_at_epoch_{epoch}')
             raise e
 
@@ -110,7 +115,7 @@ class TrainService:
         sys.stdout.flush()
 
         # example last save
-        self._model.save('results', epoch, 0, best_metrics,
+        self._model.save(self._model_path, epoch, 0, best_metrics,
                          name_prefix=f'FINISHED_at_epoch_{epoch}')
         return True
 
@@ -150,8 +155,8 @@ class TrainService:
                 new_best = self._model.compare_metric(best_metrics, train_loss)
                 if new_best:
                     best_metrics = train_loss
-                    self._model.save('results', epoch_num, i,
-                                     best_metrics, name_prefix=f'BEST_')
+                    self._model.save(self._model_path, epoch_num, i,
+                                     best_metrics, name_prefix=f'BEST')
                     patience = self._patience
                 else:
                     patience -= 1
@@ -206,18 +211,11 @@ class TrainService:
         return loss, accuracy
 
     def _load_model(self) -> ModelCheckpoint:
-        checkpoints_path = self._get_checkpoints_path()
-        model_checkpoint = self._model.load(checkpoints_path, 'BEST_')
+        model_checkpoint = self._model.load(self._model_path, 'BEST')
         if not model_checkpoint:
-            model_checkpoint = self._model.load(checkpoints_path)
+            model_checkpoint = self._model.load(self._model_path)
 
         return model_checkpoint
-
-    def _get_checkpoints_path(self) -> str:
-        if not self._arguments_service.get_argument('checkpoint_folder'):
-            return self._arguments_service.get_argument('output_folder')
-
-        return self._arguments_service.get_argument('checkpoint_folder')
 
     # def _evaluate(self) -> Tuple[float, float]:
     #     """

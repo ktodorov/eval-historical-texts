@@ -13,6 +13,7 @@ from enums.output_format import OutputFormat
 from services.arguments_service_base import ArgumentsServiceBase
 from services.dataloader_service import DataLoaderService
 from services.evaluation_service import EvaluationService
+from services.file_service import FileService
 
 from utils.dict_utils import update_dictionaries
 
@@ -23,10 +24,12 @@ class TestService:
             arguments_service: ArgumentsServiceBase,
             dataloader_service: DataLoaderService,
             evaluation_service: EvaluationService,
+            file_service: FileService,
             model: ModelBase):
 
         self._arguments_service = arguments_service
         self._evaluation_service = evaluation_service
+        self._file_service = file_service
 
         self._model = model.to(arguments_service.get_argument('device'))
 
@@ -66,13 +69,11 @@ class TestService:
             print(evaluation)
 
     def _save_semeval_evaluation(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
-        output_folder = self._arguments_service.get_argument('output_folder')
-        checkpoint_name = self._arguments_service.get_argument(
-            'checkpoint_name')
+        checkpoint_folder = self._file_service.get_checkpoints_path()
         output_file_task1 = os.path.join(
-            output_folder, f'{checkpoint_name}-task1.txt')
+            checkpoint_folder, 'task1.txt')
         output_file_task2 = os.path.join(
-            output_folder, f'{checkpoint_name}-task2.txt')
+            checkpoint_folder, 'task2.txt')
 
         threshold = self._arguments_service.get_argument(
             'word_distance_threshold')
@@ -100,12 +101,6 @@ class TestService:
         print('Output saved')
 
     def _load_model(self) -> ModelCheckpoint:
-        checkpoints_path = self._get_checkpoints_path()
+        checkpoints_path = self._file_service.get_checkpoints_path()
         model_checkpoint = self._model.load(checkpoints_path, 'BEST')
         return model_checkpoint
-
-    def _get_checkpoints_path(self) -> str:
-        if not self._arguments_service.get_argument('checkpoint_folder'):
-            return self._arguments_service.get_argument('output_folder')
-
-        return self._arguments_service.get_argument('checkpoint_folder')

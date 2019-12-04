@@ -71,7 +71,7 @@ class JointModel(ModelBase):
 
         for i, model in enumerate(self._inner_models):
             model.save(path, epoch, iteration,
-                       best_metrics, f'{name_prefix}_{i}_')
+                       best_metrics, f'{name_prefix}_{i}')
 
         return saved
 
@@ -79,7 +79,7 @@ class JointModel(ModelBase):
         for i, model in enumerate(self._inner_models):
             model.load(
                 path,
-                f'{name_prefix}_{i+1}_',
+                f'{name_prefix}_{i+1}',
                 load_model_only=True)
 
         return None
