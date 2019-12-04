@@ -45,7 +45,7 @@ class DatasetService:
         joint_model: bool = self._arguments_service.get_argument('joint_model')
         configuration: Configuration = self._arguments_service.get_argument(
             'configuration')
-        if not joint_model and configuration == Configuration.KBert:
+        if not joint_model and (configuration == Configuration.KBert or configuration == Configuration.XLNet):
             result = KBertDataset(
                 language, self._arguments_service, self._mask_service, self._file_service)
         elif joint_model:
@@ -63,8 +63,8 @@ class DatasetService:
             'configuration')
 
         result = []
-        if configuration == Configuration.KBert:
-            result = [KBertDataset(language, self._arguments_service, self._mask_service, self._file_service, corpus_id=i+1)
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+            result = [KBertDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenizer_service, corpus_id=i+1)
                       for i in range(number_of_datasets)]
         else:
             raise Exception('Unsupported configuration')

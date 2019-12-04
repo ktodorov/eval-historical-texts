@@ -8,6 +8,7 @@ from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 from services.file_service import FileService
 from services.mask_service import MaskService
+from services.tokenizer_service import TokenizerService
 
 from preprocessing.semeval_dataset import preprocess_data
 
@@ -21,6 +22,7 @@ class KBertDataset(DatasetBase):
             arguments_service: ArgumentsServiceBase,
             mask_service: MaskService,
             file_service: FileService,
+            tokenizer_service: TokenizerService,
             corpus_id: int = 1,
             **kwargs):
         super(KBertDataset, self).__init__()
@@ -33,7 +35,12 @@ class KBertDataset(DatasetBase):
 
         if not os.path.exists(ids_path):
             semeval_data_path = os.path.join('data', 'semeval_trial_data')
-            preprocess_data(corpus_id, language, semeval_data_path, full_data_path)
+            pretrained_weights = self._arguments_service.get_argument(
+                'pretrained_weights')
+
+            tokenizer = tokenizer_service.tokenizer
+            preprocess_data(corpus_id, language, semeval_data_path,
+                            full_data_path, pretrained_weights, tokenizer)
 
         with open(ids_path, 'rb') as data_file:
             self._ids = pickle.load(data_file)

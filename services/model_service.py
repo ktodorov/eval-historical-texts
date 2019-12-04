@@ -2,6 +2,7 @@ from enums.configuration import Configuration
 
 from models.model_base import ModelBase
 from models.kbert_model import KBertModel
+from models.kxlnet_model import KXLNetModel
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
@@ -23,5 +24,7 @@ class ModelService:
 
         if configuration == Configuration.KBert:
             return KBertModel(self._arguments_service, self._data_service).to(device)
+        elif configuration == Configuration.XLNet:
+            return KXLNetModel(self._arguments_service, self._data_service).to(device)
 
         raise LookupError(f'The {str(configuration)} is not supported')

@@ -1,6 +1,7 @@
 import os
+from typing import Callable
 
-from transformers import BertForMaskedLM
+from transformers import BertForMaskedLM, BertPreTrainedModel
 
 from entities.model_checkpoint import ModelCheckpoint
 from models.model_base import ModelBase
@@ -16,7 +17,7 @@ class KBertModel(ModelBase):
             data_service: DataService):
         super(KBertModel, self).__init__(data_service, arguments_service)
 
-        self._bert_model = BertForMaskedLM.from_pretrained(
+        self._bert_model = self._model_type.from_pretrained(
             arguments_service.get_argument('pretrained_weights'))
 
     def forward(self, input_batch, **kwargs):
@@ -91,10 +92,14 @@ class KBertModel(ModelBase):
 
         return model_checkpoint
 
+    @property
+    def _model_type(self) -> BertPreTrainedModel:
+        return BertForMaskedLM
+
     def _load_kbert_model(self, path: str, name_prefix: str):
         pretrained_weights_path = self._get_pretrained_path(path, name_prefix)
 
-        self._bert_model = BertForMaskedLM.from_pretrained(
+        self._bert_model = self._model_type.from_pretrained(
             pretrained_weights_path).to(self._arguments_service.get_argument('device'))
 
     def _get_pretrained_path(self, path: str, name_prefix: str, create_if_missing: bool = False):

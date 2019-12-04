@@ -11,6 +11,7 @@ from losses.joint_loss import JointLoss
 
 from models.model_base import ModelBase
 from models.kbert_model import KBertModel
+from models.kxlnet_model import KXLNetModel
 from models.joint_model import JointModel
 
 from optimizers.optimizer_base import OptimizerBase
@@ -102,13 +103,13 @@ class IocContainer(containers.DeclarativeContainer):
 
     configuration: Configuration = arguments_service().get_argument('configuration')
     joint_model: bool = arguments_service().get_argument('joint_model')
-    if not joint_model and configuration == Configuration.KBert:
+    if not joint_model and (configuration == Configuration.KBert or configuration == Configuration.XLNet):
         loss_function = providers.Singleton(
             KBertLoss
         )
 
         model = providers.Singleton(
-            KBertModel,
+            KBertModel if configuration == Configuration.KBert else KXLNetModel,
             arguments_service=arguments_service,
             data_service=data_service
         )
@@ -127,7 +128,7 @@ class IocContainer(containers.DeclarativeContainer):
             model_service=model_service
         )
 
-        if configuration == Configuration.KBert:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
             optimizer = providers.Singleton(
                 JointAdamWOptimizer,
                 arguments_service=arguments_service,
