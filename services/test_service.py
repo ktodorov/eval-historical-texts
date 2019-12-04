@@ -88,7 +88,7 @@ class TestService:
                 task1_dict[target_word] = 0
 
         abs_distances = [abs(distance) for distance in distances]
-        max_args = np.argsort(abs_distances)
+        max_args = list(np.argsort(abs_distances))
 
         with open(output_file_task1, 'w', encoding='utf-8') as task1_file:
             for word, class_prediction in task1_dict.items():
@@ -96,7 +96,7 @@ class TestService:
 
         with open(output_file_task2, 'w', encoding='utf-8') as task2_file:
             for i, target in enumerate(targets):
-                task2_file.write(f'{target}\t{max_args[i]}\n')
+                task2_file.write(f'{target}\t{max_args.index(i)}\n')
 
         print('Output saved')
 
