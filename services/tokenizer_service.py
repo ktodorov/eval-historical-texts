@@ -1,5 +1,7 @@
 from transformers import PreTrainedTokenizer, BertTokenizer, XLNetTokenizer
 
+import sentencepiece as spm
+
 from enums.configuration import Configuration
 from services.arguments_service_base import ArgumentsServiceBase
 
@@ -10,9 +12,12 @@ class TokenizerService:
 
         if configuration == Configuration.KBert:
             self._tokenizer = BertTokenizer.from_pretrained(pretrained_weights)
-        else:
+        elif configuration == Configuration.XLNet:
             self._tokenizer = XLNetTokenizer.from_pretrained(pretrained_weights)
+        elif configuration == Configuration.MultiFit:
+            self._tokenizer = spm.SentencePieceProcessor()
+            self._tokenizer.Load("data\\sentence-piece-models\\test_model.model")
 
     @property
-    def tokenizer(self) -> PreTrainedTokenizer:
+    def tokenizer(self):
         return self._tokenizer

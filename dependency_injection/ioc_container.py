@@ -12,9 +12,11 @@ from losses.joint_loss import JointLoss
 from models.model_base import ModelBase
 from models.kbert_model import KBertModel
 from models.kxlnet_model import KXLNetModel
+from models.multifit_model import MultiFitModel
 from models.joint_model import JointModel
 
 from optimizers.optimizer_base import OptimizerBase
+from optimizers.adam_optimizer import AdamOptimizer
 from optimizers.adamw_optimizer import AdamWOptimizer
 from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
 
@@ -103,22 +105,39 @@ class IocContainer(containers.DeclarativeContainer):
 
     configuration: Configuration = arguments_service().get_argument('configuration')
     joint_model: bool = arguments_service().get_argument('joint_model')
-    if not joint_model and (configuration == Configuration.KBert or configuration == Configuration.XLNet):
-        loss_function = providers.Singleton(
-            KBertLoss
-        )
+    if not joint_model:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+            loss_function = providers.Singleton(
+                KBertLoss
+            )
 
-        model = providers.Singleton(
-            KBertModel if configuration == Configuration.KBert else KXLNetModel,
-            arguments_service=arguments_service,
-            data_service=data_service
-        )
+            model = providers.Singleton(
+                KBertModel if configuration == Configuration.KBert else KXLNetModel,
+                arguments_service=arguments_service,
+                data_service=data_service
+            )
 
-        optimizer = providers.Singleton(
-            AdamWOptimizer,
-            arguments_service=arguments_service,
-            model=model
-        )
+            optimizer = providers.Singleton(
+                AdamWOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+        elif configuration == Configuration.MultiFit:
+            loss_function = providers.Singleton(
+                KBertLoss
+            )
+
+            model = providers.Singleton(
+                MultiFitModel,
+                arguments_service=arguments_service,
+                data_service=data_service
+            )
+
+            optimizer = providers.Singleton(
+                AdamOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
     elif joint_model:
 
         model = providers.Singleton(

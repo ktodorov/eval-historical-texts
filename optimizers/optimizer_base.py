@@ -9,3 +9,9 @@ from transformers import AdamW
 class OptimizerBase():
     def __init__(self):
         super(OptimizerBase, self).__init__()
+
+    def step(self):
+        pass
+
+    def zero_grad(self):
+        pass

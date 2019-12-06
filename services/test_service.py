@@ -30,12 +30,12 @@ class TestService:
         self._arguments_service = arguments_service
         self._evaluation_service = evaluation_service
         self._file_service = file_service
+        self._dataloader_service = dataloader_service
 
         self._model = model.to(arguments_service.get_argument('device'))
 
-        self._dataloader = dataloader_service.get_test_dataloader()
-
     def test(self) -> bool:
+        self._dataloader = self._dataloader_service.get_test_dataloader()
         self._load_model()
         self._model.eval()
 

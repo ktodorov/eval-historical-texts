@@ -4,6 +4,7 @@ from enums.run_type import RunType
 from datasets.dataset_base import DatasetBase
 from datasets.kbert_dataset import KBertDataset
 from datasets.joint_dataset import JointDataset
+from datasets.newseye_dataset import NewsEyeDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
 
 from services.arguments_service_base import ArgumentsServiceBase
@@ -45,9 +46,13 @@ class DatasetService:
         joint_model: bool = self._arguments_service.get_argument('joint_model')
         configuration: Configuration = self._arguments_service.get_argument(
             'configuration')
-        if not joint_model and (configuration == Configuration.KBert or configuration == Configuration.XLNet):
-            result = KBertDataset(
-                language, self._arguments_service, self._mask_service, self._file_service)
+        if not joint_model:
+            if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
+                result = KBertDataset(
+                    language, self._arguments_service, self._mask_service, self._file_service)
+            elif configuration == Configuration.MultiFit:
+                result = NewsEyeDataset(
+                    language, self._arguments_service, self._file_service, self._tokenizer_service)
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(
                 'joint_model_amount')
