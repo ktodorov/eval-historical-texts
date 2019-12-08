@@ -8,7 +8,7 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
 
         hid_dim = 256
-        output_dim = 8000
+        output_dim = 1000
         n_layers = 1
         emb_dim = 256
         dropout = 0

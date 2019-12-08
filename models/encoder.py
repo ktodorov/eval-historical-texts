@@ -10,7 +10,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         emb_dim = 256
-        input_size = 8000
+        input_size = 1000
         hidden_dim = 256
         dropout = 0
 

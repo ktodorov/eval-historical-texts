@@ -11,7 +11,7 @@ from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService
 
-from preprocessing.newseye import preprocess_data
+from preprocessing.newseye import train_spm_model, preprocess_data
 
 from utils import path_utils
 
@@ -28,9 +28,16 @@ class NewsEyeDataset(DatasetBase):
 
         self._arguments_service = arguments_service
 
-        full_data_path = file_service.get_data_path()
+        output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
-            full_data_path, f'train_language_data.pickle')
+            output_data_path, f'train_language_data.pickle')
+
+        if not tokenizer_service.is_tokenizer_loaded():
+            full_data_path = os.path.join(
+                'data', 'ICDAR2019_POCR_competition_dataset', 'ICDAR2019_POCR_competition_full_22M_without_Finnish')
+
+            train_spm_model(full_data_path, output_data_path, language)
+            tokenizer_service.load_tokenizer_model()
 
         if not os.path.exists(language_data_path):
             train_data_path = os.path.join(
@@ -39,7 +46,7 @@ class NewsEyeDataset(DatasetBase):
                 'data', 'ICDAR2019_POCR_competition_dataset', 'ICDAR2019_POCR_competition_evaluation_4M_without_Finnish')
 
             preprocess_data(language, train_data_path, test_data_path,
-                            full_data_path, tokenizer_service.tokenizer)
+                            output_data_path, tokenizer_service.tokenizer)
 
         with open(language_data_path, 'rb') as data_file:
             self._language_data: LanguageData = pickle.load(data_file)
@@ -63,10 +70,12 @@ class NewsEyeDataset(DatasetBase):
 
         _, sequences, targets = batch_split[0], batch_split[1], batch_split[2]
 
-        lengths = [[len(sequences[i]), len(targets[i])] for i in range(batch_size)]
+        lengths = [[len(sequences[i]), len(targets[i])]
+                   for i in range(batch_size)]
         max_length = max(lengths)
 
-        padded_sequences = np.zeros((batch_size, max_length[0]), dtype=np.int64)
+        padded_sequences = np.zeros(
+            (batch_size, max_length[0]), dtype=np.int64)
         padded_targets = np.zeros((batch_size, max_length[1]), dtype=np.int64)
 
         for i, (sequence_length, target_length) in enumerate(lengths):
@@ -82,7 +91,7 @@ class NewsEyeDataset(DatasetBase):
                 self._arguments_service.get_argument('device')))
 
     def _sort_batch(self, batch, targets, lengths):
-        seq_lengths, perm_idx = lengths[:,0].sort(0, descending=True)
+        seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)
         seq_tensor = batch[perm_idx]
         targets_tensor = targets[perm_idx]
         return seq_tensor, targets_tensor, seq_lengths

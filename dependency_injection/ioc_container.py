@@ -64,19 +64,20 @@ class IocContainer(containers.DeclarativeContainer):
         ArgumentsService
     )
 
+    file_service = providers.Factory(
+        FileService,
+        arguments_service=arguments_service
+    )
+
     tokenizer_service = providers.Singleton(
         TokenizerService,
         arguments_service=arguments_service,
+        file_service=file_service
     )
 
     mask_service = providers.Factory(
         MaskService,
         tokenizer_service=tokenizer_service,
-        arguments_service=arguments_service
-    )
-
-    file_service = providers.Factory(
-        FileService,
         arguments_service=arguments_service
     )
 
