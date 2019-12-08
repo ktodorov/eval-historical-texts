@@ -53,10 +53,6 @@ class TrainService:
          main training function
         """
 
-        # setup data output directories:
-        # setup_directories()
-        # save_codebase_of_run(self.arguments)
-
         epoch = 0
 
         try:
@@ -84,15 +80,6 @@ class TrainService:
                     epoch, best_metrics, patience, losses, start_iteration)
 
                 start_iteration = 0  # reset the starting iteration
-
-                # write progress to pickle file (overwrite because there is no
-                # point keeping seperate versions)
-                # DATA_MANAGER.save_python_obj(progress,
-                #                              os.path.join(RESULTS_DIR,
-                #                              DATA_MANAGER.stamp,
-                #                              PROGRESS_DIR,
-                #                                           "progress_list"),
-                #                              print_success=False)
 
                 # flush prints
                 sys.stdout.flush()

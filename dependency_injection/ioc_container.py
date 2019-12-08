@@ -5,6 +5,7 @@ import main
 
 from enums.configuration import Configuration
 
+from losses.cross_entropy_loss import CrossEntropyLoss
 from losses.loss_base import LossBase
 from losses.kbert_loss import KBertLoss
 from losses.joint_loss import JointLoss
@@ -124,7 +125,7 @@ class IocContainer(containers.DeclarativeContainer):
             )
         elif configuration == Configuration.MultiFit:
             loss_function = providers.Singleton(
-                KBertLoss
+                CrossEntropyLoss
             )
 
             model = providers.Singleton(

@@ -61,13 +61,13 @@ class NewsEyeDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, aligned, targets = batch_split[0], batch_split[1], batch_split[2]
+        _, sequences, targets = batch_split[0], batch_split[1], batch_split[2]
 
         lengths = [[len(sequences[i]), len(targets[i])] for i in range(batch_size)]
         max_length = max(lengths)
 
-        padded_sequences = np.ones((batch_size, max_length[0]), dtype=np.int64)
-        padded_targets = np.ones((batch_size, max_length[1]), dtype=np.int64)
+        padded_sequences = np.zeros((batch_size, max_length[0]), dtype=np.int64)
+        padded_targets = np.zeros((batch_size, max_length[1]), dtype=np.int64)
 
         for i, (sequence_length, target_length) in enumerate(lengths):
             padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]

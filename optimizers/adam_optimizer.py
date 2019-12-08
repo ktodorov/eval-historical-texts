@@ -15,8 +15,7 @@ class AdamOptimizer(OptimizerBase):
         super(AdamOptimizer, self).__init__()
 
         learning_rate = arguments_service.get_argument('learning_rate')
-        # self._optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-        self._optimizer = None
+        self._optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     def step(self):
         self._optimizer.step()
