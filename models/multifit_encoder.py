@@ -5,9 +5,9 @@ import sentencepiece as spm
 from sentencepiece import SentencePieceProcessor
 
 
-class Encoder(nn.Module):
+class MultiFitEncoder(nn.Module):
     def __init__(self):
-        super(Encoder, self).__init__()
+        super(MultiFitEncoder, self).__init__()
 
         emb_dim = 256
         input_size = 1000

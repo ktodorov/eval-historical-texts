@@ -37,22 +37,23 @@ class DatasetService:
         :return: the dataset
         :rtype: DatasetBase
         """
-        if run_type == RunType.Test:
+        joint_model: bool = self._arguments_service.get_argument('joint_model')
+        configuration: Configuration = self._arguments_service.get_argument(
+            'configuration')
+
+        if run_type == RunType.Test and (configuration == Configuration.KBert or configuration == Configuration.XLNet):
             return SemEvalTestDataset(
                 language,
                 self._arguments_service,
                 self._tokenizer_service)
 
-        joint_model: bool = self._arguments_service.get_argument('joint_model')
-        configuration: Configuration = self._arguments_service.get_argument(
-            'configuration')
         if not joint_model:
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
                 result = KBertDataset(
                     language, self._arguments_service, self._mask_service, self._file_service)
             elif configuration == Configuration.MultiFit:
                 result = NewsEyeDataset(
-                    language, self._arguments_service, self._file_service, self._tokenizer_service)
+                    language, self._arguments_service, self._file_service, self._tokenizer_service, run_type)
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(
                 'joint_model_amount')

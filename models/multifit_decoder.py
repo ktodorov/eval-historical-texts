@@ -3,9 +3,9 @@ from torch import nn
 from torch.functional import F
 
 
-class Decoder(nn.Module):
+class MultiFitDecoder(nn.Module):
     def __init__(self):
-        super(Decoder, self).__init__()
+        super(MultiFitDecoder, self).__init__()
 
         hid_dim = 256
         output_dim = 1000

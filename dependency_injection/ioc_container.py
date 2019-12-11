@@ -126,7 +126,8 @@ class IocContainer(containers.DeclarativeContainer):
             )
         elif configuration == Configuration.MultiFit:
             loss_function = providers.Singleton(
-                CrossEntropyLoss
+                CrossEntropyLoss,
+                arguments_service=arguments_service
             )
 
             model = providers.Singleton(

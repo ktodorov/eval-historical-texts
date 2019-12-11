@@ -24,7 +24,7 @@ class ModelBase(nn.Module):
     def forward(self):
         return None
 
-    def calculate_accuracy(self, predictions, targets) -> bool:
+    def calculate_accuracy(self, batch, outputs) -> bool:
         return 0
 
     def compare_metric(self, best_metric, metrics) -> bool:

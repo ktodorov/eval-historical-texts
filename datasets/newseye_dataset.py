@@ -4,6 +4,7 @@ import torch
 import pickle
 
 from datasets.dataset_base import DatasetBase
+from enums.run_type import RunType
 from entities.language_data import LanguageData
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
@@ -23,6 +24,7 @@ class NewsEyeDataset(DatasetBase):
             arguments_service: ArgumentsServiceBase,
             file_service: FileService,
             tokenizer_service: TokenizerService,
+            run_type: RunType,
             **kwargs):
         super(NewsEyeDataset, self).__init__()
 
@@ -30,7 +32,7 @@ class NewsEyeDataset(DatasetBase):
 
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
-            output_data_path, f'train_language_data.pickle')
+            output_data_path, f'{run_type.to_str()}_language_data.pickle')
 
         if not tokenizer_service.is_tokenizer_loaded():
             full_data_path = os.path.join(
@@ -70,9 +72,9 @@ class NewsEyeDataset(DatasetBase):
 
         _, sequences, targets = batch_split[0], batch_split[1], batch_split[2]
 
-        lengths = [[len(sequences[i]), len(targets[i])]
-                   for i in range(batch_size)]
-        max_length = max(lengths)
+        lengths = np.array([[len(sequences[i]), len(targets[i])]
+                   for i in range(batch_size)])
+        max_length = lengths.max(axis=0)
 
         padded_sequences = np.zeros(
             (batch_size, max_length[0]), dtype=np.int64)

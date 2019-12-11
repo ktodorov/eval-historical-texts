@@ -30,24 +30,43 @@ def parse_language_data(
         if current_language != Language.English:
             continue
 
-        language_data = LanguageData()
-
+        file_paths = []
         for subdir_name in os.listdir(language_dir_path):
             subdir_path = os.path.join(language_dir_path, subdir_name)
             for file_name in os.listdir(subdir_path):
                 file_path = os.path.join(subdir_path, file_name)
-                with open(file_path, 'r', encoding='utf-8') as language_file:
-                    text_data: List[str] = language_file.read().split('\n')
+                file_paths.append(file_path)
 
-                    language_data.add_entry(
-                        text_data[0][start_position:],
-                        text_data[1][start_position:],
-                        text_data[2][start_position:],
-                        tokenizer)
+        train_language_data = LanguageData()
+        validation_language_data = LanguageData()
 
-        return language_data
+        split_index = int(len(file_paths) * 0.8)
+        train_file_paths = file_paths[0:split_index]
+        validation_file_paths = file_paths[split_index:]
 
-    return None
+        for file_path in train_file_paths:
+            with open(file_path, 'r', encoding='utf-8') as language_file:
+                text_data: List[str] = language_file.read().split('\n')
+
+                train_language_data.add_entry(
+                    text_data[0][start_position:],
+                    text_data[1][start_position:],
+                    text_data[2][start_position:],
+                    tokenizer)
+
+        for file_path in validation_file_paths:
+            with open(file_path, 'r', encoding='utf-8') as language_file:
+                text_data: List[str] = language_file.read().split('\n')
+
+                validation_language_data.add_entry(
+                    text_data[0][start_position:],
+                    text_data[1][start_position:],
+                    text_data[2][start_position:],
+                    tokenizer)
+
+        return train_language_data, validation_language_data
+
+    return None, None
 
 
 def train_spm_model(
@@ -92,13 +111,18 @@ def preprocess_data(
         data_output_path: str,
         tokenizer: SentencePieceProcessor):
 
-    train_language_data = parse_language_data(
+    train_language_data, validation_language_data = parse_language_data(
         train_data_path, language, tokenizer)
     train_language_data_filepath = os.path.join(
         data_output_path, f'train_language_data.pickle')
+    validation_language_data_filepath = os.path.join(
+        data_output_path, f'validation_language_data.pickle')
 
     with open(train_language_data_filepath, 'wb') as handle:
         pickle.dump(train_language_data, handle, protocol=-1)
+
+    with open(validation_language_data_filepath, 'wb') as handle:
+        pickle.dump(validation_language_data, handle, protocol=-1)
 
     test_language_data = parse_language_data(
         test_data_path, language, tokenizer)

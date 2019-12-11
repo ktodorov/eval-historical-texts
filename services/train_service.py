@@ -137,9 +137,9 @@ class TrainService:
             # run on validation set and print progress to terminal
             # if we have eval_frequency or if we have finished the epoch
             if (batches_passed % self._arguments_service.get_argument('eval_freq')) == 0 or (i + 1 == data_loader_length):
-                # loss_validation, acc_validation = self._evaluate()
+                loss_validation, acc_validation = self._evaluate()
 
-                new_best = self._model.compare_metric(best_metrics, train_loss)
+                new_best = self._model.compare_metric(best_metrics, loss_validation)
                 if new_best:
                     best_metrics = train_loss
                     self._model.save(self._model_path, epoch_num, i,
@@ -150,6 +150,7 @@ class TrainService:
 
                 self._log_service.log_evaluation(
                     train_loss,
+                    loss_validation,
                     batches_passed,
                     epoch_num,
                     i,
@@ -193,7 +194,7 @@ class TrainService:
         else:
             loss = self._loss_function.calculate_loss(outputs)
 
-        # accuracy = self._model.calculate_accuracy(targets, *output).item()
+        accuracy = self._model.calculate_accuracy(batch, outputs)
 
         return loss, accuracy
 
@@ -204,22 +205,17 @@ class TrainService:
 
         return model_checkpoint
 
-    # def _evaluate(self) -> Tuple[float, float]:
-    #     """
-    #     runs iteration on validation set
-    #     """
+    def _evaluate(self) -> Tuple[float, float]:
+        accuracies = []
+        losses = []
+        data_loader_length = len(self.data_loader_validation)
 
-    #     accuracies = []
-    #     losses = []
-    #     data_loader_length = len(self.data_loader_validation)
+        for i, batch in enumerate(self.data_loader_validation):
+            self._log_service.log_progress(i, data_loader_length, evaluation=True)
 
-    #     for i, (batch, targets, lengths) in enumerate(self.data_loader_validation):
-    #         print(f'Validation: {i}/{data_loader_length}       \r', end='')
+            loss_batch, accuracy_batch = self._perform_batch_iteration(
+                batch, train_mode=False)
+            accuracies.append(accuracy_batch)
+            losses.append(loss_batch)
 
-    #         # do forward pass and whatnot on batch
-    #         loss_batch, accuracy_batch = self._perform_batch_iteration(
-    #             batch, targets, lengths, i, train_mode=False)
-    #         accuracies.append(accuracy_batch)
-    #         losses.append(loss_batch)
-
-    #     return float(np.mean(losses)), float(np.mean(accuracies))
+        return float(np.mean(losses, axis=0)), float(np.mean(accuracies, axis=0))

@@ -47,9 +47,13 @@ class DataLoaderService:
         if train_dataset.use_collate_function():
             data_loader_train.collate_fn = train_dataset.collate_function
 
-        data_loader_validation = None
+        data_loader_validation = DataLoader(
+            validation_dataset,
+            batch_size=self._arguments_service.get_argument('batch_size'),
+            shuffle=False)
 
-        # TODO: Add dataloader extraction
+        if validation_dataset.use_collate_function():
+            data_loader_validation.collate_fn = validation_dataset.collate_function
 
         return (data_loader_train, data_loader_validation)
 

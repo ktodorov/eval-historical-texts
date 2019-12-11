@@ -4,9 +4,9 @@ from termcolor import colored
 
 class LogService:
     def __init__(self):
-        self._log_header = '  Time Epoch Iteration   Progress  (%Epoch) | Train Loss 1 | Train Loss 2 | Best'
+        self._log_header = '  Time Epoch Iteration   Progress  (%Epoch) | Train Loss | Validation Loss | Best'
         self._log_template = ' '.join(
-            '{:>6.0f},{:>5.0f},{:>9.0f},{:>5.0f}/{:<5.0f} {:>7.0f}%,| {:>12.8f} | {:>12.8f} | {:>4s}'.split(','))
+            '{:>6.0f},{:>5.0f},{:>9.0f},{:>5.0f}/{:<5.0f} {:>7.0f}%,| {:>10.6f} | {:>15.11f} | {:>4s}'.split(','))
 
         self._start_time = datetime.now()
 
@@ -16,8 +16,14 @@ class LogService:
     def log_progress(
             self,
             current_step: int,
-            all_steps: int):
-        print(colored(f'Train: {current_step}/{all_steps}       \r', self._progress_color), end='')
+            all_steps: int,
+            evaluation: bool = False):
+
+        prefix = 'Train'
+        if evaluation:
+            prefix = 'Evaluating'
+
+        print(colored(f'{prefix}: {current_step}/{all_steps}       \r', self._progress_color), end='')
 
     def initialize_evaluation(self):
         print(self._log_header)
@@ -25,6 +31,7 @@ class LogService:
     def log_evaluation(
             self,
             loss_train: float,
+            loss_validation: float,
             batches_done: int,
             epoch: int,
             iteration: int,
@@ -43,8 +50,8 @@ class LogService:
                 1 + iteration,
                 iterations,
                 100. * (1 + iteration) / iterations,
-                loss_train[0] if isinstance(loss_train, list) else loss_train,
-                loss_train[1] if isinstance(loss_train, list) else -1,
+                loss_train,
+                loss_validation,
                 "BEST" if new_best else ""), self._evaluation_color))
 
         # self.writer.add_scalar(

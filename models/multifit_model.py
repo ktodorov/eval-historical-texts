@@ -8,8 +8,8 @@ from models.model_base import ModelBase
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 
-from models.encoder import Encoder
-from models.decoder import Decoder
+from models.multifit_encoder import MultiFitEncoder
+from models.multifit_decoder import MultiFitDecoder
 
 
 class MultiFitModel(ModelBase):
@@ -19,22 +19,27 @@ class MultiFitModel(ModelBase):
             data_service: DataService):
         super(MultiFitModel, self).__init__(data_service, arguments_service)
 
-        self.encoder = Encoder()
-        self.decoder = Decoder()
+        self._device = arguments_service.get_argument('device')
+
+        self.encoder = MultiFitEncoder()
+        self.decoder = MultiFitDecoder()
+
+        self.apply(self.init_weights)
+
+    @staticmethod
+    def init_weights(self):
+        for name, param in self.named_parameters():
+            nn.init.uniform_(param.data, -0.08, 0.08)
 
     def forward(self, input_batch, **kwargs):
         source, targets, lengths = input_batch
-        # src = [src len, batch size]
-        # trg = [trg len, batch size]
-        # teacher_forcing_ratio is probability to use teacher forcing
-        # e.g. if teacher_forcing_ratio is 0.75 we use ground-truth inputs 75% of the time
 
         (batch_size, trg_len) = targets.shape
         trg_vocab_size = self.decoder.output_dim
 
         # tensor to store decoder outputs
         outputs = torch.zeros(batch_size, trg_len,
-                              trg_vocab_size).to('cuda')
+                              trg_vocab_size).to(self._device)
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
         hidden, cell = self.encoder(source)
@@ -65,10 +70,12 @@ class MultiFitModel(ModelBase):
         return outputs, targets, lengths
 
     def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device='cuda')
+        return torch.zeros(1, 1, self.hidden_size, device=self._device)
 
-    def calculate_accuracy(self, predictions, targets) -> int:
+    def calculate_accuracy(self, batch, outputs) -> bool:
+        # targets = batch[2]
         return 0
+
 
     def compare_metric(self, best_metric, metrics) -> bool:
         if best_metric is None or best_metric > metrics:
