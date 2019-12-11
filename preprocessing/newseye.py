@@ -72,8 +72,8 @@ def parse_language_data(
 def train_spm_model(
         dataset_folder_path: str,
         data_output_path: str,
-        language: Language):
-    start_position = 14
+        language: Language,
+        vocabulary_size: int):
 
     if not os.path.exists(dataset_folder_path):
         raise Exception('Folder path does not exist')
@@ -101,7 +101,7 @@ def train_spm_model(
 
         model_prefix = os.path.join(data_output_path, 'tokenizer')
         spm.SentencePieceTrainer.Train(
-            f'--input={file_paths} --model_prefix={model_prefix} --vocab_size=1000')
+            f'--input={file_paths} --model_prefix={model_prefix} --vocab_size={vocabulary_size}')
 
 
 def preprocess_data(

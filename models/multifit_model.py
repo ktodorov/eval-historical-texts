@@ -21,8 +21,31 @@ class MultiFitModel(ModelBase):
 
         self._device = arguments_service.get_argument('device')
 
-        self.encoder = MultiFitEncoder()
-        self.decoder = MultiFitDecoder()
+        self._output_dimension = self._arguments_service.get_argument(
+            'sentence_piece_vocabulary_size')
+
+        self._encoder = MultiFitEncoder(
+            embedding_size=self._arguments_service.get_argument(
+                'embedding_size'),
+            input_size=self._arguments_service.get_argument(
+                'sentence_piece_vocabulary_size'),
+            hidden_dimension=self._arguments_service.get_argument(
+                'hidden_dimension'),
+            number_of_layers=self._arguments_service.get_argument(
+                'number_of_layers'),
+            dropout=self._arguments_service.get_argument('dropout')
+        )
+
+        self._decoder = MultiFitDecoder(
+            embedding_size=self._arguments_service.get_argument(
+                'embedding_size'),
+            output_dimension=self._output_dimension,
+            hidden_dimension=self._arguments_service.get_argument(
+                'hidden_dimension'),
+            number_of_layers=self._arguments_service.get_argument(
+                'number_of_layers'),
+            dropout=self._arguments_service.get_argument('dropout')
+        )
 
         self.apply(self.init_weights)
 
@@ -35,14 +58,14 @@ class MultiFitModel(ModelBase):
         source, targets, lengths = input_batch
 
         (batch_size, trg_len) = targets.shape
-        trg_vocab_size = self.decoder.output_dim
+        trg_vocab_size = self._output_dimension
 
         # tensor to store decoder outputs
         outputs = torch.zeros(batch_size, trg_len,
-                              trg_vocab_size).to(self._device)
+                              trg_vocab_size, device=self._device)
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        hidden, cell = self.encoder(source)
+        hidden, cell = self._encoder.forward(source, lengths)
 
         # first input to the decoder is the <sos> tokens
         input = targets[:, 0]
@@ -52,7 +75,7 @@ class MultiFitModel(ModelBase):
 
             # insert input token embedding, previous hidden and previous cell states
             # receive output tensor (predictions) and new hidden and cell states
-            output, hidden, cell = self.decoder(input, hidden, cell)
+            output, hidden, cell = self._decoder.forward(input, hidden, cell)
 
             # place predictions in a tensor holding predictions for each token
             outputs[:, t] = output
@@ -60,12 +83,14 @@ class MultiFitModel(ModelBase):
             # decide if we are going to use teacher forcing or not
             teacher_force = random.random() < teacher_forcing_ratio
 
-            # get the highest predicted token from our predictions
-            top1 = output.argmax(1)
-
             # if teacher forcing, use actual next token as next input
             # if not, use predicted token
-            input = targets[:, t] if teacher_force else top1
+            if teacher_force:
+                input = targets[:, t]
+            else:
+                # get the highest predicted token from our predictions
+                top1 = output.argmax(1)
+                input = top1
 
         return outputs, targets, lengths
 
@@ -75,7 +100,6 @@ class MultiFitModel(ModelBase):
     def calculate_accuracy(self, batch, outputs) -> bool:
         # targets = batch[2]
         return 0
-
 
     def compare_metric(self, best_metric, metrics) -> bool:
         if best_metric is None or best_metric > metrics:

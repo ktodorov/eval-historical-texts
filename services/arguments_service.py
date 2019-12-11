@@ -32,7 +32,7 @@ class ArgumentsService(ArgumentsServiceBase):
                             help="which language to train on")
         parser.add_argument("--shuffle", action='store_false',
                             help="shuffle datasets while training")
-        parser.add_argument("--learning-rate", type=float, default=2e-5,
+        parser.add_argument("--learning-rate", type=float, default=1e-5,
                             help="learning rate for training models")
         parser.add_argument("--checkpoint-name", type=str, default=None,
                             help="name that can be used to distinguish checkpoints")
@@ -65,3 +65,16 @@ class ArgumentsService(ArgumentsServiceBase):
         # SemEval
         parser.add_argument('--word-distance-threshold', type=float, default=100.0,
                             help='The threshold which will be used to compare against word distance for the SemEval challenge')
+
+        # SentencePiece
+        parser.add_argument('--sentence-piece-vocabulary-size', type=int, default=1000,
+                            help='Vocabulary size that will be used when training the sentence piece model')
+
+        parser.add_argument('--embedding-size', type=int, default=256,
+                            help='The size used for generating embeddings')
+        parser.add_argument('--hidden-dimension', type=int, default=256,
+                            help='The dimension size used for hidden layers')
+        parser.add_argument('--dropout', type=float, default=0.0,
+                            help='Dropout probability')
+        parser.add_argument('--number-of-layers', type=int, default=1,
+                            help='Number of layers used for RNN models')

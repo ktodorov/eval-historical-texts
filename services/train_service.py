@@ -141,7 +141,7 @@ class TrainService:
 
                 new_best = self._model.compare_metric(best_metrics, loss_validation)
                 if new_best:
-                    best_metrics = train_loss
+                    best_metrics = loss_validation
                     self._model.save(self._model_path, epoch_num, i,
                                      best_metrics, name_prefix=f'BEST')
                     patience = self._patience

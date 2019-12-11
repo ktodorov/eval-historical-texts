@@ -38,7 +38,8 @@ class NewsEyeDataset(DatasetBase):
             full_data_path = os.path.join(
                 'data', 'ICDAR2019_POCR_competition_dataset', 'ICDAR2019_POCR_competition_full_22M_without_Finnish')
 
-            train_spm_model(full_data_path, output_data_path, language)
+            vocabulary_size = self._arguments_service.get_argument('sentence_piece_vocabulary_size')
+            train_spm_model(full_data_path, output_data_path, language, vocabulary_size)
             tokenizer_service.load_tokenizer_model()
 
         if not os.path.exists(language_data_path):
