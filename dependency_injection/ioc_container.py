@@ -1,3 +1,7 @@
+import torch
+import numpy as np
+import random
+
 import dependency_injector.containers as containers
 import dependency_injector.providers as providers
 
@@ -38,6 +42,16 @@ from services.train_service import TrainService
 import logging
 
 
+def initialize_seed(seed: int, device: str):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+    if device == 'cuda':
+        torch.backends.cudnn.benchmark = False
+        torch.cuda.manual_seed_all(seed)
+
+
 class IocContainer(containers.DeclarativeContainer):
     """Application IoC container."""
 
@@ -45,6 +59,15 @@ class IocContainer(containers.DeclarativeContainer):
     logger = providers.Singleton(logging.Logger, name='example')
 
     # Services
+
+    arguments_service = providers.Singleton(
+        ArgumentsService
+    )
+
+    arguments_service_instance = arguments_service()
+    initialize_seed(
+        arguments_service_instance.get_argument('seed'),
+        arguments_service_instance.get_argument('device'))
 
     log_service = providers.Singleton(
         LogService
@@ -58,10 +81,6 @@ class IocContainer(containers.DeclarativeContainer):
     data_service = providers.Factory(
         DataService,
         logger=logger,
-    )
-
-    arguments_service = providers.Singleton(
-        ArgumentsService
     )
 
     file_service = providers.Factory(
@@ -105,8 +124,9 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service
     )
 
-    configuration: Configuration = arguments_service().get_argument('configuration')
-    joint_model: bool = arguments_service().get_argument('joint_model')
+    configuration: Configuration = arguments_service_instance.get_argument(
+        'configuration')
+    joint_model: bool = arguments_service_instance.get_argument('joint_model')
     if not joint_model:
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
             loss_function = providers.Singleton(

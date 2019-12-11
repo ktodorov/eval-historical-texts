@@ -19,21 +19,7 @@ def main(
     # print the arguments that the program was initialized with
     arguments_service.print_arguments()
 
-    initialize_seed(
-        arguments_service.get_argument('seed'),
-        arguments_service.get_argument('device'))
-
     if arguments_service.get_argument('evaluate'):
         test_service.test()
     else:
         train_service.train()
-
-
-def initialize_seed(seed: int, device: str):
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-    if device == 'cuda':
-        torch.backends.cudnn.benchmark = False
-        torch.cuda.manual_seed_all(seed)
