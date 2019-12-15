@@ -15,6 +15,7 @@ from models.model_base import ModelBase
 from optimizers.optimizer_base import OptimizerBase
 
 from entities.model_checkpoint import ModelCheckpoint
+from entities.metric import Metric
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.dataloader_service import DataLoaderService
@@ -58,9 +59,9 @@ class TrainService:
         try:
             self._log_service.initialize_evaluation()
 
-            best_metrics = None
+            best_metrics = Metric()
             patience = self._patience
-            losses: List[float] = []
+            metric = Metric()
 
             start_epoch = 0
             start_iteration = 0
@@ -71,13 +72,13 @@ class TrainService:
                     best_metrics = model_checkpoint.best_metrics
                     start_epoch = model_checkpoint.epoch
                     start_iteration = model_checkpoint.iteration
-                    losses.extend([best_metrics] * start_iteration)
+                    metric.initialize(best_metrics, start_iteration)
 
             # run
             for epoch in range(start_epoch, self._arguments_service.get_argument('epochs')):
 
                 best_metrics, patience = self._perform_epoch_iteration(
-                    epoch, best_metrics, patience, losses, start_iteration)
+                    epoch, best_metrics, patience, metric, start_iteration)
 
                 start_iteration = 0  # reset the starting iteration
 
@@ -111,7 +112,7 @@ class TrainService:
             epoch_num: int,
             best_metrics: float,
             patience: int,
-            losses: List[float],
+            metric: Metric,
             start_iteration: int = 0) -> Tuple[float, int, float]:
         """
         one epoch implementation
@@ -127,9 +128,8 @@ class TrainService:
             self._log_service.log_progress(i, data_loader_length)
 
             loss_batch, accuracy_batch = self._perform_batch_iteration(batch)
-            losses.append(loss_batch)
-            train_loss = np.mean(losses, axis=0)
-            train_accuracy += accuracy_batch
+            metric.add_loss(loss_batch)
+            metric.add_accuracy(accuracy_batch)
 
             # calculate amount of batches and walltime passed
             batches_passed = i + (epoch_num * len(self.data_loader_train))
@@ -137,11 +137,12 @@ class TrainService:
             # run on validation set and print progress to terminal
             # if we have eval_frequency or if we have finished the epoch
             if (batches_passed % self._arguments_service.get_argument('eval_freq')) == 0 or (i + 1 == data_loader_length):
-                loss_validation, acc_validation = self._evaluate()
+                validation_metric = self._evaluate()
 
-                new_best = self._model.compare_metric(best_metrics, loss_validation)
+                new_best = self._model.compare_metric(
+                    best_metrics, validation_metric)
                 if new_best:
-                    best_metrics = loss_validation
+                    best_metrics = validation_metric
                     self._model.save(self._model_path, epoch_num, i,
                                      best_metrics, name_prefix=f'BEST')
                     patience = self._patience
@@ -149,8 +150,8 @@ class TrainService:
                     patience -= 1
 
                 self._log_service.log_evaluation(
-                    train_loss,
-                    loss_validation,
+                    metric,
+                    validation_metric,
                     batches_passed,
                     epoch_num,
                     i,
@@ -206,16 +207,16 @@ class TrainService:
         return model_checkpoint
 
     def _evaluate(self) -> Tuple[float, float]:
-        accuracies = []
-        losses = []
+        metric = Metric()
         data_loader_length = len(self.data_loader_validation)
 
         for i, batch in enumerate(self.data_loader_validation):
-            self._log_service.log_progress(i, data_loader_length, evaluation=True)
+            self._log_service.log_progress(
+                i, data_loader_length, evaluation=True)
 
             loss_batch, accuracy_batch = self._perform_batch_iteration(
                 batch, train_mode=False)
-            accuracies.append(accuracy_batch)
-            losses.append(loss_batch)
+            metric.add_accuracy(accuracy_batch)
+            metric.add_loss(loss_batch)
 
-        return float(np.mean(losses, axis=0)), float(np.mean(accuracies, axis=0))
+        return metric

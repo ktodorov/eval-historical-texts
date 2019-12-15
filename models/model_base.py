@@ -6,6 +6,7 @@ import torch.nn as nn
 from datetime import datetime
 
 from entities.model_checkpoint import ModelCheckpoint
+from entities.metric import Metric
 
 from services.data_service import DataService
 from services.arguments_service_base import ArgumentsServiceBase
@@ -27,7 +28,7 @@ class ModelBase(nn.Module):
     def calculate_accuracy(self, batch, outputs) -> bool:
         return 0
 
-    def compare_metric(self, best_metric, metrics) -> bool:
+    def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         return True
 
     def clip_gradients(self):

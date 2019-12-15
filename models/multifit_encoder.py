@@ -18,7 +18,7 @@ class MultiFitEncoder(nn.Module):
 
         self.embedding = nn.Embedding(input_size, embedding_size)
         self.rnn = nn.LSTM(embedding_size, hidden_dimension, number_of_layers,
-                           dropout=dropout, batch_first=True)
+                           dropout=dropout, batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input_batch, lengths, **kwargs):
@@ -28,7 +28,7 @@ class MultiFitEncoder(nn.Module):
 
         x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
         outputs, (hidden, cell) = self.rnn(x_packed)
-        outputs, _ = pad_packed_sequence(outputs, batch_first=True)
+        # outputs, _ = pad_packed_sequence(outputs, batch_first=True)
 
         # outputs = [src len, batch size, hid dim * n directions]
         # hidden = [n layers * n directions, batch size, hid dim]

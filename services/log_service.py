@@ -2,11 +2,13 @@ from datetime import datetime, timedelta
 
 from termcolor import colored
 
+from entities.metric import Metric
+
 class LogService:
     def __init__(self):
-        self._log_header = '  Time Epoch Iteration   Progress  (%Epoch) | Train Loss | Validation Loss | Best'
+        self._log_header = '  Time Epoch Iteration   Progress  (%Epoch) | Train Loss Train Accuracy | Validation Loss Val. Accuracy | Best'
         self._log_template = ' '.join(
-            '{:>6.0f},{:>5.0f},{:>9.0f},{:>5.0f}/{:<5.0f} {:>7.0f}%,| {:>10.6f} | {:>15.11f} | {:>4s}'.split(','))
+            '{:>6.0f},{:>5.0f},{:>9.0f},{:>5.0f}/{:<5.0f} {:>7.0f}%,| {:>10.6f} {:>14.10f} | {:>15.11f} {:>13.9f} | {:>4s}'.split(','))
 
         self._start_time = datetime.now()
 
@@ -30,8 +32,8 @@ class LogService:
 
     def log_evaluation(
             self,
-            loss_train: float,
-            loss_validation: float,
+            train_metric: Metric,
+            validation_metric: Metric,
             batches_done: int,
             epoch: int,
             iteration: int,
@@ -50,8 +52,10 @@ class LogService:
                 1 + iteration,
                 iterations,
                 100. * (1 + iteration) / iterations,
-                loss_train,
-                loss_validation,
+                train_metric.get_current_loss(),
+                train_metric.get_current_accuracy(),
+                validation_metric.get_current_loss(),
+                validation_metric.get_current_accuracy(),
                 "BEST" if new_best else ""), self._evaluation_color))
 
         # self.writer.add_scalar(

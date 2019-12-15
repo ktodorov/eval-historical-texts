@@ -24,14 +24,14 @@ class CrossEntropyLoss(nn.Module):
         return loss.item()
 
     def _calculate_inner_loss(self, model_output):
-        output, trg, lengths = model_output
+        output, targets, lengths = model_output
         output_dim = output.shape[-1]
 
         sequences_length = output.shape[1] - 1
         batch_size = output.shape[0]
 
         output = output[:, 1:].reshape(-1, output_dim)
-        trg = trg[:, 1:].reshape(-1)
+        targets = targets[:, 1:].reshape(-1)
 
         new_output = torch.zeros(lengths.sum(), output_dim).to(self._arguments_service.get_argument('device'))
         new_trg = torch.zeros(lengths.sum(), dtype=torch.long).to(self._arguments_service.get_argument('device'))
@@ -40,14 +40,14 @@ class CrossEntropyLoss(nn.Module):
             new_output[counter:counter+lengths[i]
                        ] = output[(i * sequences_length):((i * sequences_length) + lengths[i])]
             new_trg[counter:counter+lengths[i]
-                    ] = trg[(i * sequences_length):((i * sequences_length) + lengths[i])]
+                    ] = targets[(i * sequences_length):((i * sequences_length) + lengths[i])]
             counter += lengths[i]
 
         output = new_output
-        trg = new_trg
+        targets = new_trg
 
         # trg = [(trg len - 1) * batch size]
         # output = [(trg len - 1) * batch size, output dim]
 
-        loss = self._criterion.forward(output, trg)
+        loss = self._criterion.forward(output, targets)
         return loss

@@ -3,6 +3,7 @@ from torch import nn
 import random
 
 from entities.model_checkpoint import ModelCheckpoint
+from entities.metric import Metric
 from models.model_base import ModelBase
 
 from services.arguments_service_base import ArgumentsServiceBase
@@ -98,9 +99,17 @@ class MultiFitModel(ModelBase):
         return torch.zeros(1, 1, self.hidden_size, device=self._device)
 
     def calculate_accuracy(self, batch, outputs) -> bool:
-        # targets = batch[2]
-        return 0
+        output, targets, lengths = outputs
+        output_dim = output.shape[-1]
+        predicted_characters = output[:,
+                                      1:].reshape(-1, output_dim).max(dim=1)[1]
+        target_characters = targets[:, 1:].reshape(-1)
 
-    def compare_metric(self, best_metric, metrics) -> bool:
-        if best_metric is None or best_metric > metrics:
+        accuracy = ((predicted_characters ==
+                     target_characters).sum().float() / len(targets)).item()
+
+        return accuracy
+
+    def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
+        if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():
             return True
