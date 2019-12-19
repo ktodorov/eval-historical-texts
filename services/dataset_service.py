@@ -5,6 +5,7 @@ from datasets.dataset_base import DatasetBase
 from datasets.kbert_dataset import KBertDataset
 from datasets.joint_dataset import JointDataset
 from datasets.newseye_dataset import NewsEyeDataset
+from datasets.ocr_dataset import OCRDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
 
 from services.arguments_service_base import ArgumentsServiceBase
@@ -52,7 +53,7 @@ class DatasetService:
                 result = KBertDataset(
                     language, self._arguments_service, self._mask_service, self._file_service)
             elif configuration == Configuration.MultiFit:
-                result = NewsEyeDataset(
+                result = OCRDataset(
                     language, self._arguments_service, self._file_service, self._tokenizer_service, run_type)
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(
