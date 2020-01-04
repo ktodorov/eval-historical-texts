@@ -20,15 +20,17 @@ from utils import path_utils
 class OCRDataset(DatasetBase):
     def __init__(
             self,
-            language: str,
-            arguments_service: ArgumentsServiceBase,
             file_service: FileService,
             tokenizer_service: TokenizerService,
             run_type: RunType,
+            language: str,
+            device: torch.device,
+            vocabulary_size: int,
+            reduction: float = None,
             **kwargs):
         super(OCRDataset, self).__init__()
 
-        self._arguments_service = arguments_service
+        self._device = device
 
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
@@ -42,8 +44,6 @@ class OCRDataset(DatasetBase):
 
             full_data_path = os.path.join('data', 'ocr', 'full.txt')
 
-            vocabulary_size = self._arguments_service.get_argument(
-                'sentence_piece_vocabulary_size')
             train_spm_model(full_data_path, output_data_path,
                             vocabulary_size)
             tokenizer_service.load_tokenizer_model()
@@ -56,6 +56,18 @@ class OCRDataset(DatasetBase):
 
         with open(language_data_path, 'rb') as data_file:
             self._language_data: LanguageData = pickle.load(data_file)
+
+            if reduction:
+                items_length = int(self._language_data.length * reduction)
+                language_data_items = self._language_data.get_entries(
+                    items_length)
+                self._language_data = LanguageData(
+                    language_data_items[0],
+                    language_data_items[1],
+                    language_data_items[2])
+
+            print(
+                f'Loaded {self._language_data.length} entries for {str(run_type)}')
 
     def __len__(self):
         return self._language_data.length
@@ -89,12 +101,9 @@ class OCRDataset(DatasetBase):
             padded_targets[i][0:target_length] = targets[i][0:target_length]
 
         return self._sort_batch(
-            torch.from_numpy(padded_sequences).to(
-                self._arguments_service.get_argument('device')),
-            torch.from_numpy(padded_targets).to(
-                self._arguments_service.get_argument('device')),
-            torch.tensor(lengths).to(
-                self._arguments_service.get_argument('device')))
+            torch.from_numpy(padded_sequences).to(self._device),
+            torch.from_numpy(padded_targets).to(self._device),
+            torch.tensor(lengths, device=self._device))
 
     def _sort_batch(self, batch, targets, lengths):
         seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)

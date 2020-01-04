@@ -53,8 +53,21 @@ class DatasetService:
                 result = KBertDataset(
                     language, self._arguments_service, self._mask_service, self._file_service)
             elif configuration == Configuration.MultiFit:
+                reduction_size = self._arguments_service.get_argument(
+                    'train_dataset_reduction_size')
+                if run_type == RunType.Validation:
+                    reduction_size = self._arguments_service.get_argument(
+                        'validation_dataset_reduction_size')
+
                 result = OCRDataset(
-                    language, self._arguments_service, self._file_service, self._tokenizer_service, run_type)
+                    self._file_service,
+                    self._tokenizer_service,
+                    run_type,
+                    language,
+                    self._arguments_service.get_argument('device'),
+                    self._arguments_service.get_argument(
+                        'sentence_piece_vocabulary_size'),
+                    reduction_size)
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(
                 'joint_model_amount')

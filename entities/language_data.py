@@ -4,10 +4,15 @@ from sentencepiece import SentencePieceProcessor
 
 
 class LanguageData:
-    def __init__(self):
-        self._ocr_inputs: List[List[int]] = []
-        self._ocr_aligned: List[List[int]] = []
-        self._gs_aligned: List[List[int]] = []
+    def __init__(
+            self,
+            ocr_inputs: List[List[int]] = [],
+            ocr_aligned: List[List[int]] = [],
+            gs_aligned: List[List[int]] = []):
+
+        self._ocr_inputs: List[List[int]] = ocr_inputs
+        self._ocr_aligned: List[List[int]] = ocr_aligned
+        self._gs_aligned: List[List[int]] = gs_aligned
 
     def add_entry(
             self,
@@ -29,6 +34,19 @@ class LanguageData:
             self._ocr_inputs[index],
             self._ocr_aligned[index],
             self._gs_aligned[index]
+        )
+
+        return result
+
+    def get_entries(self, length: int) -> Tuple[List[List[int]], List[List[int]], List[List[int]]]:
+        if length > self.length:
+            raise Exception(
+                'Length given is greater than the total items in the language data')
+
+        result = (
+            self._ocr_inputs[:length],
+            self._ocr_aligned[:length],
+            self._gs_aligned[:length]
         )
 
         return result

@@ -32,6 +32,10 @@ class ArgumentsServiceBase:
 
         self._add_specific_arguments(parser)
         self._arguments: Dict[str, object] = vars(parser.parse_args())
+        self._validate_arguments(parser)
 
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
+        pass
+
+    def _validate_arguments(self, parser: argparse.ArgumentParser):
         pass

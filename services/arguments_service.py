@@ -50,6 +50,10 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='what the format of the output after evaluation will be')
         parser.add_argument("--challenge", type=str, default=None,
                             help='Optional challenge that the model is being trained for. If given, data and output results will be put into a specific folder')
+        parser.add_argument('--train-dataset-reduction-size', type=float, default=None,
+                            help='Proportions to use to reduce the train dataset. Must be a value between 0.0 and 1.0. By default no reduction is done.')
+        parser.add_argument('--validation-dataset-reduction-size', type=float, default=None,
+                            help='Proportions to use to reduce the validation dataset. Must be a value between 0.0 and 1.0. By default no reduction is done.')
 
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',
@@ -60,7 +64,6 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='If a joint model should be used instead of a single one')
         parser.add_argument('--joint-model-amount', type=int, default=2,
                             help='How many models should be trained jointly')
-
 
         # SemEval
         parser.add_argument('--word-distance-threshold', type=float, default=100.0,
@@ -78,3 +81,16 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='Dropout probability')
         parser.add_argument('--number-of-layers', type=int, default=1,
                             help='Number of layers used for RNN models')
+
+    def _validate_arguments(self, parser: argparse.ArgumentParser):
+        super()._validate_arguments(parser)
+
+        train_dataset_reduction_size = self._arguments['train_dataset_reduction_size']
+        if train_dataset_reduction_size and (train_dataset_reduction_size <= 0 or train_dataset_reduction_size >= 1):
+            raise parser.error(
+                '"--train-dataset-reduction-size" must be between 0.0 and 1.0')
+
+        validation_dataset_reduction_size = self._arguments['validation_dataset_reduction_size']
+        if validation_dataset_reduction_size and (validation_dataset_reduction_size <= 0 or validation_dataset_reduction_size >= 1):
+            raise parser.error(
+                '"--validation-dataset-reduction-size" must be between 0.0 and 1.0')
