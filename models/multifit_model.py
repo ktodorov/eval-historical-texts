@@ -4,10 +4,14 @@ import random
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
+
+from enums.accuracy_type import AccuracyType
+
 from models.model_base import ModelBase
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
+from services.tokenizer_service import TokenizerService
 
 from models.multifit_encoder import MultiFitEncoder
 from models.multifit_decoder import MultiFitDecoder
@@ -17,10 +21,14 @@ class MultiFitModel(ModelBase):
     def __init__(
             self,
             arguments_service: ArgumentsServiceBase,
-            data_service: DataService):
+            data_service: DataService,
+            tokenizer_service: TokenizerService):
         super(MultiFitModel, self).__init__(data_service, arguments_service)
 
         self._device = arguments_service.get_argument('device')
+        self._accuracy_type: AccuracyType = arguments_service.get_argument(
+            'accuracy_type')
+        self._tokenizer_service = tokenizer_service
 
         self._output_dimension = self._arguments_service.get_argument(
             'sentence_piece_vocabulary_size')
@@ -103,10 +111,24 @@ class MultiFitModel(ModelBase):
         output_dim = output.shape[-1]
         predicted_characters = output[:,
                                       1:].reshape(-1, output_dim).max(dim=1)[1]
+
         target_characters = targets[:, 1:].reshape(-1)
 
-        accuracy = ((predicted_characters ==
-                     target_characters).sum().float() / len(targets)).item()
+        if self._accuracy_type == AccuracyType.WordLevel:
+            predicted_string = self._tokenizer_service.decode_tokens(
+                predicted_characters.detach().cpu().tolist())
+            target_string = self._tokenizer_service.decode_tokens(
+                target_characters.detach().cpu().tolist())
+
+            predicted_words = predicted_string.split(' ')
+            target_words = target_string.split(' ')
+            matches_list = [1 for i, j in zip(
+                predicted_words, target_words) if i == j]
+            accuracy = float(len(matches_list)) / \
+                max(len(target_words), len(predicted_words))
+        else:
+            accuracy = ((predicted_characters ==
+                         target_characters).sum().float() / len(targets)).item()
 
         return accuracy
 

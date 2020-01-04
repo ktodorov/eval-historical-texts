@@ -127,6 +127,7 @@ class IocContainer(containers.DeclarativeContainer):
     configuration: Configuration = arguments_service_instance.get_argument(
         'configuration')
     joint_model: bool = arguments_service_instance.get_argument('joint_model')
+    device: torch.device = arguments_service_instance.get_argument('device')
     if not joint_model:
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
             loss_function = providers.Singleton(
@@ -147,13 +148,14 @@ class IocContainer(containers.DeclarativeContainer):
         elif configuration == Configuration.MultiFit:
             loss_function = providers.Singleton(
                 CrossEntropyLoss,
-                arguments_service=arguments_service
+                device=device
             )
 
             model = providers.Singleton(
                 MultiFitModel,
                 arguments_service=arguments_service,
-                data_service=data_service
+                data_service=data_service,
+                tokenizer_service=tokenizer_service
             )
 
             optimizer = providers.Singleton(

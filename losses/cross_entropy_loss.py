@@ -8,10 +8,10 @@ from services.arguments_service_base import ArgumentsServiceBase
 class CrossEntropyLoss(nn.Module):
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase):
+            device: torch.device):
         super(CrossEntropyLoss, self).__init__()
         self._criterion = nn.CrossEntropyLoss(ignore_index=0)
-        self._arguments_service = arguments_service
+        self._device = device
 
     def backward(self, model_output):
         loss = self._calculate_inner_loss(model_output)
@@ -33,8 +33,8 @@ class CrossEntropyLoss(nn.Module):
         output = output[:, 1:].reshape(-1, output_dim)
         targets = targets[:, 1:].reshape(-1)
 
-        new_output = torch.zeros(lengths.sum(), output_dim).to(self._arguments_service.get_argument('device'))
-        new_trg = torch.zeros(lengths.sum(), dtype=torch.long).to(self._arguments_service.get_argument('device'))
+        new_output = torch.zeros(lengths.sum(), output_dim, device=self._device)
+        new_trg = torch.zeros(lengths.sum(), dtype=torch.long, device=self._device)
         counter = 0
         for i in range(batch_size):
             new_output[counter:counter+lengths[i]
@@ -45,9 +45,6 @@ class CrossEntropyLoss(nn.Module):
 
         output = new_output
         targets = new_trg
-
-        # trg = [(trg len - 1) * batch size]
-        # output = [(trg len - 1) * batch size, output dim]
 
         loss = self._criterion.forward(output, targets)
         return loss

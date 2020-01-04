@@ -43,6 +43,10 @@ class TokenizerService:
         self._tokenizer.Load(tokenizer_path)
         self._tokenizer_loaded = True
 
+    def decode_tokens(self, character_ids) -> str:
+        result = self._tokenizer.DecodeIds(character_ids)
+        return result
+
     def is_tokenizer_loaded(self) -> bool:
         return self._tokenizer_loaded
 
