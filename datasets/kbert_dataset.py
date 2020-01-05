@@ -24,6 +24,7 @@ class KBertDataset(DatasetBase):
             file_service: FileService,
             tokenizer_service: TokenizerService,
             corpus_id: int = 1,
+            reduction: float = None,
             **kwargs):
         super(KBertDataset, self).__init__()
 
@@ -44,6 +45,12 @@ class KBertDataset(DatasetBase):
 
         with open(ids_path, 'rb') as data_file:
             self._ids = pickle.load(data_file)
+
+            if reduction:
+                items_length = int(len(self._ids) * reduction)
+                self._ids = self._ids[:items_length]
+
+            print(f'Loaded {len(self._ids)} entries')
 
     def __len__(self):
         return len(self._ids)

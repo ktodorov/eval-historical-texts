@@ -85,7 +85,7 @@ tk=8.6.8=hfa6e2cd_0
 torchvision=0.4.2=py37_cu101
 tornado=6.0.3=py37he774522_0
 tqdm=4.38.0=pypi_0
-transformers=2.1.1=pypi_0
+transformers=2.3.0=pypi_0
 urllib3=1.25.7=py37_0
 vc=14.1=h0510ff6_4
 vs2015_runtime=14.16.27012=hf0eaf9b_0

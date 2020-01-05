@@ -135,3 +135,6 @@ class MultiFitModel(ModelBase):
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():
             return True
+
+        return False
+

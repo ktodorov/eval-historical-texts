@@ -4,6 +4,7 @@ from typing import Callable
 from transformers import BertForMaskedLM, BertPreTrainedModel
 
 from entities.model_checkpoint import ModelCheckpoint
+from entities.metric import Metric
 from models.model_base import ModelBase
 
 from services.arguments_service_base import ArgumentsServiceBase
@@ -39,9 +40,11 @@ class KBertModel(ModelBase):
     def calculate_accuracy(self, predictions, targets) -> int:
         return 0
 
-    def compare_metric(self, best_metric, metrics) -> bool:
-        if best_metric is None or best_metric > metrics:
+    def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
+        if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():
             return True
+
+        return False
 
     def save(
             self,
