@@ -19,4 +19,4 @@ module load Python/3.7.5-foss-2018b
 
 ### todo: COPY TO SCRATCH FIRST??? -> see example in vae file
 source activate eval-env
-srun python3 -u run.py --device cuda --seed 13 --configuration multi-fit --learning-rate 1e-2 --accuracy-type character-level --language english --challenge ocr --batch-size 16 --validation-dataset-reduction-size 0.05 --hidden-dimension 256 --sentence-piece-vocabulary-size 8000 --embedding-size 256 --dropout 0 --number-of-layers 1 > output/multifit-13.txt
+srun python3 -u run.py --device cuda --seed 13 --configuration multi-fit --learning-rate 1e-2 --accuracy-type character-level --language english --challenge ocr --batch-size 8 --validation-dataset-reduction-size 0.05 --hidden-dimension 256 --sentence-piece-vocabulary-size 8000 --embedding-size 256 --dropout 0 --number-of-layers 1 > output/multifit-13.txt

@@ -9,3 +9,7 @@ class LossBase(nn.Module):
 
     def calculate_loss(self, model_output):
         pass
+
+    @property
+    def criterion(self) -> nn.Module:
+        return None

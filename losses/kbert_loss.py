@@ -1,6 +1,8 @@
 import torch.nn as nn
 
-class KBertLoss(nn.Module):
+from losses.loss_base import LossBase
+
+class KBertLoss(LossBase):
     def __init__(self):
         super(KBertLoss, self).__init__()
 

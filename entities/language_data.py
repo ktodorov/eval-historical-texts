@@ -1,6 +1,7 @@
 from enums.language import Language
 from typing import Dict, List, Tuple
 from sentencepiece import SentencePieceProcessor
+import math
 
 
 class LanguageData:
@@ -10,7 +11,7 @@ class LanguageData:
             ocr_aligned: List[List[int]] = [],
             gs_aligned: List[List[int]] = []):
 
-        self._ocr_inputs: List[List[int]] = ocr_inputs
+        self._ocr_inputs: List[List[int]] = []  # ocr_inputs
         self._ocr_aligned: List[List[int]] = ocr_aligned
         self._gs_aligned: List[List[int]] = gs_aligned
 
@@ -21,7 +22,7 @@ class LanguageData:
             gs_aligned_entry: str,
             tokenizer: SentencePieceProcessor):
 
-        self._ocr_inputs.append(tokenizer.EncodeAsIds(ocr_input_entry))
+        # self._ocr_inputs.append(tokenizer.EncodeAsIds(ocr_input_entry))
         self._ocr_aligned.append(tokenizer.EncodeAsIds(ocr_aligned_entry))
         self._gs_aligned.append(tokenizer.EncodeAsIds(gs_aligned_entry))
 
@@ -31,7 +32,7 @@ class LanguageData:
                 'Index given is higher than the total items in the language data')
 
         result = (
-            self._ocr_inputs[index],
+            None,  # self._ocr_inputs[index],
             self._ocr_aligned[index],
             self._gs_aligned[index]
         )
@@ -44,17 +45,26 @@ class LanguageData:
                 'Length given is greater than the total items in the language data')
 
         result = (
-            self._ocr_inputs[:length],
+            None,  # self._ocr_inputs[:length],
             self._ocr_aligned[:length],
             self._gs_aligned[:length]
         )
 
         return result
 
+
+    def trim_entries(self, length: int):
+        self._ocr_inputs = [ocr_input[:length]
+                            for ocr_input in self._ocr_inputs]
+        self._ocr_aligned = [ocr_aligned[:length]
+                             for ocr_aligned in self._ocr_aligned]
+        self._gs_aligned = [gs_aligned[:length]
+                            for gs_aligned in self._gs_aligned]
+
     @property
     def length(self) -> int:
         result = min(
-            len(self._ocr_inputs),
+            math.inf,  # len(self._ocr_inputs),
             len(self._ocr_aligned),
             len(self._gs_aligned)
         )

@@ -70,7 +70,8 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service_instance.get_argument('device'))
 
     log_service = providers.Singleton(
-        LogService
+        LogService,
+        arguments_service=arguments_service
     )
 
     config_service = providers.Singleton(
@@ -105,7 +106,8 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service,
         mask_service=mask_service,
         tokenizer_service=tokenizer_service,
-        file_service=file_service
+        file_service=file_service,
+        log_service=log_service
     )
 
     dataloader_service = providers.Factory(

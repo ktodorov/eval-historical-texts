@@ -5,10 +5,10 @@ import pickle
 
 from datasets.dataset_base import DatasetBase
 from services.arguments_service_base import ArgumentsServiceBase
-from services.data_service import DataService
 from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService
+from services.log_service import LogService
 
 from preprocessing.semeval_dataset import preprocess_data
 
@@ -23,6 +23,7 @@ class KBertDataset(DatasetBase):
             mask_service: MaskService,
             file_service: FileService,
             tokenizer_service: TokenizerService,
+            log_service: LogService,
             corpus_id: int = 1,
             reduction: float = None,
             **kwargs):
@@ -51,6 +52,7 @@ class KBertDataset(DatasetBase):
                 self._ids = self._ids[:items_length]
 
             print(f'Loaded {len(self._ids)} entries')
+            log_service.log_summary(key='Entries amount', value=len(self._ids))
 
     def __len__(self):
         return len(self._ids)

@@ -1,6 +1,8 @@
 import torch.nn as nn
 
-class JointLoss(nn.Module):
+from losses.loss_base import LossBase
+
+class JointLoss(LossBase):
     def __init__(self):
         super(JointLoss, self).__init__()
 

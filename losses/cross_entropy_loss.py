@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 from services.arguments_service_base import ArgumentsServiceBase
+from losses.loss_base import LossBase
 
-
-class CrossEntropyLoss(nn.Module):
+class CrossEntropyLoss(LossBase):
     def __init__(
             self,
             device: torch.device):
@@ -48,3 +48,7 @@ class CrossEntropyLoss(nn.Module):
 
         loss = self._criterion.forward(output, targets)
         return loss
+
+    @property
+    def criterion(self) -> nn.Module:
+        return self._criterion

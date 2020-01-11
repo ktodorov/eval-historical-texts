@@ -12,6 +12,7 @@ from services.arguments_service_base import ArgumentsServiceBase
 from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService
+from services.log_service import LogService
 
 
 class DatasetService:
@@ -20,12 +21,14 @@ class DatasetService:
             arguments_service: ArgumentsServiceBase,
             mask_service: MaskService,
             tokenizer_service: TokenizerService,
-            file_service: FileService):
+            file_service: FileService,
+            log_service: LogService):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
         self._tokenizer_service = tokenizer_service
         self._file_service = file_service
+        self._log_service = log_service
 
     def get_dataset(self, run_type: RunType, language: str) -> DatasetBase:
         """Loads and returns the dataset based on run type ``(Train, Validation, Test)`` and the language
@@ -62,18 +65,21 @@ class DatasetService:
                     self._mask_service,
                     self._file_service,
                     self._tokenizer_service,
+                    self._log_service,
                     reduction=reduction_size)
 
             elif configuration == Configuration.MultiFit:
                 result = OCRDataset(
                     self._file_service,
                     self._tokenizer_service,
+                    self._log_service,
                     run_type,
                     language,
                     self._arguments_service.get_argument('device'),
                     self._arguments_service.get_argument(
                         'sentence_piece_vocabulary_size'),
-                    reduction_size)
+                    reduction_size,
+                    self._arguments_service.get_argument('max_articles_length'))
 
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(
@@ -91,7 +97,7 @@ class DatasetService:
 
         result = []
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
-            result = [KBertDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenizer_service, corpus_id=i+1)
+            result = [KBertDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenizer_service, self._log_service, corpus_id=i+1)
                       for i in range(number_of_datasets)]
         else:
             raise Exception('Unsupported configuration')

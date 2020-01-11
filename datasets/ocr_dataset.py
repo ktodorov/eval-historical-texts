@@ -7,10 +7,9 @@ from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
 from entities.language_data import LanguageData
 from services.arguments_service_base import ArgumentsServiceBase
-from services.data_service import DataService
 from services.file_service import FileService
-from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService
+from services.log_service import LogService
 
 from preprocessing.ocr_preprocessing import train_spm_model, preprocess_data, combine_data
 
@@ -22,11 +21,13 @@ class OCRDataset(DatasetBase):
             self,
             file_service: FileService,
             tokenizer_service: TokenizerService,
+            log_service: LogService,
             run_type: RunType,
             language: str,
             device: torch.device,
             vocabulary_size: int,
             reduction: float = None,
+            max_articles_length: int = 1000,
             **kwargs):
         super(OCRDataset, self).__init__()
 
@@ -66,8 +67,9 @@ class OCRDataset(DatasetBase):
                     language_data_items[1],
                     language_data_items[2])
 
-            print(
-                f'Loaded {self._language_data.length} entries for {str(run_type)}')
+            self._language_data.trim_entries(max_articles_length)
+            print(f'Loaded {self._language_data.length} entries for {run_type.to_str()}')
+            log_service.log_summary(key=f'\'{run_type.to_str()}\' entries amount', value=self._language_data.length)
 
     def __len__(self):
         return self._language_data.length

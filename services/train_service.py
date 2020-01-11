@@ -24,7 +24,6 @@ from services.log_service import LogService
 
 from transformers import BertTokenizer
 
-
 class TrainService:
     def __init__(
             self,
@@ -40,21 +39,23 @@ class TrainService:
         self._model_path = file_service.get_checkpoints_path()
 
         self._log_service = log_service
+        self._dataloader_service = dataloader_service
 
         self._loss_function = loss_function
         self._optimizer = optimizer
         self._model = model.to(arguments_service.get_argument('device'))
         self._patience = self._arguments_service.get_argument('patience')
 
-        (self.data_loader_train,
-         self.data_loader_validation) = dataloader_service.get_train_dataloaders()
-
     def train(self) -> bool:
         """
          main training function
         """
 
+        (self.data_loader_train,
+         self.data_loader_validation) = self._dataloader_service.get_train_dataloaders()
+
         epoch = 0
+        self._log_service.start_logging_model(self._model, self._loss_function.criterion)
 
         try:
             self._log_service.initialize_evaluation()
@@ -110,10 +111,10 @@ class TrainService:
     def _perform_epoch_iteration(
             self,
             epoch_num: int,
-            best_metrics: float,
+            best_metrics: Metric,
             patience: int,
             metric: Metric,
-            start_iteration: int = 0) -> Tuple[float, int, float]:
+            start_iteration: int = 0) -> Tuple[Metric, int]:
         """
         one epoch implementation
         """
@@ -145,6 +146,9 @@ class TrainService:
                     best_metrics = validation_metric
                     self._model.save(self._model_path, epoch_num, i,
                                      best_metrics, name_prefix=f'BEST')
+
+                    self._log_service.log_summary(key='Best accuracy', value=best_metrics.get_current_accuracy())
+                    self._log_service.log_summary(key='Best loss', value=best_metrics.get_current_loss())
                     patience = self._patience
                 else:
                     patience -= 1
@@ -206,7 +210,7 @@ class TrainService:
 
         return model_checkpoint
 
-    def _evaluate(self) -> Tuple[float, float]:
+    def _evaluate(self) -> Metric:
         metric = Metric()
         data_loader_length = len(self.data_loader_validation)
 
