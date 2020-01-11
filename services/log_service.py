@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from termcolor import colored
 import wandb
-import torch 
+import torch
+import numpy as np
 
 from entities.metric import Metric
 from services.arguments_service_base import ArgumentsServiceBase
@@ -25,7 +26,7 @@ class LogService:
             config=arguments_service._arguments
             # resume=arguments_service.get_argument('resume_training'),
             # id='' #TODO
-            )
+        )
 
     def log_progress(
             self,
@@ -58,9 +59,9 @@ class LogService:
 
         time_passed = self.get_time_passed()
         train_loss = train_metric.get_current_loss()
-        train_accuracy = train_metric.get_current_accuracy()
+        train_accuracies = train_metric.get_current_accuracies()
         validation_loss = validation_metric.get_current_loss()
-        validation_accuracy = validation_metric.get_current_accuracy()
+        validation_accuracies = validation_metric.get_current_accuracies()
 
         print(colored(
             self._log_template.format(
@@ -71,18 +72,23 @@ class LogService:
                 iterations,
                 100. * (1 + iteration) / iterations,
                 train_loss,
-                train_accuracy,
+                np.mean([*train_accuracies.values()]),
                 validation_loss,
-                validation_accuracy,
+                np.mean([*validation_accuracies.values()]),
                 "BEST" if new_best else ""), self._evaluation_color))
 
         wandb.log({'Train loss': train_loss},
                   step=time_passed.seconds, commit=False)
-        wandb.log({'Train accuracy': train_accuracy},
-                  step=time_passed.seconds, commit=False)
+
+        for key, value in train_accuracies.items():
+            wandb.log({f'Train accuracy - {key}': value},
+                      step=time_passed.seconds, commit=False)
+
+        for key, value in validation_accuracies.items():
+            wandb.log({f'Validation accuracy - {key}': value},
+                      step=time_passed.seconds, commit=False)
+
         wandb.log({'Validation loss': validation_loss},
-                  step=time_passed.seconds, commit=False)
-        wandb.log({'Validation accuracy': validation_accuracy},
                   step=time_passed.seconds)
 
     def log_summary(self, key: str, value: object):

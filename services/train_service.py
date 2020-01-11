@@ -3,7 +3,7 @@ import sys
 import time
 import math
 from datetime import datetime
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 
 import torch
@@ -16,6 +16,8 @@ from optimizers.optimizer_base import OptimizerBase
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
+
+from enums.accuracy_type import AccuracyType
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.dataloader_service import DataLoaderService
@@ -87,6 +89,7 @@ class TrainService:
                 sys.stdout.flush()
 
                 if patience == 0:
+                    print('Stopping training due to depleted patience')
                     break
 
         except KeyboardInterrupt as e:
@@ -128,9 +131,9 @@ class TrainService:
 
             self._log_service.log_progress(i, data_loader_length)
 
-            loss_batch, accuracy_batch = self._perform_batch_iteration(batch)
+            loss_batch, accuracies_batch = self._perform_batch_iteration(batch)
             metric.add_loss(loss_batch)
-            metric.add_accuracy(accuracy_batch)
+            metric.add_accuracies(accuracies_batch)
 
             # calculate amount of batches and walltime passed
             batches_passed = i + (epoch_num * len(self.data_loader_train))
@@ -147,7 +150,9 @@ class TrainService:
                     self._model.save(self._model_path, epoch_num, i,
                                      best_metrics, name_prefix=f'BEST')
 
-                    self._log_service.log_summary(key='Best accuracy', value=best_metrics.get_current_accuracy())
+                    best_accuracies = best_metrics.get_current_accuracies()
+                    for key, value in best_accuracies.items():
+                        self._log_service.log_summary(key=f'Best accuracy - {str(key)}', value=value)
                     self._log_service.log_summary(key='Best loss', value=best_metrics.get_current_loss())
                     patience = self._patience
                 else:
@@ -177,7 +182,7 @@ class TrainService:
     def _perform_batch_iteration(
             self,
             batch: torch.Tensor,
-            train_mode: bool = True) -> Tuple[float, float]:
+            train_mode: bool = True) -> Tuple[float, Dict[AccuracyType, float]]:
         """
         runs forward pass on batch and backward pass if in train_mode
         """
@@ -199,9 +204,9 @@ class TrainService:
         else:
             loss = self._loss_function.calculate_loss(outputs)
 
-        accuracy = self._model.calculate_accuracy(batch, outputs)
+        accuracies = self._model.calculate_accuracies(batch, outputs)
 
-        return loss, accuracy
+        return loss, accuracies
 
     def _load_model(self) -> ModelCheckpoint:
         model_checkpoint = self._model.load(self._model_path, 'BEST')
@@ -218,9 +223,9 @@ class TrainService:
             self._log_service.log_progress(
                 i, data_loader_length, evaluation=True)
 
-            loss_batch, accuracy_batch = self._perform_batch_iteration(
+            loss_batch, accuracies_batch = self._perform_batch_iteration(
                 batch, train_mode=False)
-            metric.add_accuracy(accuracy_batch)
+            metric.add_accuracies(accuracies_batch)
             metric.add_loss(loss_batch)
 
         return metric

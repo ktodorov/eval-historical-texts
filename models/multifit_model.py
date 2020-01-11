@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import random
 
+from typing import List, Dict
+
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
 
@@ -26,7 +28,7 @@ class MultiFitModel(ModelBase):
         super(MultiFitModel, self).__init__(data_service, arguments_service)
 
         self._device = arguments_service.get_argument('device')
-        self._accuracy_type: AccuracyType = arguments_service.get_argument(
+        self._accuracy_types: List[AccuracyType] = arguments_service.get_argument(
             'accuracy_type')
         self._tokenizer_service = tokenizer_service
 
@@ -106,7 +108,7 @@ class MultiFitModel(ModelBase):
     def initHidden(self):
         return torch.zeros(1, 1, self.hidden_size, device=self._device)
 
-    def calculate_accuracy(self, batch, outputs) -> bool:
+    def calculate_accuracies(self, batch, outputs) -> Dict[AccuracyType, float]:
         output, targets, lengths = outputs
         output_dim = output.shape[-1]
         predicted_characters = output[:,
@@ -114,7 +116,9 @@ class MultiFitModel(ModelBase):
 
         target_characters = targets[:, 1:].reshape(-1)
 
-        if self._accuracy_type == AccuracyType.WordLevel:
+        accuracies = {}
+
+        if AccuracyType.WordLevel in self._accuracy_types:
             predicted_string = self._tokenizer_service.decode_tokens(
                 predicted_characters.detach().cpu().tolist())
             target_string = self._tokenizer_service.decode_tokens(
@@ -126,11 +130,16 @@ class MultiFitModel(ModelBase):
                 predicted_words, target_words) if i == j]
             accuracy = float(len(matches_list)) / \
                 max(len(target_words), len(predicted_words))
-        else:
+
+            accuracies[AccuracyType.WordLevel] = accuracy
+
+        if AccuracyType.CharacterLevel in self._accuracy_types:
             accuracy = ((predicted_characters ==
                          target_characters).sum().float() / len(targets)).item()
 
-        return accuracy
+            accuracies[AccuracyType.CharacterLevel] = accuracy
+
+        return accuracies
 
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():

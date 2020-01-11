@@ -56,7 +56,7 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='Proportions to use to reduce the train dataset. Must be a value between 0.0 and 1.0. By default no reduction is done.')
         parser.add_argument('--validation-dataset-reduction-size', type=float, default=None,
                             help='Proportions to use to reduce the validation dataset. Must be a value between 0.0 and 1.0. By default no reduction is done.')
-        parser.add_argument('--accuracy-type', type=AccuracyType, choices=list(AccuracyType), default=AccuracyType.CharacterLevel,
+        parser.add_argument('--accuracy-type', type=AccuracyType, choices=list(AccuracyType), default=AccuracyType.CharacterLevel, nargs='*',
                             help='How should the accuracy be calculated. Default is character-level accuracy')
         parser.add_argument('--max-articles-length', type=int, default=1000,
                             help='This is the maximum length of articles that will be used in models. Articles longer than this length will be cut.')

@@ -37,9 +37,6 @@ class KBertModel(ModelBase):
     def parameters(self):
         return self._bert_model.parameters()
 
-    def calculate_accuracy(self, predictions, targets) -> int:
-        return 0
-
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():
             return True
