@@ -28,7 +28,7 @@ class ModelBase(nn.Module):
     def forward(self):
         return None
 
-    def calculate_accuracies(self, batch, outputs) -> Dict[AccuracyType, float]:
+    def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[AccuracyType, float]:
         return {AccuracyType.CharacterLevel: 0}
 
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:

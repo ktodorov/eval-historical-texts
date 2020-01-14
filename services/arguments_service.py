@@ -60,6 +60,8 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='How should the accuracy be calculated. Default is character-level accuracy')
         parser.add_argument('--max-articles-length', type=int, default=1000,
                             help='This is the maximum length of articles that will be used in models. Articles longer than this length will be cut.')
+        parser.add_argument('--enable-external-logging', action='store_true',
+                            help='Should logging to external service be enabled')
 
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',

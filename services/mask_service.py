@@ -29,7 +29,9 @@ class MaskService:
         :return: returns the masked inputs as well as the labels for the masks
         :rtype: Tuple[torch.Tensor, torch.Tensor]
         """
-        tokenizer = self._tokenizer_service.tokenizer
+        # TODO add check
+        tokenizer = self._tokenizer_service.get_sub_tokenizer()
+
         labels = inputs.clone()
         # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
         probability_matrix = torch.full(labels.shape, mlm_probability)

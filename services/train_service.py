@@ -182,7 +182,8 @@ class TrainService:
     def _perform_batch_iteration(
             self,
             batch: torch.Tensor,
-            train_mode: bool = True) -> Tuple[float, Dict[AccuracyType, float]]:
+            train_mode: bool = True,
+            print_characters: bool = False) -> Tuple[float, Dict[AccuracyType, float]]:
         """
         runs forward pass on batch and backward pass if in train_mode
         """
@@ -204,7 +205,7 @@ class TrainService:
         else:
             loss = self._loss_function.calculate_loss(outputs)
 
-        accuracies = self._model.calculate_accuracies(batch, outputs)
+        accuracies = self._model.calculate_accuracies(batch, outputs, print_characters=print_characters)
 
         return loss, accuracies
 
@@ -224,7 +225,7 @@ class TrainService:
                 i, data_loader_length, evaluation=True)
 
             loss_batch, accuracies_batch = self._perform_batch_iteration(
-                batch, train_mode=False)
+                batch, train_mode=False, print_characters=(i==0))
             metric.add_accuracies(accuracies_batch)
             metric.add_loss(loss_batch)
 

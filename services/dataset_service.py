@@ -73,6 +73,7 @@ class DatasetService:
                     self._file_service,
                     self._tokenizer_service,
                     self._log_service,
+                    self._mask_service,
                     run_type,
                     language,
                     self._arguments_service.get_argument('device'),

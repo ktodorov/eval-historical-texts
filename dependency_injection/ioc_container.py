@@ -69,9 +69,12 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service_instance.get_argument('seed'),
         arguments_service_instance.get_argument('device'))
 
+    external_logging_enabled: bool = arguments_service_instance.get_argument('enable_external_logging')
+
     log_service = providers.Singleton(
         LogService,
-        arguments_service=arguments_service
+        arguments_service=arguments_service,
+        external_logging_enabled=external_logging_enabled
     )
 
     config_service = providers.Singleton(

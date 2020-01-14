@@ -11,7 +11,8 @@ from services.arguments_service_base import ArgumentsServiceBase
 class LogService:
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase):
+            arguments_service: ArgumentsServiceBase,
+            external_logging_enabled: bool = False):
         self._log_header = '  Time Epoch Iteration   Progress  (%Epoch) | Train Loss Train Accuracy | Validation Loss Val. Accuracy | Best'
         self._log_template = ' '.join(
             '{:>6.0f},{:>5.0f},{:>9.0f},{:>5.0f}/{:<5.0f} {:>7.0f}%,| {:>10.6f} {:>14.10f} | {:>15.11f} {:>13.9f} | {:>4s}'.split(','))
@@ -21,12 +22,14 @@ class LogService:
         self._progress_color = 'red'
         self._evaluation_color = 'cyan'
 
-        wandb.init(
-            project='eval-historical-texts',
-            config=arguments_service._arguments
-            # resume=arguments_service.get_argument('resume_training'),
-            # id='' #TODO
-        )
+        self._external_logging_enabled = external_logging_enabled
+        if self._external_logging_enabled:
+            wandb.init(
+                project='eval-historical-texts',
+                config=arguments_service._arguments
+                # resume=arguments_service.get_argument('resume_training'),
+                # id='' #TODO
+            )
 
     def log_progress(
             self,
@@ -77,25 +80,28 @@ class LogService:
                 np.mean([*validation_accuracies.values()]),
                 "BEST" if new_best else ""), self._evaluation_color))
 
-        wandb.log({'Train loss': train_loss},
-                  step=time_passed.seconds, commit=False)
+        if self._external_logging_enabled:
+            wandb.log({'Train loss': train_loss},
+                    step=time_passed.seconds, commit=False)
 
-        for key, value in train_accuracies.items():
-            wandb.log({f'Train accuracy - {key}': value},
-                      step=time_passed.seconds, commit=False)
+            for key, value in train_accuracies.items():
+                wandb.log({f'Train accuracy - {key}': value},
+                        step=time_passed.seconds, commit=False)
 
-        for key, value in validation_accuracies.items():
-            wandb.log({f'Validation accuracy - {key}': value},
-                      step=time_passed.seconds, commit=False)
+            for key, value in validation_accuracies.items():
+                wandb.log({f'Validation accuracy - {key}': value},
+                        step=time_passed.seconds, commit=False)
 
-        wandb.log({'Validation loss': validation_loss},
-                  step=time_passed.seconds)
+            wandb.log({'Validation loss': validation_loss},
+                    step=time_passed.seconds)
 
     def log_summary(self, key: str, value: object):
-        wandb.run.summary[key] = value
+        if self._external_logging_enabled:
+            wandb.run.summary[key] = value
 
     def start_logging_model(self, model: torch.nn.Module, criterion: torch.nn.Module = None):
-        wandb.watch(model, criterion=criterion)
+        if self._external_logging_enabled:
+            wandb.watch(model, criterion=criterion)
 
     def get_time_passed(self) -> timedelta:
         result = datetime.now() - self._start_time

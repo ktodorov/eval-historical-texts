@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import random
+import numpy as np
 
 from typing import List, Dict
 
@@ -35,6 +36,8 @@ class MultiFitModel(ModelBase):
         self._output_dimension = self._arguments_service.get_argument(
             'sentence_piece_vocabulary_size')
 
+        self._include_pretrained_model = False
+
         self._encoder = MultiFitEncoder(
             embedding_size=self._arguments_service.get_argument(
                 'embedding_size'),
@@ -44,21 +47,26 @@ class MultiFitModel(ModelBase):
                 'hidden_dimension'),
             number_of_layers=self._arguments_service.get_argument(
                 'number_of_layers'),
-            dropout=self._arguments_service.get_argument('dropout')
+            dropout=self._arguments_service.get_argument('dropout'),
+            include_bert=self._include_pretrained_model,
+            pretrained_weights=arguments_service.get_argument(
+                'pretrained_weights')
         )
 
+        additional_dimension_size = 768 if self._include_pretrained_model else 0
         self._decoder = MultiFitDecoder(
             embedding_size=self._arguments_service.get_argument(
                 'embedding_size'),
             output_dimension=self._output_dimension,
             hidden_dimension=self._arguments_service.get_argument(
-                'hidden_dimension'),
+                'hidden_dimension') + additional_dimension_size,
             number_of_layers=self._arguments_service.get_argument(
                 'number_of_layers'),
             dropout=self._arguments_service.get_argument('dropout')
         )
 
         self.apply(self.init_weights)
+        self._ignore_index = 0
 
     @staticmethod
     def init_weights(self):
@@ -66,7 +74,7 @@ class MultiFitModel(ModelBase):
             nn.init.uniform_(param.data, -0.08, 0.08)
 
     def forward(self, input_batch, **kwargs):
-        source, targets, lengths = input_batch
+        source, targets, lengths, masked_inputs, masked_labels = input_batch
 
         (batch_size, trg_len) = targets.shape
         trg_vocab_size = self._output_dimension
@@ -76,19 +84,34 @@ class MultiFitModel(ModelBase):
                               trg_vocab_size, device=self._device)
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        hidden, cell = self._encoder.forward(source, lengths)
+        hidden, cell, xlnet_hidden = self._encoder.forward(
+            source, lengths, masked_inputs, masked_labels)
 
         # first input to the decoder is the <sos> tokens
         input = targets[:, 0]
         teacher_forcing_ratio = 0.5
 
+        if self._include_pretrained_model:
+            current_xlnet_hidden = torch.zeros((hidden.shape[1], 1, xlnet_hidden.shape[2]))
+            hidden = torch.cat((hidden, torch.zeros((1, hidden.shape[1], xlnet_hidden.shape[2]), device=self._device)), dim=2)
+            cell = torch.cat((cell, torch.zeros((1, hidden.shape[1], xlnet_hidden.shape[2]), device=self._device)), dim=2)
+
         for t in range(1, trg_len):
 
             # insert input token embedding, previous hidden and previous cell states
             # receive output tensor (predictions) and new hidden and cell states
+            if self._include_pretrained_model and xlnet_hidden.shape[1] > t:
+                current_xlnet_hidden = xlnet_hidden[:, t, :]
+                hidden[:, :, -xlnet_hidden.shape[2]:] = current_xlnet_hidden
+                cell[:, :, -xlnet_hidden.shape[2]:] = current_xlnet_hidden
+
             output, hidden, cell = self._decoder.forward(input, hidden, cell)
 
             # place predictions in a tensor holding predictions for each token
+            for i in range(batch_size):
+                if targets[i, t] == self._ignore_index:
+                    output[i] = self._ignore_index
+
             outputs[:, t] = output
 
             # decide if we are going to use teacher forcing or not
@@ -105,24 +128,27 @@ class MultiFitModel(ModelBase):
 
         return outputs, targets, lengths
 
-    def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device=self._device)
-
-    def calculate_accuracies(self, batch, outputs) -> Dict[AccuracyType, float]:
-        output, targets, lengths = outputs
+    def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[AccuracyType, float]:
+        output, targets, _ = outputs
         output_dim = output.shape[-1]
-        predicted_characters = output[:,
-                                      1:].reshape(-1, output_dim).max(dim=1)[1]
+        predicted_characters = output.reshape(-1, output_dim).max(dim=1)[1].cpu().detach().numpy()
 
-        target_characters = targets[:, 1:].reshape(-1)
+        target_characters = targets.reshape(-1).cpu().detach().numpy()
+        indices = np.array((target_characters != 0), dtype=bool)
+
+        target_characters = target_characters[indices].tolist()
+        predicted_characters = predicted_characters[indices].tolist()
 
         accuracies = {}
 
+        predicted_string = self._tokenizer_service.decode_tokens(predicted_characters)
+        target_string = self._tokenizer_service.decode_tokens(target_characters)
         if AccuracyType.WordLevel in self._accuracy_types:
-            predicted_string = self._tokenizer_service.decode_tokens(
-                predicted_characters.detach().cpu().tolist())
-            target_string = self._tokenizer_service.decode_tokens(
-                target_characters.detach().cpu().tolist())
+            if print_characters:
+                print(f'Predicted:\n{predicted_string.encode("utf-8")}')
+                print('---------------------------------------------------------')
+                print(f'Target:\n{target_string.encode("utf-8")}')
+                print('---------------------------------------------------------')
 
             predicted_words = predicted_string.split(' ')
             target_words = target_string.split(' ')
@@ -134,8 +160,10 @@ class MultiFitModel(ModelBase):
             accuracies[AccuracyType.WordLevel] = accuracy
 
         if AccuracyType.CharacterLevel in self._accuracy_types:
-            accuracy = ((predicted_characters ==
-                         target_characters).sum().float() / len(targets)).item()
+            matches_list = [1 for i, j in zip(
+                predicted_string, target_string) if i == j]
+            accuracy = float(len(matches_list)) / \
+                max(len(target_string), len(predicted_string))
 
             accuracies[AccuracyType.CharacterLevel] = accuracy
 
@@ -146,4 +174,3 @@ class MultiFitModel(ModelBase):
             return True
 
         return False
-

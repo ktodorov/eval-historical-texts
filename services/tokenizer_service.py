@@ -32,6 +32,9 @@ class TokenizerService:
         elif configuration == Configuration.MultiFit:
             self._tokenizer_loaded = False
             self._tokenizer = spm.SentencePieceProcessor()
+
+            #TODO add check if bert is initialized
+            self._bert_tokenizer = XLNetTokenizer.from_pretrained(pretrained_weights)
             self.load_tokenizer_model()
 
     def load_tokenizer_model(self):
@@ -53,3 +56,7 @@ class TokenizerService:
     @property
     def tokenizer(self):
         return self._tokenizer
+
+    def get_sub_tokenizer(self):
+        return self._bert_tokenizer
+
