@@ -7,8 +7,7 @@ import functools
 import sys
 import pickle
 
-import sentencepiece as spm
-from sentencepiece import SentencePieceProcessor
+from transformers import PreTrainedTokenizer
 
 from enums.language import Language
 from entities.language_data import LanguageData
@@ -187,7 +186,7 @@ def read_data_file(data_file_name: str, output_full_path: str):
 
 def parse_language_data(
         dataset_folder_path: str,
-        tokenizer: SentencePieceProcessor) -> LanguageData:
+        tokenizer: PreTrainedTokenizer) -> LanguageData:
     start_position = 14
 
     if not os.path.exists(dataset_folder_path):
@@ -224,26 +223,6 @@ def parse_language_data(
             data[0], data[1], data[2], tokenizer)
     print('Processing VALIDATION data...Done     ')
 
-    # for file_path in train_file_paths:
-    #     with open(file_path, 'r', encoding='utf-8') as language_file:
-    #         text_data: List[str] = language_file.read().split('\n')
-
-    #         train_language_data.add_entry(
-    #             text_data[0][start_position:],
-    #             text_data[1][start_position:],
-    #             text_data[2][start_position:],
-    #             tokenizer)
-
-    # for file_path in validation_file_paths:
-    #     with open(file_path, 'r', encoding='utf-8') as language_file:
-    #         text_data: List[str] = language_file.read().split('\n')
-
-    #         validation_language_data.add_entry(
-    #             text_data[0][start_position:],
-    #             text_data[1][start_position:],
-    #             text_data[2][start_position:],
-    #             tokenizer)
-
     return train_language_data, validation_language_data
 
 
@@ -278,7 +257,7 @@ def preprocess_data(
         train_data_path: str,
         test_data_path: str,
         data_output_path: str,
-        tokenizer: SentencePieceProcessor):
+        tokenizer: PreTrainedTokenizer):
 
     train_language_data, validation_language_data = parse_language_data(
         train_data_path, tokenizer)

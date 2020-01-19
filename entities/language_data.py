@@ -1,6 +1,6 @@
 from enums.language import Language
 from typing import Dict, List, Tuple
-from sentencepiece import SentencePieceProcessor
+from transformers import PreTrainedTokenizer
 import math
 
 
@@ -15,16 +15,44 @@ class LanguageData:
         self._ocr_aligned: List[List[int]] = ocr_aligned
         self._gs_aligned: List[List[int]] = gs_aligned
 
+        self._max_length: int = 512
+
     def add_entry(
             self,
             ocr_input_entry: str,
             ocr_aligned_entry: str,
             gs_aligned_entry: str,
-            tokenizer: SentencePieceProcessor):
+            tokenizer: PreTrainedTokenizer):
 
-        # self._ocr_inputs.append(tokenizer.EncodeAsIds(ocr_input_entry))
-        self._ocr_aligned.append(tokenizer.EncodeAsIds(ocr_aligned_entry))
-        self._gs_aligned.append(tokenizer.EncodeAsIds(gs_aligned_entry))
+        ocr_aligned_entries = tokenizer.tokenize(ocr_aligned_entry)
+        gs_aligned_entries = tokenizer.tokenize(gs_aligned_entry)
+
+        if len(ocr_aligned_entries) > self._max_length or len(gs_aligned_entries) > self._max_length:
+            ocr_aligned_entries, gs_aligned_entries, number_of_splits = self._split_article(
+                ocr_aligned_entries,
+                gs_aligned_entries)
+
+            for i in range(number_of_splits):
+                self._add_tokenized_entries(
+                    ocr_aligned_entries[i],
+                    gs_aligned_entries[i],
+                    tokenizer)
+        else:
+            self._add_tokenized_entries(
+                ocr_aligned_entries,
+                gs_aligned_entries,
+                tokenizer)
+
+    def _add_tokenized_entries(
+            self,
+            ocr_aligned_entries: List[str],
+            gs_aligned_entries: List[str],
+            tokenizer: PreTrainedTokenizer):
+
+        self._ocr_aligned.append(
+            tokenizer.convert_tokens_to_ids(ocr_aligned_entries))
+        self._gs_aligned.append(
+            tokenizer.convert_tokens_to_ids(gs_aligned_entries))
 
     def get_entry(self, index: int) -> Tuple[List[int], List[int], List[int]]:
         if index > self.length:
@@ -52,7 +80,6 @@ class LanguageData:
 
         return result
 
-
     def trim_entries(self, length: int):
         self._ocr_inputs = [ocr_input[:length]
                             for ocr_input in self._ocr_inputs]
@@ -60,6 +87,36 @@ class LanguageData:
                              for ocr_aligned in self._ocr_aligned]
         self._gs_aligned = [gs_aligned[:length]
                             for gs_aligned in self._gs_aligned]
+
+    def _split_article(
+            self,
+            ocr_aligned_entries: List[str],
+            gs_aligned_entries: List[str]) -> Tuple[List[List[str]], List[List[str]], List[List[str]], int]:
+
+        max_article_length = max(len(
+            ocr_aligned_entries), len(gs_aligned_entries))
+
+        ocr_aligned_entries = self._split_to_chunks(
+            ocr_aligned_entries, self._max_length, 2)
+        gs_aligned_entries = self._split_to_chunks(
+            gs_aligned_entries, self._max_length, 2)
+
+        number_of_splits = max(len(ocr_aligned_entries),
+                               len(gs_aligned_entries))
+
+        # equalize lengths if necessary
+        while len(ocr_aligned_entries) < number_of_splits:
+            ocr_aligned_entries.append([])
+
+        while len(gs_aligned_entries) < number_of_splits:
+            gs_aligned_entries.append([])
+
+        return ocr_aligned_entries, gs_aligned_entries, number_of_splits
+
+    def _split_to_chunks(self, list_to_split: list, chunk_size: int, overlap_size: int):
+        result = [list_to_split[i:i+chunk_size]
+                  for i in range(0, len(list_to_split), chunk_size-overlap_size)]
+        return result
 
     @property
     def length(self) -> int:

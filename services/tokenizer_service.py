@@ -23,6 +23,7 @@ class TokenizerService:
         self._file_service = file_service
         self._arguments_service = arguments_service
         self._tokenizer_loaded = True
+        self._tokenizer: PreTrainedTokenizer = None
 
         if configuration == Configuration.KBert:
             self._tokenizer = BertTokenizer.from_pretrained(pretrained_weights)
@@ -30,12 +31,7 @@ class TokenizerService:
             self._tokenizer = XLNetTokenizer.from_pretrained(
                 pretrained_weights)
         elif configuration == Configuration.MultiFit:
-            self._tokenizer_loaded = False
-            self._tokenizer = spm.SentencePieceProcessor()
-
-            #TODO add check if bert is initialized
-            self._bert_tokenizer = XLNetTokenizer.from_pretrained(pretrained_weights)
-            self.load_tokenizer_model()
+            self._tokenizer = BertTokenizer.from_pretrained(pretrained_weights)
 
     def load_tokenizer_model(self):
         data_path = self._file_service.get_data_path()
@@ -47,7 +43,7 @@ class TokenizerService:
         self._tokenizer_loaded = True
 
     def decode_tokens(self, character_ids) -> str:
-        result = self._tokenizer.DecodeIds(character_ids)
+        result = self._tokenizer.decode(character_ids)
         return result
 
     def is_tokenizer_loaded(self) -> bool:

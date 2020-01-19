@@ -5,7 +5,8 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 import sentencepiece as spm
 from sentencepiece import SentencePieceProcessor
 
-from transformers import XLNetModel
+from transformers import BertForMaskedLM
+
 
 class MultiFitEncoder(nn.Module):
     def __init__(
@@ -19,29 +20,34 @@ class MultiFitEncoder(nn.Module):
             pretrained_weights: str = None):
         super(MultiFitEncoder, self).__init__()
 
+        additional_size = 28996 if self._include_bert else 0
         self.embedding = nn.Embedding(input_size, embedding_size)
-        self.rnn = nn.LSTM(embedding_size, hidden_dimension, number_of_layers,
-                           dropout=dropout, batch_first=True)
+        self.rnn = nn.LSTM(embedding_size + additional_size, hidden_dimension, number_of_layers,
+                           batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(dropout)
 
         self._include_bert = include_bert
         if self._include_bert and pretrained_weights:
-            self._xlnet_model = XLNetModel.from_pretrained(pretrained_weights)
-            self._xlnet_model.eval()
+            self._pretrained_model = BertForMaskedLM.from_pretrained(
+                pretrained_weights)
+            self._pretrained_model.eval()
 
-    def forward(self, input_batch, lengths, masked_inputs, masked_labels, **kwargs):
+    def forward(self, input_batch, lengths, **kwargs):
         # src = [src len, batch size]
         embedded = self.dropout(self.embedding(input_batch))
         # embedded = [src len, batch size, emb dim]
 
-        x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
-        outputs, (hidden, cell) = self.rnn(x_packed)
-        outputs, _ = pad_packed_sequence(outputs, batch_first=True)
-
-        xlnet_hidden = None
         if self._include_bert:
             with torch.no_grad():
-                xlnet_outputs = self._xlnet_model.forward(masked_inputs, attention_mask=masked_labels)
-                xlnet_hidden = xlnet_outputs[0]
+                pretrained_outputs = self._pretrained_model.forward(
+                    input_batch)  # , lm_labels=input_batch)
+                embedded = torch.cat((embedded, pretrained_outputs[0]), dim=2)
 
-        return hidden, cell, xlnet_hidden
+        x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
+        outputs, (hidden, cell) = self.rnn(x_packed)
+        # outputs, _ = pad_packed_sequence(outputs, batch_first=True)
+        hidden = torch.cat(
+            (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
+        cell = torch.cat((cell[0, :, :], cell[1, :, :]), dim=1).unsqueeze(0)
+
+        return hidden, cell

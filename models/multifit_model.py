@@ -53,13 +53,12 @@ class MultiFitModel(ModelBase):
                 'pretrained_weights')
         )
 
-        additional_dimension_size = 768 if self._include_pretrained_model else 0
         self._decoder = MultiFitDecoder(
             embedding_size=self._arguments_service.get_argument(
                 'embedding_size'),
             output_dimension=self._output_dimension,
             hidden_dimension=self._arguments_service.get_argument(
-                'hidden_dimension') + additional_dimension_size,
+                'hidden_dimension') * 2,
             number_of_layers=self._arguments_service.get_argument(
                 'number_of_layers'),
             dropout=self._arguments_service.get_argument('dropout')
@@ -74,7 +73,7 @@ class MultiFitModel(ModelBase):
             nn.init.uniform_(param.data, -0.08, 0.08)
 
     def forward(self, input_batch, **kwargs):
-        source, targets, lengths, masked_inputs, masked_labels = input_batch
+        source, targets, lengths = input_batch
 
         (batch_size, trg_len) = targets.shape
         trg_vocab_size = self._output_dimension
@@ -84,27 +83,17 @@ class MultiFitModel(ModelBase):
                               trg_vocab_size, device=self._device)
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        hidden, cell, xlnet_hidden = self._encoder.forward(
-            source, lengths, masked_inputs, masked_labels)
+        hidden, cell = self._encoder.forward(
+            source, lengths)
 
         # first input to the decoder is the <sos> tokens
         input = targets[:, 0]
         teacher_forcing_ratio = 0.5
 
-        if self._include_pretrained_model:
-            current_xlnet_hidden = torch.zeros((hidden.shape[1], 1, xlnet_hidden.shape[2]))
-            hidden = torch.cat((hidden, torch.zeros((1, hidden.shape[1], xlnet_hidden.shape[2]), device=self._device)), dim=2)
-            cell = torch.cat((cell, torch.zeros((1, hidden.shape[1], xlnet_hidden.shape[2]), device=self._device)), dim=2)
-
         for t in range(1, trg_len):
 
             # insert input token embedding, previous hidden and previous cell states
             # receive output tensor (predictions) and new hidden and cell states
-            if self._include_pretrained_model and xlnet_hidden.shape[1] > t:
-                current_xlnet_hidden = xlnet_hidden[:, t, :]
-                hidden[:, :, -xlnet_hidden.shape[2]:] = current_xlnet_hidden
-                cell[:, :, -xlnet_hidden.shape[2]:] = current_xlnet_hidden
-
             output, hidden, cell = self._decoder.forward(input, hidden, cell)
 
             # place predictions in a tensor holding predictions for each token
