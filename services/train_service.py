@@ -126,6 +126,9 @@ class TrainService:
         data_loader_length = len(self.data_loader_train)
 
         for i, batch in enumerate(self.data_loader_train):
+            if not batch:
+                continue
+
             if i < start_iteration:
                 continue
 
@@ -221,6 +224,9 @@ class TrainService:
         data_loader_length = len(self.data_loader_validation)
 
         for i, batch in enumerate(self.data_loader_validation):
+            if not batch:
+                continue
+
             self._log_service.log_progress(
                 i, data_loader_length, evaluation=True)
 

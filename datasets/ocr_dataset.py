@@ -86,9 +86,8 @@ class OCRDataset(DatasetBase):
 
         lengths = np.array([[len(sequences[i]), len(targets[i])]
                             for i in range(batch_size)])
+
         max_length = lengths.max(axis=0)
-        if max_length[1] == 0:
-            max_length[1] = max_length[0]
 
         padded_sequences = np.zeros(
             (batch_size, max_length[0]), dtype=np.int64)
@@ -99,6 +98,14 @@ class OCRDataset(DatasetBase):
             padded_targets[i][0:target_length] = targets[i][0:target_length]
             if len(targets[i][0:target_length]) == 0:
                 padded_targets[i][:] = [0] * max_length[1]
+
+        non_empty_elements = np.logical_and(lengths[:,0] > 0, lengths[:,1] > 0)
+        lengths = lengths[non_empty_elements]
+        padded_sequences = padded_sequences[non_empty_elements]
+        padded_targets = padded_targets[non_empty_elements]
+
+        if len(padded_sequences) == 0 or len(padded_targets) == 0:
+            return None
 
         return self._sort_batch(
             torch.from_numpy(padded_sequences).to(self._device),
