@@ -2,10 +2,7 @@ import torch
 from torch import nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
-import sentencepiece as spm
-from sentencepiece import SentencePieceProcessor
-
-from transformers import BertForMaskedLM
+from transformers import BertModel
 
 
 class MultiFitEncoder(nn.Module):
@@ -21,14 +18,14 @@ class MultiFitEncoder(nn.Module):
         super(MultiFitEncoder, self).__init__()
 
         self._include_bert = include_bert
-        additional_size = 28996 if self._include_bert else 0
+        additional_size = 768 if self._include_bert else 0
         self.embedding = nn.Embedding(input_size, embedding_size)
         self.rnn = nn.LSTM(embedding_size + additional_size, hidden_dimension, number_of_layers,
                            batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(dropout)
 
         if self._include_bert and pretrained_weights:
-            self._pretrained_model = BertForMaskedLM.from_pretrained(
+            self._pretrained_model = BertModel.from_pretrained(
                 pretrained_weights)
             self._pretrained_model.eval()
 
