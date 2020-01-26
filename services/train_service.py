@@ -17,7 +17,7 @@ from optimizers.optimizer_base import OptimizerBase
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
 
-from enums.accuracy_type import AccuracyType
+from enums.metric_type import MetricType
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.dataloader_service import DataLoaderService
@@ -155,7 +155,7 @@ class TrainService:
 
                     best_accuracies = best_metrics.get_current_accuracies()
                     for key, value in best_accuracies.items():
-                        self._log_service.log_summary(key=f'Best accuracy - {str(key)}', value=value)
+                        self._log_service.log_summary(key=f'Best - {str(key)}', value=value)
                     self._log_service.log_summary(key='Best loss', value=best_metrics.get_current_loss())
                     patience = self._patience
                 else:
@@ -186,7 +186,7 @@ class TrainService:
             self,
             batch: torch.Tensor,
             train_mode: bool = True,
-            print_characters: bool = False) -> Tuple[float, Dict[AccuracyType, float]]:
+            print_characters: bool = False) -> Tuple[float, Dict[MetricType, float]]:
         """
         runs forward pass on batch and backward pass if in train_mode
         """

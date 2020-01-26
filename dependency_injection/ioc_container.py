@@ -34,6 +34,7 @@ from services.evaluation_service import EvaluationService
 from services.file_service import FileService
 from services.log_service import LogService
 from services.mask_service import MaskService
+from services.metrics_service import MetricsService
 from services.model_service import ModelService
 from services.test_service import TestService
 from services.tokenizer_service import TokenizerService
@@ -104,6 +105,10 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service
     )
 
+    metrics_service = providers.Factory(
+        MetricsService
+    )
+
     dataset_service = providers.Factory(
         DatasetService,
         arguments_service=arguments_service,
@@ -160,7 +165,8 @@ class IocContainer(containers.DeclarativeContainer):
                 MultiFitModel,
                 arguments_service=arguments_service,
                 data_service=data_service,
-                tokenizer_service=tokenizer_service
+                tokenizer_service=tokenizer_service,
+                metrics_service=metrics_service
             )
 
             optimizer = providers.Singleton(

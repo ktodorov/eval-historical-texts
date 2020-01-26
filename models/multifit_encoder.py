@@ -37,14 +37,13 @@ class MultiFitEncoder(nn.Module):
         if self._include_bert:
             with torch.no_grad():
                 pretrained_outputs = self._pretrained_model.forward(
-                    input_batch)  # , lm_labels=input_batch)
+                    input_batch)
                 embedded = torch.cat((embedded, pretrained_outputs[0]), dim=2)
 
         x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
         outputs, (hidden, cell) = self.rnn(x_packed)
-        # outputs, _ = pad_packed_sequence(outputs, batch_first=True)
-        hidden = torch.cat(
-            (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
+
+        hidden = torch.cat((hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
         cell = torch.cat((cell[0, :, :], cell[1, :, :]), dim=1).unsqueeze(0)
 
         return hidden, cell

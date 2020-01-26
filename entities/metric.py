@@ -1,15 +1,15 @@
 from typing import Dict, List
 import numpy as np
 
-from enums.accuracy_type import AccuracyType
+from enums.metric_type import MetricType
 
 
 class Metric:
     def __init__(self):
-        self._accuracies: Dict[AccuracyType, List[float]] = {}
+        self._accuracies: Dict[MetricType, List[float]] = {}
         self._losses: List[float] = []
 
-    def add_accuracies(self, accuracies: Dict[AccuracyType, float]):
+    def add_accuracies(self, accuracies: Dict[MetricType, float]):
         for key, value in accuracies.items():
             if key not in self._accuracies.keys():
                 self._accuracies[key] = []
@@ -17,7 +17,7 @@ class Metric:
             self._accuracies[key].append(value)
             self._accuracies[key] = self._accuracies[key][-5:]
 
-    def get_current_accuracies(self) -> Dict[AccuracyType, float]:
+    def get_current_accuracies(self) -> Dict[MetricType, float]:
         result = {}
         for key, value in self._accuracies.items():
             result[key] = np.mean(value, axis=0)

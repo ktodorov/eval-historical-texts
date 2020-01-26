@@ -8,13 +8,14 @@ from typing import List, Dict
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
 
-from enums.accuracy_type import AccuracyType
+from enums.metric_type import MetricType
 
 from models.model_base import ModelBase
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 from services.tokenizer_service import TokenizerService
+from services.metrics_service import MetricsService
 
 from models.multifit_encoder import MultiFitEncoder
 from models.multifit_decoder import MultiFitDecoder
@@ -25,12 +26,15 @@ class MultiFitModel(ModelBase):
             self,
             arguments_service: ArgumentsServiceBase,
             data_service: DataService,
-            tokenizer_service: TokenizerService):
+            tokenizer_service: TokenizerService,
+            metrics_service: MetricsService):
         super(MultiFitModel, self).__init__(data_service, arguments_service)
 
+        self._metrics_service = metrics_service
+
         self._device = arguments_service.get_argument('device')
-        self._accuracy_types: List[AccuracyType] = arguments_service.get_argument(
-            'accuracy_type')
+        self._metric_types: List[MetricType] = arguments_service.get_argument(
+            'metric_types')
         self._tokenizer_service = tokenizer_service
 
         self._output_dimension = self._arguments_service.get_argument(
@@ -117,10 +121,11 @@ class MultiFitModel(ModelBase):
 
         return outputs, targets, lengths
 
-    def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[AccuracyType, float]:
+    def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[MetricType, float]:
         output, targets, _ = outputs
         output_dim = output.shape[-1]
-        predicted_characters = output.reshape(-1, output_dim).max(dim=1)[1].cpu().detach().numpy()
+        predicted_characters = output.reshape(-1, output_dim).max(dim=1)[
+            1].cpu().detach().numpy()
 
         target_characters = targets.reshape(-1).cpu().detach().numpy()
         indices = np.array((target_characters != 0), dtype=bool)
@@ -128,35 +133,34 @@ class MultiFitModel(ModelBase):
         target_characters = target_characters[indices].tolist()
         predicted_characters = predicted_characters[indices].tolist()
 
-        accuracies = {}
+        metrics = {}
 
-        predicted_string = self._tokenizer_service.decode_tokens(predicted_characters)
-        target_string = self._tokenizer_service.decode_tokens(target_characters)
-        if AccuracyType.WordLevel in self._accuracy_types:
-            if print_characters:
-                print(f'Predicted:\n{predicted_string.encode("utf-8")}')
-                print('---------------------------------------------------------')
-                print(f'Target:\n{target_string.encode("utf-8")}')
-                print('---------------------------------------------------------')
+        if MetricType.JaccardSimilarity in self._metric_types:
+            predicted_tokens = self._tokenizer_service.decode_tokens(
+                predicted_characters)
+            target_tokens = self._tokenizer_service.decode_tokens(
+                target_characters)
+            jaccard_score = self._metrics_service.calculate_jaccard_similarity(target_tokens, predicted_tokens)
 
-            predicted_words = predicted_string.split(' ')
-            target_words = target_string.split(' ')
-            matches_list = [1 for i, j in zip(
-                predicted_words, target_words) if i == j]
-            accuracy = float(len(matches_list)) / \
-                max(len(target_words), len(predicted_words))
+            # if print_characters:
+            #     print(f'Predicted:\n{predicted_string.encode("utf-8")}')
+            #     print('---------------------------------------------------------')
+            #     print(f'Target:\n{target_string.encode("utf-8")}')
+            #     print('---------------------------------------------------------')
 
-            accuracies[AccuracyType.WordLevel] = accuracy
+            metrics[MetricType.JaccardSimilarity] = jaccard_score
 
-        if AccuracyType.CharacterLevel in self._accuracy_types:
-            matches_list = [1 for i, j in zip(
-                predicted_string, target_string) if i == j]
-            accuracy = float(len(matches_list)) / \
-                max(len(target_string), len(predicted_string))
+        if MetricType.LevenshteinDistance in self._metric_types:
+            predicted_string = self._tokenizer_service.decode_string(
+                predicted_characters)
+            target_string = self._tokenizer_service.decode_string(
+                target_characters)
 
-            accuracies[AccuracyType.CharacterLevel] = accuracy
+            levenshtein_distance = self._metrics_service.calculate_levenshtein_distance(predicted_string, target_string)
 
-        return accuracies
+            metrics[MetricType.LevenshteinDistance] = levenshtein_distance
+
+        return metrics
 
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():

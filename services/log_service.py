@@ -25,8 +25,10 @@ class LogService:
         self._external_logging_enabled = external_logging_enabled
         if self._external_logging_enabled:
             wandb.init(
-                project='eval-historical-texts',
-                config=arguments_service._arguments
+                project='default',
+                config=arguments_service._arguments,
+                entity='eval-historical-texts',
+                force=True
                 # resume=arguments_service.get_argument('resume_training'),
                 # id='' #TODO
             )
@@ -75,22 +77,22 @@ class LogService:
                 iterations,
                 100. * (1 + iteration) / iterations,
                 train_loss,
-                np.mean([*train_accuracies.values()]),
+                list(train_accuracies.values())[0],
                 validation_loss,
-                np.mean([*validation_accuracies.values()]),
+                list(validation_accuracies.values())[0],
                 "BEST" if new_best else ""), self._evaluation_color))
 
         if self._external_logging_enabled:
             wandb.log({'Train loss': train_loss},
-                    step=time_passed.seconds, commit=False)
+                    step=time_passed.seconds)
 
             for key, value in train_accuracies.items():
-                wandb.log({f'Train accuracy - {key}': value},
-                        step=time_passed.seconds, commit=False)
+                wandb.log({f'Train - {key}': value},
+                        step=time_passed.seconds)
 
             for key, value in validation_accuracies.items():
-                wandb.log({f'Validation accuracy - {key}': value},
-                        step=time_passed.seconds, commit=False)
+                wandb.log({f'Validation - {key}': value},
+                        step=time_passed.seconds)
 
             wandb.log({'Validation loss': validation_loss},
                     step=time_passed.seconds)

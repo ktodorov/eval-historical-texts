@@ -1,5 +1,7 @@
 import os
 
+from typing import List
+
 from transformers import PreTrainedTokenizer, BertTokenizer, XLNetTokenizer
 
 import sentencepiece as spm
@@ -42,7 +44,11 @@ class TokenizerService:
         self._tokenizer.Load(tokenizer_path)
         self._tokenizer_loaded = True
 
-    def decode_tokens(self, character_ids) -> str:
+    def decode_tokens(self, character_ids: List[int]) -> List[str]:
+        result = self._tokenizer.convert_ids_to_tokens(character_ids)
+        return result
+
+    def decode_string(self, character_ids: List[int]) -> str:
         result = self._tokenizer.decode(character_ids)
         return result
 

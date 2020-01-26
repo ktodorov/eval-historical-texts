@@ -9,7 +9,7 @@ from typing import Dict
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
-from enums.accuracy_type import AccuracyType
+from enums.metric_type import MetricType
 
 from services.data_service import DataService
 from services.arguments_service_base import ArgumentsServiceBase
@@ -28,8 +28,8 @@ class ModelBase(nn.Module):
     def forward(self):
         return None
 
-    def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[AccuracyType, float]:
-        return {AccuracyType.CharacterLevel: 0}
+    def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[MetricType, float]:
+        return {MetricType.JaccardSimilarity: 0}
 
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         return True
