@@ -231,7 +231,7 @@ class TrainService:
                 i, data_loader_length, evaluation=True)
 
             loss_batch, accuracies_batch = self._perform_batch_iteration(
-                batch, train_mode=False, print_characters=(i==0))
+                batch, train_mode=False, print_characters=True)
             metric.add_accuracies(accuracies_batch)
             metric.add_loss(loss_batch)
 

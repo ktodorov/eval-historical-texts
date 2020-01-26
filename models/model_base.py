@@ -18,12 +18,10 @@ from services.arguments_service_base import ArgumentsServiceBase
 class ModelBase(nn.Module):
     def __init__(
             self,
-            data_service: DataService,
-            arguments_service: ArgumentsServiceBase):
+            data_service: DataService):
         super(ModelBase, self).__init__()
 
         self._data_service = data_service
-        self._arguments_service = arguments_service
 
     def forward(self):
         return None

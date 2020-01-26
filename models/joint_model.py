@@ -18,9 +18,9 @@ class JointModel(ModelBase):
             arguments_service: ArgumentsServiceBase,
             data_service: DataService,
             model_service: ModelService):
-        super(JointModel, self).__init__(data_service, arguments_service)
+        super(JointModel, self).__init__(data_service)
 
-        self._number_of_models: int = self._arguments_service.get_argument(
+        self._number_of_models: int = arguments_service.get_argument(
             'joint_model_amount')
 
         self._inner_models: List[ModelBase] = [

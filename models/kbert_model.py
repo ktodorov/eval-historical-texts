@@ -16,7 +16,7 @@ class KBertModel(ModelBase):
             self,
             arguments_service: ArgumentsServiceBase,
             data_service: DataService):
-        super(KBertModel, self).__init__(data_service, arguments_service)
+        super(KBertModel, self).__init__(data_service)
 
         self._bert_model = self._model_type.from_pretrained(
             arguments_service.get_argument('pretrained_weights'))

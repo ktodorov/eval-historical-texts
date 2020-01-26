@@ -84,26 +84,39 @@ class LogService:
 
         if self._external_logging_enabled:
             wandb.log({'Train loss': train_loss},
-                    step=time_passed.seconds)
+                      step=time_passed.seconds)
 
             for key, value in train_accuracies.items():
                 wandb.log({f'Train - {key}': value},
-                        step=time_passed.seconds)
+                          step=time_passed.seconds)
 
             for key, value in validation_accuracies.items():
                 wandb.log({f'Validation - {key}': value},
-                        step=time_passed.seconds)
+                          step=time_passed.seconds)
 
             wandb.log({'Validation loss': validation_loss},
-                    step=time_passed.seconds)
+                      step=time_passed.seconds)
 
     def log_summary(self, key: str, value: object):
-        if self._external_logging_enabled:
-            wandb.run.summary[key] = value
+        if not self._external_logging_enabled:
+            return
+
+        wandb.run.summary[key] = value
+
+    def log_batch_results(self, input: str, output: str, expected: str):
+        if not self._external_logging_enabled:
+            return
+
+        table_log = wandb.Table(data=[[input, output, expected]])
+        time_passed = self.get_time_passed()
+
+        wandb.log({'batch results': table_log}, step=time_passed.seconds)
 
     def start_logging_model(self, model: torch.nn.Module, criterion: torch.nn.Module = None):
-        if self._external_logging_enabled:
-            wandb.watch(model, criterion=criterion)
+        if not self._external_logging_enabled:
+            return
+
+        wandb.watch(model, criterion=criterion)
 
     def get_time_passed(self) -> timedelta:
         result = datetime.now() - self._start_time

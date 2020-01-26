@@ -166,7 +166,8 @@ class IocContainer(containers.DeclarativeContainer):
                 arguments_service=arguments_service,
                 data_service=data_service,
                 tokenizer_service=tokenizer_service,
-                metrics_service=metrics_service
+                metrics_service=metrics_service,
+                log_service=log_service
             )
 
             optimizer = providers.Singleton(

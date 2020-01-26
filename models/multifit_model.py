@@ -16,6 +16,7 @@ from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 from services.tokenizer_service import TokenizerService
 from services.metrics_service import MetricsService
+from services.log_service import LogService
 
 from models.multifit_encoder import MultiFitEncoder
 from models.multifit_decoder import MultiFitDecoder
@@ -27,15 +28,18 @@ class MultiFitModel(ModelBase):
             arguments_service: ArgumentsServiceBase,
             data_service: DataService,
             tokenizer_service: TokenizerService,
-            metrics_service: MetricsService):
-        super(MultiFitModel, self).__init__(data_service, arguments_service)
+            metrics_service: MetricsService,
+            log_service: LogService):
+        super(MultiFitModel, self).__init__(data_service)
 
         self._metrics_service = metrics_service
+        self._log_service = log_service
+        self._tokenizer_service = tokenizer_service
+        self._arguments_service = arguments_service
 
         self._device = arguments_service.get_argument('device')
         self._metric_types: List[MetricType] = arguments_service.get_argument(
             'metric_types')
-        self._tokenizer_service = tokenizer_service
 
         self._output_dimension = self._arguments_service.get_argument(
             'sentence_piece_vocabulary_size')
@@ -141,12 +145,6 @@ class MultiFitModel(ModelBase):
             jaccard_score = self._metrics_service.calculate_jaccard_similarity(
                 target_tokens, predicted_tokens)
 
-            # if print_characters:
-            #     print(f'Predicted:\n{predicted_string.encode("utf-8")}')
-            #     print('---------------------------------------------------------')
-            #     print(f'Target:\n{target_string.encode("utf-8")}')
-            #     print('---------------------------------------------------------')
-
             metrics[MetricType.JaccardSimilarity] = jaccard_score
 
         if MetricType.LevenshteinDistance in self._metric_types:
@@ -159,6 +157,14 @@ class MultiFitModel(ModelBase):
                 predicted_string, target_string)
 
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
+
+            if print_characters:
+                input_string = ''
+                source, _, lengths = batch
+                for i in range(source.shape[0]):
+                    input_string += self._tokenizer_service.decode_string(source[i][:lengths[i]])
+
+                self._log_service.log_batch_results(input_string, predicted_string, target_string)
 
         return metrics
 
