@@ -13,28 +13,32 @@ class MultiFitEncoder(nn.Module):
             hidden_dimension: int,
             number_of_layers: int,
             dropout: float = 0,
-            include_bert: bool = False,
+            include_pretrained: bool = False,
+            pretrained_hidden_size: int = None,
             pretrained_weights: str = None):
         super(MultiFitEncoder, self).__init__()
 
-        self._include_bert = include_bert
-        additional_size = 768 if self._include_bert else 0
+        self._include_pretrained = include_pretrained
+        additional_size = pretrained_hidden_size if self._include_pretrained else 0
         self.embedding = nn.Embedding(input_size, embedding_size)
         self.rnn = nn.LSTM(embedding_size + additional_size, hidden_dimension, number_of_layers,
                            batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(dropout)
 
-        if self._include_bert and pretrained_weights:
+        if self._include_pretrained and pretrained_weights:
             self._pretrained_model = BertModel.from_pretrained(
                 pretrained_weights)
             self._pretrained_model.eval()
+
+            for param in self._pretrained_model.parameters():
+                param.requires_grad = False
 
     def forward(self, input_batch, lengths, **kwargs):
         # src = [src len, batch size]
         embedded = self.dropout(self.embedding(input_batch))
         # embedded = [src len, batch size, emb dim]
 
-        if self._include_bert:
+        if self._include_pretrained:
             with torch.no_grad():
                 pretrained_outputs = self._pretrained_model.forward(
                     input_batch)

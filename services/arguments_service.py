@@ -72,6 +72,10 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='If a joint model should be used instead of a single one')
         parser.add_argument('--joint-model-amount', type=int, default=2,
                             help='How many models should be trained jointly')
+        parser.add_argument('--include-pretrained-model', action='store_true',
+                            help='Should a pretrained model be used to provide more information')
+        parser.add_argument('--pretrained-model-size', type=int, default=768,
+                            help='The hidden size dimension of the pretrained model. Default is 768 for BERT')
 
         # SemEval
         parser.add_argument('--word-distance-threshold', type=float, default=100.0,
@@ -90,6 +94,10 @@ class ArgumentsService(ArgumentsServiceBase):
         parser.add_argument('--number-of-layers', type=int, default=1,
                             help='Number of layers used for RNN models')
 
+        # Translation
+        parser.add_argument('--teacher-forcing-ratio', type=float, default=0.5,
+                            help='Ratio for teacher forcing during decoding of translation. Default is 0.5')
+
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         super()._validate_arguments(parser)
 
@@ -102,3 +110,7 @@ class ArgumentsService(ArgumentsServiceBase):
         if validation_dataset_reduction_size and (validation_dataset_reduction_size <= 0 or validation_dataset_reduction_size >= 1):
             raise parser.error(
                 '"--validation-dataset-reduction-size" must be between 0.0 and 1.0')
+
+        teacher_forcing_ratio = self._arguments['teacher_forcing_ratio']
+        if teacher_forcing_ratio < 0 or teacher_forcing_ratio > 1:
+            raise parser.error('"--teacher-forcing-ratio" must be a value between 0.0 and 1.0')

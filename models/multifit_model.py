@@ -40,7 +40,8 @@ class MultiFitModel(ModelBase):
         self._output_dimension = self._arguments_service.get_argument(
             'sentence_piece_vocabulary_size')
 
-        self._include_pretrained_model = False
+        self._teacher_forcing_ratio: int = self._arguments_service.get_argument(
+            'teacher_forcing_ratio')
 
         self._encoder = MultiFitEncoder(
             embedding_size=self._arguments_service.get_argument(
@@ -52,7 +53,10 @@ class MultiFitModel(ModelBase):
             number_of_layers=self._arguments_service.get_argument(
                 'number_of_layers'),
             dropout=self._arguments_service.get_argument('dropout'),
-            include_bert=self._include_pretrained_model,
+            include_pretrained=self._arguments_service.get_argument(
+                'include_pretrained_model'),
+            pretrained_hidden_size=self._arguments_service.get_argument(
+                'pretrained_model_size'),
             pretrained_weights=arguments_service.get_argument(
                 'pretrained_weights')
         )
@@ -92,7 +96,6 @@ class MultiFitModel(ModelBase):
 
         # first input to the decoder is the <sos> tokens
         input = targets[:, 0]
-        teacher_forcing_ratio = 0.5
 
         for t in range(1, trg_len):
 
@@ -100,15 +103,10 @@ class MultiFitModel(ModelBase):
             # receive output tensor (predictions) and new hidden and cell states
             output, hidden, cell = self._decoder.forward(input, hidden, cell)
 
-            # place predictions in a tensor holding predictions for each token
-            for i in range(batch_size):
-                if targets[i, t] == self._ignore_index:
-                    output[i] = self._ignore_index
-
             outputs[:, t] = output
 
             # decide if we are going to use teacher forcing or not
-            teacher_force = random.random() < teacher_forcing_ratio
+            teacher_force = random.random() < self._teacher_forcing_ratio
 
             # if teacher forcing, use actual next token as next input
             # if not, use predicted token
@@ -140,7 +138,8 @@ class MultiFitModel(ModelBase):
                 predicted_characters)
             target_tokens = self._tokenizer_service.decode_tokens(
                 target_characters)
-            jaccard_score = self._metrics_service.calculate_jaccard_similarity(target_tokens, predicted_tokens)
+            jaccard_score = self._metrics_service.calculate_jaccard_similarity(
+                target_tokens, predicted_tokens)
 
             # if print_characters:
             #     print(f'Predicted:\n{predicted_string.encode("utf-8")}')
@@ -156,7 +155,8 @@ class MultiFitModel(ModelBase):
             target_string = self._tokenizer_service.decode_string(
                 target_characters)
 
-            levenshtein_distance = self._metrics_service.calculate_levenshtein_distance(predicted_string, target_string)
+            levenshtein_distance = self._metrics_service.calculate_levenshtein_distance(
+                predicted_string, target_string)
 
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
 
