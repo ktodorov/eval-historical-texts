@@ -22,6 +22,10 @@ class LogService:
         self._progress_color = 'red'
         self._evaluation_color = 'cyan'
 
+        self._current_epoch = 0
+        self._all_iterations = 0
+        self._current_iteration = 0
+
         self._external_logging_enabled = external_logging_enabled
         if self._external_logging_enabled:
             wandb.init(
@@ -42,6 +46,8 @@ class LogService:
         prefix = 'Train'
         if evaluation:
             prefix = 'Evaluating'
+        else:
+            self.log_summary('Iteration', current_step)
 
         print(colored(
             f'{prefix}: {current_step}/{all_steps}       \r', self._progress_color), end='')
@@ -61,6 +67,10 @@ class LogService:
         """
         logs progress to user through tensorboard and terminal
         """
+
+        self._current_epoch = epoch
+        self._current_iteration = iteration
+        self._all_iterations = iterations
 
         time_passed = self.get_time_passed()
         train_loss = train_metric.get_current_loss()
@@ -82,20 +92,21 @@ class LogService:
                 list(validation_accuracies.values())[0],
                 "BEST" if new_best else ""), self._evaluation_color))
 
+        current_step = self._get_current_step()
         if self._external_logging_enabled:
             wandb.log({'Train loss': train_loss},
-                      step=time_passed.seconds)
+                      step=current_step)
 
             for key, value in train_accuracies.items():
                 wandb.log({f'Train - {key}': value},
-                          step=time_passed.seconds)
+                          step=current_step)
 
             for key, value in validation_accuracies.items():
                 wandb.log({f'Validation - {key}': value},
-                          step=time_passed.seconds)
+                          step=current_step)
 
             wandb.log({'Validation loss': validation_loss},
-                      step=time_passed.seconds)
+                      step=current_step)
 
     def log_summary(self, key: str, value: object):
         if not self._external_logging_enabled:
@@ -110,7 +121,7 @@ class LogService:
         table_log = wandb.Table(data=[[input, output, expected]])
         time_passed = self.get_time_passed()
 
-        wandb.log({'batch results': table_log}, step=time_passed.seconds)
+        wandb.log({'batch results': table_log}, step=self._get_current_step())
 
     def start_logging_model(self, model: torch.nn.Module, criterion: torch.nn.Module = None):
         if not self._external_logging_enabled:
@@ -121,3 +132,6 @@ class LogService:
     def get_time_passed(self) -> timedelta:
         result = datetime.now() - self._start_time
         return result
+
+    def _get_current_step(self) -> int:
+        return (self._current_epoch * self._all_iterations) + self._current_iteration

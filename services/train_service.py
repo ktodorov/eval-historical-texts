@@ -82,6 +82,7 @@ class TrainService:
 
             # run
             for epoch in range(start_epoch, self._arguments_service.get_argument('epochs')):
+                self._log_service.log_summary('Epoch', epoch)
 
                 best_metrics, patience = self._perform_epoch_iteration(
                     epoch, best_metrics, patience, metric, start_iteration)
