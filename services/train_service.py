@@ -26,6 +26,7 @@ from services.log_service import LogService
 
 from transformers import BertTokenizer
 
+
 class TrainService:
     def __init__(
             self,
@@ -46,7 +47,8 @@ class TrainService:
         self._loss_function = loss_function
         self._optimizer = optimizer
         self._model = model.to(arguments_service.get_argument('device'))
-        self._patience = self._arguments_service.get_argument('patience')
+        self._patience: int = self._arguments_service.get_argument('patience')
+        self._debug: bool = self._arguments_service.get_argument('debug')
 
     def train(self) -> bool:
         """
@@ -57,7 +59,8 @@ class TrainService:
          self.data_loader_validation) = self._dataloader_service.get_train_dataloaders()
 
         epoch = 0
-        self._log_service.start_logging_model(self._model, self._loss_function.criterion)
+        self._log_service.start_logging_model(
+            self._model, self._loss_function.criterion)
 
         try:
             self._log_service.initialize_evaluation()
@@ -126,15 +129,17 @@ class TrainService:
         data_loader_length = len(self.data_loader_train)
 
         for i, batch in enumerate(self.data_loader_train):
-            if not batch:
-                continue
-
             if i < start_iteration:
                 continue
 
             self._log_service.log_progress(i, data_loader_length)
 
-            loss_batch, accuracies_batch = self._perform_batch_iteration(batch)
+            loss_batch, accuracies_batch = self._perform_batch_iteration(
+                batch, debug=self._debug)
+            if math.isnan(loss_batch):
+                raise Exception(
+                    f'loss is NaN during training at iteration {i}')
+
             metric.add_loss(loss_batch)
             metric.add_accuracies(accuracies_batch)
 
@@ -146,6 +151,14 @@ class TrainService:
             if (batches_passed % self._arguments_service.get_argument('eval_freq')) == 0 or (i + 1 == data_loader_length):
                 validation_metric = self._evaluate()
 
+                if math.isnan(validation_metric.get_current_loss()):
+                    raise Exception(
+                        f'combined loss is NaN during evaluating at iteration {i}; losses are - {validation_metric._losses}')
+
+                if math.isnan(metric.get_current_loss()):
+                    raise Exception(
+                        f'combined loss is NaN during evaluating at iteration {i}; losses are - {metric._losses}')
+
                 new_best = self._model.compare_metric(
                     best_metrics, validation_metric)
                 if new_best:
@@ -155,8 +168,10 @@ class TrainService:
 
                     best_accuracies = best_metrics.get_current_accuracies()
                     for key, value in best_accuracies.items():
-                        self._log_service.log_summary(key=f'Best - {str(key)}', value=value)
-                    self._log_service.log_summary(key='Best loss', value=best_metrics.get_current_loss())
+                        self._log_service.log_summary(
+                            key=f'Best - {str(key)}', value=value)
+                    self._log_service.log_summary(
+                        key='Best loss', value=best_metrics.get_current_loss())
                     patience = self._patience
                 else:
                     patience -= 1
@@ -186,7 +201,8 @@ class TrainService:
             self,
             batch: torch.Tensor,
             train_mode: bool = True,
-            print_characters: bool = False) -> Tuple[float, Dict[MetricType, float]]:
+            print_characters: bool = False,
+            debug: bool = False) -> Tuple[float, Dict[MetricType, float]]:
         """
         runs forward pass on batch and backward pass if in train_mode
         """
@@ -197,7 +213,7 @@ class TrainService:
         else:
             self._model.eval()
 
-        outputs = self._model.forward(batch)
+        outputs = self._model.forward(batch, debug=debug)
 
         accuracy = 0
         if train_mode:
@@ -208,7 +224,8 @@ class TrainService:
         else:
             loss = self._loss_function.calculate_loss(outputs)
 
-        accuracies = self._model.calculate_accuracies(batch, outputs, print_characters=print_characters)
+        accuracies = self._model.calculate_accuracies(
+            batch, outputs, print_characters=print_characters)
 
         return loss, accuracies
 
@@ -232,6 +249,11 @@ class TrainService:
 
             loss_batch, accuracies_batch = self._perform_batch_iteration(
                 batch, train_mode=False, print_characters=True)
+
+            if math.isnan(loss_batch):
+                raise Exception(
+                    f'loss is NaN during evaluation at iteration {i}')
+
             metric.add_accuracies(accuracies_batch)
             metric.add_loss(loss_batch)
 

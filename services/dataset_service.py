@@ -13,6 +13,7 @@ from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
+from services.pretrained_representations_service import PretrainedRepresentationsService
 
 
 class DatasetService:
@@ -22,13 +23,15 @@ class DatasetService:
             mask_service: MaskService,
             tokenizer_service: TokenizerService,
             file_service: FileService,
-            log_service: LogService):
+            log_service: LogService,
+            pretrained_representations_service: PretrainedRepresentationsService):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
         self._tokenizer_service = tokenizer_service
         self._file_service = file_service
         self._log_service = log_service
+        self._pretrained_representations_service = pretrained_representations_service
 
     def get_dataset(self, run_type: RunType, language: str) -> DatasetBase:
         """Loads and returns the dataset based on run type ``(Train, Validation, Test)`` and the language
@@ -74,13 +77,13 @@ class DatasetService:
                     self._tokenizer_service,
                     self._log_service,
                     self._mask_service,
+                    self._pretrained_representations_service,
                     run_type,
                     language,
                     self._arguments_service.get_argument('device'),
-                    self._arguments_service.get_argument(
-                        'sentence_piece_vocabulary_size'),
                     reduction_size,
-                    self._arguments_service.get_argument('max_articles_length'))
+                    self._arguments_service.get_argument('max_articles_length'),
+                    include_pretrained=self._arguments_service.get_argument('include_pretrained_model'))
 
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(

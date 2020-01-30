@@ -272,13 +272,13 @@ def preprocess_data(
     with open(validation_language_data_filepath, 'wb') as handle:
         pickle.dump(validation_language_data, handle, protocol=-1)
 
-    test_language_data = parse_language_data(
-        test_data_path, tokenizer)
-    test_language_data_filepath = os.path.join(
-        data_output_path, f'test_language_data.pickle')
+    # test_language_data = parse_language_data(
+    #     test_data_path, tokenizer)
+    # test_language_data_filepath = os.path.join(
+    #     data_output_path, f'test_language_data.pickle')
 
-    with open(test_language_data_filepath, 'wb') as handle:
-        pickle.dump(test_language_data, handle, protocol=-1)
+    # with open(test_language_data_filepath, 'wb') as handle:
+    #     pickle.dump(test_language_data, handle, protocol=-1)
 
 
 if __name__ == '__main__':

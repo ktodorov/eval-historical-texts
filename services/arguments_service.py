@@ -62,6 +62,8 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='This is the maximum length of articles that will be used in models. Articles longer than this length will be cut.')
         parser.add_argument('--enable-external-logging', action='store_true',
                             help='Should logging to external service be enabled')
+        parser.add_argument('--debug', action='store_true',
+                            help='Output debug statistics and logs')
 
         # Transformer specific settings
         parser.add_argument('--pretrained-weights', type=str, default='bert-base-cased',
@@ -76,6 +78,8 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='Should a pretrained model be used to provide more information')
         parser.add_argument('--pretrained-model-size', type=int, default=768,
                             help='The hidden size dimension of the pretrained model. Default is 768 for BERT')
+        parser.add_argument('--pretrained-max-length', type=int, default=None,
+                            help='The maximum length the pretrained model(if any). Default is None')
 
         # SemEval
         parser.add_argument('--word-distance-threshold', type=float, default=100.0,

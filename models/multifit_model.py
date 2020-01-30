@@ -84,8 +84,8 @@ class MultiFitModel(ModelBase):
         for name, param in self.named_parameters():
             nn.init.uniform_(param.data, -0.08, 0.08)
 
-    def forward(self, input_batch, **kwargs):
-        source, targets, lengths = input_batch
+    def forward(self, input_batch, debug=False, **kwargs):
+        source, targets, lengths, pretrained_representations = input_batch
 
         (batch_size, trg_len) = targets.shape
         trg_vocab_size = self._output_dimension
@@ -96,7 +96,7 @@ class MultiFitModel(ModelBase):
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
         hidden, cell = self._encoder.forward(
-            source, lengths)
+            source, lengths, pretrained_representations, debug=debug)
 
         # first input to the decoder is the <sos> tokens
         input = targets[:, 0]
@@ -160,7 +160,7 @@ class MultiFitModel(ModelBase):
 
             if print_characters:
                 input_string = ''
-                source, _, lengths = batch
+                source, _, lengths, _ = batch
                 for i in range(source.shape[0]):
                     input_string += self._tokenizer_service.decode_string(source[i][:lengths[i]])
 

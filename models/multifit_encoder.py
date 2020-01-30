@@ -25,29 +25,31 @@ class MultiFitEncoder(nn.Module):
                            batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(dropout)
 
-        if self._include_pretrained and pretrained_weights:
-            self._pretrained_model = BertModel.from_pretrained(
-                pretrained_weights)
-            self._pretrained_model.eval()
-
-            for param in self._pretrained_model.parameters():
-                param.requires_grad = False
-
-    def forward(self, input_batch, lengths, **kwargs):
-        # src = [src len, batch size]
+    def forward(self, input_batch, lengths, pretrained_representations, debug: bool = False, **kwargs):
         embedded = self.dropout(self.embedding(input_batch))
-        # embedded = [src len, batch size, emb dim]
+        self._print_debug_embedded_statistics(debug, embedded)
 
         if self._include_pretrained:
-            with torch.no_grad():
-                pretrained_outputs = self._pretrained_model.forward(
-                    input_batch)
-                embedded = torch.cat((embedded, pretrained_outputs[0]), dim=2)
+            embedded = torch.cat((embedded, pretrained_representations), dim=2)
 
         x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
-        outputs, (hidden, cell) = self.rnn(x_packed)
 
-        hidden = torch.cat((hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
+        outputs, (hidden, cell) = self.rnn.forward(x_packed)
+        self._print_debug_hidden_statistics(debug, hidden, cell)
+
+        hidden = torch.cat(
+            (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
         cell = torch.cat((cell[0, :, :], cell[1, :, :]), dim=1).unsqueeze(0)
 
         return hidden, cell
+
+    def _print_debug_embedded_statistics(self, debug: bool, embedded):
+        if debug:
+            print(f'embedded nans[0]: {torch.isnan(embedded).sum(dim=0)}')
+            print(f'embedded nans[1]: {torch.isnan(embedded).sum(dim=1)}')
+            print(f'embedded nans[2]: {torch.isnan(embedded).sum(dim=2)}')
+
+    def _print_debug_hidden_statistics(self, debug: bool, hidden, cell):
+        if debug:
+            print(f'hidden nans: {torch.isnan(hidden).sum().item()}')
+            print(f'cell nans: {torch.isnan(cell).sum().item()}')

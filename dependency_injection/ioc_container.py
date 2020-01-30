@@ -36,6 +36,7 @@ from services.log_service import LogService
 from services.mask_service import MaskService
 from services.metrics_service import MetricsService
 from services.model_service import ModelService
+from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.test_service import TestService
 from services.tokenizer_service import TokenizerService
 from services.train_service import TrainService
@@ -109,13 +110,23 @@ class IocContainer(containers.DeclarativeContainer):
         MetricsService
     )
 
+    pretrained_representations_service = providers.Singleton(
+        PretrainedRepresentationsService,
+        include_pretrained=arguments_service_instance.get_argument('include_pretrained_model'),
+        pretrained_model_size=arguments_service_instance.get_argument('pretrained_model_size'),
+        pretrained_weights=arguments_service_instance.get_argument('pretrained_weights'),
+        pretrained_max_length=arguments_service_instance.get_argument('pretrained_max_length'),
+        device=arguments_service_instance.get_argument('device')
+    )
+
     dataset_service = providers.Factory(
         DatasetService,
         arguments_service=arguments_service,
         mask_service=mask_service,
         tokenizer_service=tokenizer_service,
         file_service=file_service,
-        log_service=log_service
+        log_service=log_service,
+        pretrained_representations_service=pretrained_representations_service
     )
 
     dataloader_service = providers.Factory(
