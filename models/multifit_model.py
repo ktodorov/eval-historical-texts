@@ -20,6 +20,7 @@ from services.log_service import LogService
 
 from models.multifit_encoder import MultiFitEncoder
 from models.multifit_decoder import MultiFitDecoder
+from models.multifit_attention import MultiFitAttention
 
 
 class MultiFitModel(ModelBase):
@@ -70,9 +71,11 @@ class MultiFitModel(ModelBase):
                 'embedding_size'),
             output_dimension=self._output_dimension,
             hidden_dimension=self._arguments_service.get_argument(
-                'hidden_dimension') * 2,
+                'hidden_dimension'),
             number_of_layers=self._arguments_service.get_argument(
                 'number_of_layers'),
+            attention=MultiFitAttention(self._arguments_service.get_argument(
+                'hidden_dimension')),
             dropout=self._arguments_service.get_argument('dropout')
         )
 
@@ -82,7 +85,10 @@ class MultiFitModel(ModelBase):
     @staticmethod
     def init_weights(self):
         for name, param in self.named_parameters():
-            nn.init.uniform_(param.data, -0.08, 0.08)
+            if 'weight' in name:
+                nn.init.normal_(param.data, mean=0, std=0.01)
+            else:
+                nn.init.constant_(param.data, 0)
 
     def forward(self, input_batch, debug=False, **kwargs):
         source, targets, lengths, pretrained_representations = input_batch
@@ -95,7 +101,7 @@ class MultiFitModel(ModelBase):
                               trg_vocab_size, device=self._device)
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        hidden, cell = self._encoder.forward(
+        encoder_outputs, hidden = self._encoder.forward(
             source, lengths, pretrained_representations, debug=debug)
 
         # first input to the decoder is the <sos> tokens
@@ -105,14 +111,15 @@ class MultiFitModel(ModelBase):
 
             # insert input token embedding, previous hidden and previous cell states
             # receive output tensor (predictions) and new hidden and cell states
-            output, hidden, cell = self._decoder.forward(input, hidden, cell)
+            output, hidden = self._decoder.forward(
+                input, hidden, encoder_outputs)
 
             outputs[:, t] = output
 
             # we must not compute loss for padded targets
-            for i in range(batch_size):
-                if targets[i, t] == self._ignore_index:
-                    outputs[i, t] = 0
+            # for i in range(batch_size):
+            #     if targets[i, t] == self._ignore_index:
+            #         outputs[i, t] = 0
 
             # decide if we are going to use teacher forcing or not
             teacher_force = random.random() < self._teacher_forcing_ratio
@@ -167,10 +174,13 @@ class MultiFitModel(ModelBase):
                 input_string = ''
                 source, _, lengths, _ = batch
                 for i in range(source.shape[0]):
-                    source_character_ids = source[i][:lengths[i]].cpu().detach().tolist()
-                    input_string += self._tokenizer_service.decode_string(source_character_ids)
+                    source_character_ids = source[i][:lengths[i]].cpu(
+                    ).detach().tolist()
+                    input_string += self._tokenizer_service.decode_string(
+                        source_character_ids)
 
-                self._log_service.log_batch_results(input_string, predicted_string, target_string)
+                self._log_service.log_batch_results(
+                    input_string, predicted_string, target_string)
 
         return metrics
 

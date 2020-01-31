@@ -21,8 +21,11 @@ class MultiFitEncoder(nn.Module):
         self._include_pretrained = include_pretrained
         additional_size = pretrained_hidden_size if self._include_pretrained else 0
         self.embedding = nn.Embedding(input_size, embedding_size)
-        self.rnn = nn.LSTM(embedding_size + additional_size, hidden_dimension, number_of_layers,
-                           batch_first=True, bidirectional=True)
+        self.rnn = nn.GRU(embedding_size + additional_size, hidden_dimension, number_of_layers,
+                          batch_first=True, bidirectional=True)
+
+        self.fc = nn.Linear(hidden_dimension * 2, hidden_dimension)
+
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input_batch, lengths, pretrained_representations, debug: bool = False, **kwargs):
@@ -33,15 +36,14 @@ class MultiFitEncoder(nn.Module):
             embedded = torch.cat((embedded, pretrained_representations), dim=2)
 
         x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
+        outputs, hidden = self.rnn.forward(x_packed)
+        outputs = pad_packed_sequence(outputs, batch_first=True)[0]
 
-        outputs, (hidden, cell) = self.rnn.forward(x_packed)
-        self._print_debug_hidden_statistics(debug, hidden, cell)
+        self._print_debug_hidden_statistics(debug, hidden)
 
-        hidden = torch.cat(
-            (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
-        cell = torch.cat((cell[0, :, :], cell[1, :, :]), dim=1).unsqueeze(0)
+        hidden = torch.tanh(self.fc(torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)))
 
-        return hidden, cell
+        return outputs, hidden
 
     def _print_debug_embedded_statistics(self, debug: bool, embedded):
         if debug:
@@ -49,7 +51,6 @@ class MultiFitEncoder(nn.Module):
             print(f'embedded nans[1]: {torch.isnan(embedded).sum(dim=1)}')
             print(f'embedded nans[2]: {torch.isnan(embedded).sum(dim=2)}')
 
-    def _print_debug_hidden_statistics(self, debug: bool, hidden, cell):
+    def _print_debug_hidden_statistics(self, debug: bool, hidden):
         if debug:
             print(f'hidden nans: {torch.isnan(hidden).sum().item()}')
-            print(f'cell nans: {torch.isnan(cell).sum().item()}')
