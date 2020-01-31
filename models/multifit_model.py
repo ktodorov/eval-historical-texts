@@ -109,6 +109,11 @@ class MultiFitModel(ModelBase):
 
             outputs[:, t] = output
 
+            # we must not compute loss for padded targets
+            for i in range(batch_size):
+                if targets[i, t] == self._ignore_index:
+                    outputs[i, t] = 0
+
             # decide if we are going to use teacher forcing or not
             teacher_force = random.random() < self._teacher_forcing_ratio
 
@@ -162,7 +167,8 @@ class MultiFitModel(ModelBase):
                 input_string = ''
                 source, _, lengths, _ = batch
                 for i in range(source.shape[0]):
-                    input_string += self._tokenizer_service.decode_string(source[i][:lengths[i]])
+                    source_character_ids = source[i][:lengths[i]].cpu().detach().tolist()
+                    input_string += self._tokenizer_service.decode_string(source_character_ids)
 
                 self._log_service.log_batch_results(input_string, predicted_string, target_string)
 

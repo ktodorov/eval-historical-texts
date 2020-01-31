@@ -2,7 +2,8 @@ import os
 
 from typing import List
 
-from transformers import PreTrainedTokenizer, BertTokenizer, XLNetTokenizer
+# from transformers import PreTrainedTokenizer, BertTokenizer, XLNetTokenizer
+from tokenizers import BertWordPieceTokenizer
 
 import sentencepiece as spm
 
@@ -33,7 +34,11 @@ class TokenizerService:
             self._tokenizer = XLNetTokenizer.from_pretrained(
                 pretrained_weights)
         elif configuration == Configuration.MultiFit:
-            self._tokenizer = BertTokenizer.from_pretrained(pretrained_weights)
+            vocabulary_path = os.path.join('data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
+            if not os.path.exists(vocabulary_path):
+                raise Exception(f'Vocabulary not found in {vocabulary_path}')
+
+            self._tokenizer = BertWordPieceTokenizer(vocabulary_path)
 
     def load_tokenizer_model(self):
         data_path = self._file_service.get_data_path()
@@ -45,7 +50,8 @@ class TokenizerService:
         self._tokenizer_loaded = True
 
     def decode_tokens(self, character_ids: List[int]) -> List[str]:
-        result = self._tokenizer.convert_ids_to_tokens(character_ids)
+        result = [self._tokenizer.id_to_token(
+            character_id) for character_id in character_ids]
         return result
 
     def decode_string(self, character_ids: List[int]) -> str:
@@ -61,4 +67,3 @@ class TokenizerService:
 
     def get_sub_tokenizer(self):
         return self._bert_tokenizer
-

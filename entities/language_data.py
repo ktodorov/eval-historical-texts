@@ -22,8 +22,16 @@ class LanguageData:
             gs_aligned_entry: str,
             tokenizer: PreTrainedTokenizer):
 
-        self._ocr_aligned.append(tokenizer.convert_tokens_to_ids(tokenizer.tokenize(ocr_aligned_entry)))
-        self._gs_aligned.append(tokenizer.convert_tokens_to_ids(tokenizer.tokenize(gs_aligned_entry)))
+        ocr_ids = tokenizer.encode(ocr_aligned_entry).ids
+        gs_ids = tokenizer.encode(gs_aligned_entry).ids
+
+        # We skip articles which contain more tokens than max_tokens
+        max_tokens = 2000
+        if len(ocr_ids) > max_tokens:
+            return
+
+        self._ocr_aligned.append(ocr_ids)
+        self._gs_aligned.append(gs_ids)
 
     def get_entry(self, index: int) -> Tuple[List[int], List[int], List[int]]:
         if index > self.length:
@@ -50,14 +58,6 @@ class LanguageData:
         )
 
         return result
-
-    def trim_entries(self, length: int):
-        self._ocr_inputs = [ocr_input[:length]
-                            for ocr_input in self._ocr_inputs]
-        self._ocr_aligned = [ocr_aligned[:length]
-                             for ocr_aligned in self._ocr_aligned]
-        self._gs_aligned = [gs_aligned[:length]
-                            for gs_aligned in self._gs_aligned]
 
     @property
     def length(self) -> int:

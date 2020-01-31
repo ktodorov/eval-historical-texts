@@ -94,7 +94,6 @@ class OCRDataset(DatasetBase):
                     language_data_items[1],
                     language_data_items[2])
 
-            language_data.trim_entries(max_articles_length)
             print(
                 f'Loaded {language_data.length} entries for {run_type.to_str()}')
             log_service.log_summary(
