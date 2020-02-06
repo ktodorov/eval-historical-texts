@@ -68,8 +68,8 @@ class OCRDataset(DatasetBase):
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
 
         if not os.path.exists(language_data_path):
-            train_data_path = os.path.join('data', 'ocr', 'train')
-            test_data_path = os.path.join('data', 'ocr', 'eval')
+            train_data_path = os.path.join('data', 'ocr', 'pickles')
+            test_data_path = None # os.path.join('data', 'ocr', 'eval')
             preprocess_data(language, train_data_path, test_data_path,
                             output_data_path, self._tokenizer_service.tokenizer)
 

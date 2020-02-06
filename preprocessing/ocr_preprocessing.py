@@ -187,46 +187,60 @@ def read_data_file(data_file_name: str, output_full_path: str):
 def parse_language_data(
         dataset_folder_path: str,
         tokenizer: PreTrainedTokenizer) -> LanguageData:
-    start_position = 14
 
-    if not os.path.exists(dataset_folder_path):
-        raise Exception('Folder path does not exist')
+    train_pickle_path = os.path.join(dataset_folder_path, 'train_pairs.pickle')
+    with open(train_pickle_path, 'rb') as train_pickle_file:
+        train_pairs = pickle.load(train_pickle_file)
 
-    file_paths = []
-    for file_name in os.listdir(dataset_folder_path):
-        file_path = os.path.join(dataset_folder_path, file_name)
-        file_paths.append(file_path)
+    validation_pickle_path = os.path.join(dataset_folder_path, 'eval_pairs.pickle')
+    with open(validation_pickle_path, 'rb') as validation_pickle_file:
+        validation_pairs = pickle.load(validation_pickle_file)
+
+#     start_position = 14
+
+#     if not os.path.exists(dataset_folder_path):
+#         raise Exception('Folder path does not exist')
+
+#     file_paths = []
+#     for file_name in os.listdir(dataset_folder_path):
+#         file_path = os.path.join(dataset_folder_path, file_name)
+#         file_paths.append(file_path)
 
     train_language_data = LanguageData()
+    for train_pair in train_pairs:
+        train_language_data.add_entry(None, train_pair[0], train_pair[1], tokenizer)
+
     validation_language_data = LanguageData()
+    for validation_pair in validation_pairs:
+        validation_language_data.add_entry(None, validation_pair[0], validation_pair[1], tokenizer)
 
-    split_index = int(len(file_paths) * 0.8)
-    train_file_paths = file_paths[0:split_index]
-    validation_file_paths = file_paths[split_index:]
+#     split_index = int(len(file_paths) * 0.8)
+#     train_file_paths = file_paths[0:split_index]
+#     validation_file_paths = file_paths[split_index:]
 
-    pool = Pool(processes=4)
+#     pool = Pool(processes=4)
 
-    print('\rProcessing TRAIN data...', end='')
-    train_file_data = pool.map(read_ocr_file, train_file_paths)
-    for i, data in enumerate(train_file_data):
-        print(
-            f'\rProcessing TRAIN data...Saving ({i}\\{len(train_file_data)})', end='')
-        train_language_data.add_entry(data[0], data[1], data[2], tokenizer)
-    print('Processing TRAIN data...Done     ')
+#     print('\rProcessing TRAIN data...', end='')
+#     train_file_data = pool.map(read_ocr_file, train_file_paths)
+#     for i, data in enumerate(train_file_data):
+#         print(
+#             f'\rProcessing TRAIN data...Saving ({i}\\{len(train_file_data)})', end='')
+#         train_language_data.add_entry(data[0], data[1], data[2], tokenizer)
+#     print('Processing TRAIN data...Done     ')
 
-    print('\rProcessing VALIDATION data...', end='')
-    validation_file_data = pool.map(read_ocr_file, validation_file_paths)
-    for i, data in enumerate(validation_file_data):
-        print(
-            f'\rProcessing VALIDATION data...Saving ({i}\\{len(validation_file_data)})', end='')
-        validation_language_data.add_entry(
-            data[0], data[1], data[2], tokenizer)
-    print('Processing VALIDATION data...Done     ')
+#     print('\rProcessing VALIDATION data...', end='')
+#     validation_file_data = pool.map(read_ocr_file, validation_file_paths)
+#     for i, data in enumerate(validation_file_data):
+#         print(
+#             f'\rProcessing VALIDATION data...Saving ({i}\\{len(validation_file_data)})', end='')
+#         validation_language_data.add_entry(
+#             data[0], data[1], data[2], tokenizer)
+#     print('Processing VALIDATION data...Done     ')
 
     return train_language_data, validation_language_data
 
 
-start_position = 14
+# start_position = 14
 
 
 def read_ocr_file(file_path: str):

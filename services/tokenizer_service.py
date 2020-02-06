@@ -2,7 +2,7 @@ import os
 
 from typing import List
 
-# from transformers import PreTrainedTokenizer, BertTokenizer, XLNetTokenizer
+from transformers import PreTrainedTokenizer, BertTokenizer, XLNetTokenizer
 from tokenizers import BertWordPieceTokenizer
 
 import sentencepiece as spm
@@ -38,7 +38,7 @@ class TokenizerService:
             if not os.path.exists(vocabulary_path):
                 raise Exception(f'Vocabulary not found in {vocabulary_path}')
 
-            self._tokenizer = BertWordPieceTokenizer(vocabulary_path)
+            self._tokenizer = BertWordPieceTokenizer(vocabulary_path, lowercase=False)
 
     def load_tokenizer_model(self):
         data_path = self._file_service.get_data_path()

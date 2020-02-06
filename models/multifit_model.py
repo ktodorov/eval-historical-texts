@@ -62,7 +62,8 @@ class MultiFitModel(ModelBase):
             pretrained_hidden_size=self._arguments_service.get_argument(
                 'pretrained_model_size'),
             pretrained_weights=arguments_service.get_argument(
-                'pretrained_weights')
+                'pretrained_weights'),
+            learn_embeddings=arguments_service.get_argument('learn_encoder_embeddings')
         )
 
         self._decoder = MultiFitDecoder(
@@ -70,7 +71,7 @@ class MultiFitModel(ModelBase):
                 'embedding_size'),
             output_dimension=self._output_dimension,
             hidden_dimension=self._arguments_service.get_argument(
-                'hidden_dimension') * 2,
+                'hidden_dimension'),
             number_of_layers=self._arguments_service.get_argument(
                 'number_of_layers'),
             dropout=self._arguments_service.get_argument('dropout')
@@ -95,17 +96,21 @@ class MultiFitModel(ModelBase):
                               trg_vocab_size, device=self._device)
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        hidden, cell = self._encoder.forward(
+        context = self._encoder.forward(
             source, lengths, pretrained_representations, debug=debug)
+
+        hidden = context
+        context = context.permute(1, 0, 2)
+
 
         # first input to the decoder is the <sos> tokens
         input = targets[:, 0]
 
-        for t in range(1, trg_len):
+        for t in range(0, trg_len):
 
             # insert input token embedding, previous hidden and previous cell states
             # receive output tensor (predictions) and new hidden and cell states
-            output, hidden, cell = self._decoder.forward(input, hidden, cell)
+            output, hidden = self._decoder.forward(input, hidden, context)
 
             outputs[:, t] = output
 
