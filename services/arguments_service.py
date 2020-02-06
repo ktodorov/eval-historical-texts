@@ -80,7 +80,7 @@ class ArgumentsService(ArgumentsServiceBase):
                             help='The hidden size dimension of the pretrained model. Default is 768 for BERT')
         parser.add_argument('--pretrained-max-length', type=int, default=None,
                             help='The maximum length the pretrained model(if any). Default is None')
-        parser.add_argument('--learn-encoder-embeddings', action='store_false',
+        parser.add_argument('--learn-encoder-embeddings', action='store_true',
                             help='Whether encoder embeddings should be learned next to the pretrained representation')
 
         # SemEval

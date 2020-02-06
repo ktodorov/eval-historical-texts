@@ -206,11 +206,11 @@ def parse_language_data(
 #         file_path = os.path.join(dataset_folder_path, file_name)
 #         file_paths.append(file_path)
 
-    train_language_data = LanguageData()
+    train_language_data = LanguageData([],[],[])
     for train_pair in train_pairs:
         train_language_data.add_entry(None, train_pair[0], train_pair[1], tokenizer)
 
-    validation_language_data = LanguageData()
+    validation_language_data = LanguageData([],[],[])
     for validation_pair in validation_pairs:
         validation_language_data.add_entry(None, validation_pair[0], validation_pair[1], tokenizer)
 
@@ -280,11 +280,11 @@ def preprocess_data(
     validation_language_data_filepath = os.path.join(
         data_output_path, f'validation_language_data.pickle')
 
-    with open(train_language_data_filepath, 'wb') as handle:
-        pickle.dump(train_language_data, handle, protocol=-1)
+    with open(train_language_data_filepath, 'wb') as train_handle:
+        pickle.dump(train_language_data, train_handle, protocol=-1)
 
-    with open(validation_language_data_filepath, 'wb') as handle:
-        pickle.dump(validation_language_data, handle, protocol=-1)
+    with open(validation_language_data_filepath, 'wb') as validation_handle:
+        pickle.dump(validation_language_data, validation_handle, protocol=-1)
 
     # test_language_data = parse_language_data(
     #     test_data_path, tokenizer)
