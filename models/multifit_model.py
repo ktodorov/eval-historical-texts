@@ -179,8 +179,18 @@ class MultiFitModel(ModelBase):
 
         return metrics
 
-    def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
-        if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():
+    def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
+        if best_metric.is_new:
             return True
 
-        return False
+        best_jaccard = round(best_metric.get_accuracy_metric(MetricType.JaccardSimilarity), 2)
+        new_jaccard = round(new_metric.get_accuracy_metric(MetricType.JaccardSimilarity), 2)
+
+        if best_jaccard == new_jaccard:
+            best_levenshtein = best_metric.get_accuracy_metric(MetricType.LevenshteinDistance)
+            new_levenshtein = new_metric.get_accuracy_metric(MetricType.LevenshteinDistance)
+            new_is_better = new_levenshtein < best_levenshtein
+        else:
+            new_is_better = new_jaccard > best_jaccard
+
+        return new_is_better

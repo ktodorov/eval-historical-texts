@@ -92,8 +92,8 @@ class LogService:
                 list(validation_accuracies.values())[0],
                 "BEST" if new_best else ""), self._evaluation_color))
 
-        current_step = self._get_current_step()
         if self._external_logging_enabled:
+            current_step = self._get_current_step()
             wandb.log({'Train loss': train_loss},
                       step=current_step)
 
@@ -107,6 +107,13 @@ class LogService:
 
             wandb.log({'Validation loss': validation_loss},
                       step=current_step)
+
+            if current_step == 0:
+                seconds_per_iteration = time_passed.total_seconds()
+            else:
+                seconds_per_iteration = time_passed.total_seconds() / current_step
+
+            self.log_summary('Seconds per iteration', seconds_per_iteration)
 
     def log_summary(self, key: str, value: object):
         if not self._external_logging_enabled:

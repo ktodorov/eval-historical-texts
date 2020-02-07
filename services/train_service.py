@@ -65,9 +65,9 @@ class TrainService:
         try:
             self._log_service.initialize_evaluation()
 
-            best_metrics = Metric()
+            best_metrics = Metric(amount_limit=None)
             patience = self._patience
-            metric = Metric()
+            metric = Metric(amount_limit=10)
 
             start_epoch = 0
             start_iteration = 0
@@ -186,6 +186,9 @@ class TrainService:
                     data_loader_length,
                     new_best)
 
+                self._log_service.log_summary(
+                    key='Patience left', value=patience)
+
             # check if runtime is expired
             time_passed = self._log_service.get_time_passed()
             if ((time_passed.total_seconds() > (self._arguments_service.get_argument('max_training_minutes') * 60)) and
@@ -238,7 +241,7 @@ class TrainService:
         return model_checkpoint
 
     def _evaluate(self) -> Metric:
-        metric = Metric()
+        metric = Metric(amount_limit=None)
         data_loader_length = len(self.data_loader_validation)
 
         for i, batch in enumerate(self.data_loader_validation):
