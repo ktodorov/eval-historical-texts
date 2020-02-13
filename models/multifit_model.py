@@ -63,7 +63,8 @@ class MultiFitModel(ModelBase):
                 'pretrained_model_size'),
             pretrained_weights=arguments_service.get_argument(
                 'pretrained_weights'),
-            learn_embeddings=arguments_service.get_argument('learn_encoder_embeddings')
+            learn_embeddings=arguments_service.get_argument(
+                'learn_encoder_embeddings')
         )
 
         self._decoder = MultiFitDecoder(
@@ -102,7 +103,6 @@ class MultiFitModel(ModelBase):
         hidden = context
         context = context.permute(1, 0, 2)
 
-
         # first input to the decoder is the <sos> tokens
         input = targets[:, 0]
 
@@ -136,35 +136,37 @@ class MultiFitModel(ModelBase):
     def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[MetricType, float]:
         output, targets, _ = outputs
         output_dim = output.shape[-1]
-        predicted_characters = output.reshape(-1, output_dim).max(dim=1)[
-            1].cpu().detach().numpy()
+        predictions = output.max(dim=2)[1].cpu().detach().numpy()
 
-        target_characters = targets.reshape(-1).cpu().detach().numpy()
-        indices = np.array((target_characters != 0), dtype=bool)
+        targets = targets.cpu().detach().numpy()
+        predicted_characters = []
+        target_characters = []
 
-        target_characters = target_characters[indices].tolist()
-        predicted_characters = predicted_characters[indices].tolist()
+        for i in range(targets.shape[0]):
+            indices = np.array((targets[i] != 0), dtype=bool)
+            predicted_characters.append(predictions[i][indices])
+            target_characters.append(targets[i][indices])
 
         metrics = {}
 
         if MetricType.JaccardSimilarity in self._metric_types:
-            predicted_tokens = self._tokenizer_service.decode_tokens(
-                predicted_characters)
-            target_tokens = self._tokenizer_service.decode_tokens(
-                target_characters)
-            jaccard_score = self._metrics_service.calculate_jaccard_similarity(
-                target_tokens, predicted_tokens)
+            predicted_tokens = [self._tokenizer_service.decode_tokens(
+                x) for x in predicted_characters]
+            target_tokens = [self._tokenizer_service.decode_tokens(
+                x) for x in target_characters]
+            jaccard_score = np.mean([self._metrics_service.calculate_jaccard_similarity(
+                target_tokens[i], predicted_tokens[i]) for i in range(len(predicted_tokens))])
 
             metrics[MetricType.JaccardSimilarity] = jaccard_score
 
         if MetricType.LevenshteinDistance in self._metric_types:
-            predicted_string = self._tokenizer_service.decode_string(
-                predicted_characters)
-            target_string = self._tokenizer_service.decode_string(
-                target_characters)
+            predicted_strings = [self._tokenizer_service.decode_string(
+                x) for x in predicted_characters]
+            target_strings = [self._tokenizer_service.decode_string(
+                x) for x in target_characters]
 
-            levenshtein_distance = self._metrics_service.calculate_levenshtein_distance(
-                predicted_string, target_string)
+            levenshtein_distance = np.mean([self._metrics_service.calculate_normalized_levenshtein_distance(
+                predicted_strings[i], target_strings[i]) for i in range(len(predicted_strings))])
 
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
 
@@ -172,10 +174,13 @@ class MultiFitModel(ModelBase):
                 input_string = ''
                 source, _, lengths, _ = batch
                 for i in range(source.shape[0]):
-                    source_character_ids = source[i][:lengths[i]].cpu().detach().tolist()
-                    input_string += self._tokenizer_service.decode_string(source_character_ids)
+                    source_character_ids = source[i][:lengths[i]].cpu(
+                    ).detach().tolist()
+                    input_string += self._tokenizer_service.decode_string(
+                        source_character_ids)
 
-                self._log_service.log_batch_results(input_string, predicted_string, target_string)
+                self._log_service.log_batch_results(
+                    input_string, predicted_string, target_string)
 
         return metrics
 
@@ -183,12 +188,16 @@ class MultiFitModel(ModelBase):
         if best_metric.is_new:
             return True
 
-        best_jaccard = round(best_metric.get_accuracy_metric(MetricType.JaccardSimilarity), 2)
-        new_jaccard = round(new_metric.get_accuracy_metric(MetricType.JaccardSimilarity), 2)
+        best_jaccard = round(best_metric.get_accuracy_metric(
+            MetricType.JaccardSimilarity), 2)
+        new_jaccard = round(new_metric.get_accuracy_metric(
+            MetricType.JaccardSimilarity), 2)
 
         if best_jaccard == new_jaccard:
-            best_levenshtein = best_metric.get_accuracy_metric(MetricType.LevenshteinDistance)
-            new_levenshtein = new_metric.get_accuracy_metric(MetricType.LevenshteinDistance)
+            best_levenshtein = best_metric.get_accuracy_metric(
+                MetricType.LevenshteinDistance)
+            new_levenshtein = new_metric.get_accuracy_metric(
+                MetricType.LevenshteinDistance)
             new_is_better = new_levenshtein < best_levenshtein
         else:
             new_is_better = new_jaccard > best_jaccard

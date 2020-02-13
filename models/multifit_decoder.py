@@ -18,11 +18,11 @@ class MultiFitDecoder(nn.Module):
                           hidden_dimension, number_of_layers, batch_first=True)
         self.fc_out = nn.Linear(
             embedding_size + hidden_dimension * 2, output_dimension)
-        # self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, input, hidden, context):
         input = input.unsqueeze(1)
-        embedded = self.embedding(input)
+        embedded = self.dropout(self.embedding(input))
 
         emb_con = torch.cat((embedded, context), dim=2)
 

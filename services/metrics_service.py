@@ -6,6 +6,6 @@ class MetricsService:
         set2 = set(list2)
         return len(set1.intersection(set2)) / len(set1.union(set2))
 
-    def calculate_levenshtein_distance(self, string1: str, string2: str) -> int:
-        result = jellyfish.levenshtein_distance(string1, string2)
+    def calculate_normalized_levenshtein_distance(self, string1: str, string2: str) -> int:
+        result = float(jellyfish.levenshtein_distance(string1, string2)) / max(len(string1), len(string2))
         return result

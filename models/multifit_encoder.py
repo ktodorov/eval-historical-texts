@@ -32,11 +32,11 @@ class MultiFitEncoder(nn.Module):
 
         self.rnn = nn.GRU(lstm_input_size, hidden_dimension,
                           number_of_layers, batch_first=True)
-        # self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, input_batch, lengths, pretrained_representations, debug: bool = False, **kwargs):
         if self._learn_embeddings:
-            embedded = self.embedding(input_batch)
+            embedded = self.dropout(self.embedding(input_batch))
             # self._print_debug_embedded_statistics(debug, embedded)
 
             if self._include_pretrained:
