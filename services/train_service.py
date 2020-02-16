@@ -135,7 +135,7 @@ class TrainService:
 
             self._log_service.log_progress(i, data_loader_length)
 
-            loss_batch, accuracies_batch = self._perform_batch_iteration(
+            loss_batch, accuracies_batch, _ = self._perform_batch_iteration(
                 batch, debug=self._debug)
             if math.isnan(loss_batch):
                 raise Exception(
@@ -205,7 +205,7 @@ class TrainService:
             self,
             batch: torch.Tensor,
             train_mode: bool = True,
-            print_characters: bool = False,
+            output_characters: bool = False,
             debug: bool = False) -> Tuple[float, Dict[MetricType, float]]:
         """
         runs forward pass on batch and backward pass if in train_mode
@@ -228,10 +228,10 @@ class TrainService:
         else:
             loss = self._loss_function.calculate_loss(outputs)
 
-        accuracies = self._model.calculate_accuracies(
-            batch, outputs, print_characters=print_characters)
+        metrics, character_results = self._model.calculate_accuracies(
+            batch, outputs, output_characters=output_characters)
 
-        return loss, accuracies
+        return loss, metrics, character_results
 
     def _load_model(self) -> ModelCheckpoint:
         model_checkpoint = self._model.load(self._model_path, 'BEST')
@@ -243,6 +243,7 @@ class TrainService:
     def _evaluate(self) -> Metric:
         metric = Metric(amount_limit=None)
         data_loader_length = len(self.data_loader_validation)
+        all_character_results = []
 
         for i, batch in enumerate(self.data_loader_validation):
             if not batch:
@@ -251,14 +252,20 @@ class TrainService:
             self._log_service.log_progress(
                 i, data_loader_length, evaluation=True)
 
-            loss_batch, accuracies_batch = self._perform_batch_iteration(
-                batch, train_mode=False, print_characters=True)
+            loss_batch, metrics_batch, character_results = self._perform_batch_iteration(
+                batch, train_mode=False, output_characters=True)
 
             if math.isnan(loss_batch):
                 raise Exception(
                     f'loss is NaN during evaluation at iteration {i}')
 
-            metric.add_accuracies(accuracies_batch)
+            all_character_results.extend(character_results)
+            metric.add_accuracies(metrics_batch)
             metric.add_loss(loss_batch)
+
+        inputs = [x[0] for x in all_character_results]
+        predictions = [x[1] for x in all_character_results]
+        targets = [x[2] for x in all_character_results]
+        self._log_service.log_batch_results(inputs, predictions, targets)
 
         return metric

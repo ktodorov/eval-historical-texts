@@ -126,7 +126,6 @@ class LogService:
             return
 
         table_log = wandb.Table(data=[[input, output, expected]])
-        time_passed = self.get_time_passed()
 
         wandb.log({'batch results': table_log}, step=self._get_current_step())
 

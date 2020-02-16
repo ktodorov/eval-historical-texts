@@ -133,7 +133,7 @@ class MultiFitModel(ModelBase):
 
         return outputs, targets, lengths
 
-    def calculate_accuracies(self, batch, outputs, print_characters=False) -> Dict[MetricType, float]:
+    def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
         output, targets, _ = outputs
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()
@@ -159,6 +159,7 @@ class MultiFitModel(ModelBase):
 
             metrics[MetricType.JaccardSimilarity] = jaccard_score
 
+        character_results = None
         if MetricType.LevenshteinDistance in self._metric_types:
             predicted_strings = [self._tokenizer_service.decode_string(
                 x) for x in predicted_characters]
@@ -170,19 +171,19 @@ class MultiFitModel(ModelBase):
 
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
 
-            if print_characters:
-                input_string = ''
+            if output_characters:
+                character_results = []
                 source, _, lengths, _ = batch
                 for i in range(source.shape[0]):
                     source_character_ids = source[i][:lengths[i]].cpu(
                     ).detach().tolist()
-                    input_string += self._tokenizer_service.decode_string(
+                    input_string = self._tokenizer_service.decode_string(
                         source_character_ids)
 
-                self._log_service.log_batch_results(
-                    input_string, predicted_string, target_string)
+                    character_results.append(
+                        [input_string, predicted_strings[i], target_strings[i]])
 
-        return metrics
+        return metrics, character_results
 
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
         if best_metric.is_new:
