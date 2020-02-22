@@ -259,7 +259,9 @@ class TrainService:
                 raise Exception(
                     f'loss is NaN during evaluation at iteration {i}')
 
-            all_character_results.extend(character_results)
+            if character_results:
+                all_character_results.extend(character_results)
+
             metric.add_accuracies(metrics_batch)
             metric.add_loss(loss_batch)
 

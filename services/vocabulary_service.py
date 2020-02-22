@@ -27,8 +27,12 @@ class VocabularyService:
         result = [self._char2int[x] for x in input]
         return result
 
-    def ids_to_string(self, input: List[int]) -> str:
+    def ids_to_string(self, input: List[int], exclude_pad_tokens: bool = True) -> str:
         result = ''.join([self._int2char[x] for x in input])
+
+        if exclude_pad_tokens:
+            result = result.replace('[PAD]', '')
+
         return result
 
     def vocabulary_size(self) -> int:

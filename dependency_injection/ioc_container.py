@@ -19,6 +19,7 @@ from models.kbert_model import KBertModel
 from models.kxlnet_model import KXLNetModel
 from models.multifit_model import MultiFitModel
 from models.sequence_model import SequenceModel
+from models.transformer_model import TransformerModel
 from models.joint_model import JointModel
 
 from optimizers.optimizer_base import OptimizerBase
@@ -176,7 +177,7 @@ class IocContainer(containers.DeclarativeContainer):
                 arguments_service=arguments_service,
                 model=model
             )
-        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter:
+        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
             loss_function = providers.Singleton(
                 CrossEntropyLoss,
                 device=device
@@ -191,7 +192,7 @@ class IocContainer(containers.DeclarativeContainer):
                     metrics_service=metrics_service,
                     log_service=log_service
                 )
-            else:
+            elif configuration == Configuration.SequenceToCharacter:
                 model = providers.Singleton(
                     SequenceModel,
                     arguments_service=arguments_service,
@@ -200,6 +201,16 @@ class IocContainer(containers.DeclarativeContainer):
                     metrics_service=metrics_service,
                     log_service=log_service,
                     vocabulary_service=vocabulary_service
+                )
+            elif configuration == Configuration.TransformerSequence:
+                model = providers.Singleton(
+                    TransformerModel,
+                    arguments_service=arguments_service,
+                    data_service=data_service,
+                    vocabulary_service=vocabulary_service,
+                    metrics_service=metrics_service,
+                    log_service=log_service,
+                    tokenizer_service=tokenizer_service
                 )
 
             optimizer = providers.Singleton(

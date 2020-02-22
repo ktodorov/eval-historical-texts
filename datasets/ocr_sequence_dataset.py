@@ -36,9 +36,10 @@ class OCRSequenceDataset(OCRDataset):
             max_articles_length: int = 1000,
             include_pretrained: bool = False,
             **kwargs):
-        super(OCRSequenceDataset, self).__init__(
+        super().__init__(
             file_service,
             tokenizer_service,
+            vocabulary_service,
             log_service,
             pretrained_representations_service,
             run_type,
@@ -48,8 +49,6 @@ class OCRSequenceDataset(OCRDataset):
             max_articles_length,
             include_pretrained,
             **kwargs)
-
-        self._vocabulary_service = vocabulary_service
 
     def _get_language_data_path(
         self,
