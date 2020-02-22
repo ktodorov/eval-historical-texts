@@ -13,7 +13,6 @@ from services.arguments_service_base import ArgumentsServiceBase
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
-from services.mask_service import MaskService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 
 from preprocessing.ocr_preprocessing import train_spm_model, preprocess_data, combine_data
@@ -27,7 +26,6 @@ class OCRDataset(DatasetBase):
             file_service: FileService,
             tokenizer_service: TokenizerService,
             log_service: LogService,
-            mask_service: MaskService,
             pretrained_representations_service: PretrainedRepresentationsService,
             run_type: RunType,
             language: str,
@@ -39,7 +37,6 @@ class OCRDataset(DatasetBase):
         super(OCRDataset, self).__init__()
 
         self._device = device
-        self._mask_service = mask_service
         self._tokenizer_service = tokenizer_service
         self._pretrained_representations_service = pretrained_representations_service
         self._include_pretrained = include_pretrained
@@ -68,7 +65,7 @@ class OCRDataset(DatasetBase):
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
 
         if not os.path.exists(language_data_path):
-            train_data_path = os.path.join('data', 'ocr', 'pickles')
+            train_data_path = file_service.get_pickles_path()
             test_data_path = None # os.path.join('data', 'ocr', 'eval')
             preprocess_data(language, train_data_path, test_data_path,
                             output_data_path, self._tokenizer_service.tokenizer)
@@ -92,7 +89,9 @@ class OCRDataset(DatasetBase):
                 language_data = LanguageData(
                     language_data_items[0],
                     language_data_items[1],
-                    language_data_items[2])
+                    language_data_items[2],
+                    language_data_items[3],
+                    language_data_items[4])
 
             print(
                 f'Loaded {language_data.length} entries for {run_type.to_str()}')
@@ -107,7 +106,7 @@ class OCRDataset(DatasetBase):
     def __getitem__(self, idx):
         result = self._language_data.get_entry(idx)
 
-        _, ocr_aligned, gs_aligned = result
+        _, ocr_aligned, gs_aligned, _, _ = result
 
         pretrained_result = self._get_pretrained_representation(ocr_aligned)
 

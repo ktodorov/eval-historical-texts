@@ -68,3 +68,22 @@ class FileService:
             os.mkdir(model_path)
 
         return model_path
+
+    def get_pickles_path(self) -> str:
+        data_path = self._arguments_service.get_argument('data_folder')
+
+        if not os.path.exists(data_path):
+            os.mkdir(data_path)
+
+        challenge_name = self._arguments_service.get_argument('challenge')
+        if challenge_name:
+            data_path = os.path.join(data_path, challenge_name)
+            if not os.path.exists(data_path):
+                os.mkdir(data_path)
+
+        data_pickles_path = os.path.join(data_path, 'pickles')
+
+        if not os.path.exists(data_pickles_path):
+            os.mkdir(data_pickles_path)
+
+        return data_pickles_path

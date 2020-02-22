@@ -16,7 +16,8 @@ class MultiFitEncoder(nn.Module):
             include_pretrained: bool = False,
             pretrained_hidden_size: int = None,
             pretrained_weights: str = None,
-            learn_embeddings: bool = True):
+            learn_embeddings: bool = True,
+            bidirectional: bool = False):
         super(MultiFitEncoder, self).__init__()
 
         assert learn_embeddings or include_pretrained
@@ -31,13 +32,12 @@ class MultiFitEncoder(nn.Module):
             lstm_input_size += embedding_size
 
         self.rnn = nn.GRU(lstm_input_size, hidden_dimension,
-                          number_of_layers, batch_first=True)
+                          number_of_layers, batch_first=True, bidirectional=bidirectional)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input_batch, lengths, pretrained_representations, debug: bool = False, **kwargs):
         if self._learn_embeddings:
             embedded = self.dropout(self.embedding(input_batch))
-            # self._print_debug_embedded_statistics(debug, embedded)
 
             if self._include_pretrained:
                 embedded = torch.cat((embedded, pretrained_representations), dim=2)
@@ -46,12 +46,8 @@ class MultiFitEncoder(nn.Module):
 
         x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
 
-        outputs, hidden = self.rnn.forward(x_packed)
-        
-        # self._print_debug_hidden_statistics(debug, hidden)
+        _, hidden = self.rnn.forward(x_packed)
 
-        # hidden = torch.cat(
-        #     (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
-        # cell = torch.cat((cell[0, :, :], cell[1, :, :]), dim=1).unsqueeze(0)
+        hidden = torch.cat((hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
 
         return hidden

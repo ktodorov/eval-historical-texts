@@ -91,8 +91,10 @@ class ArgumentsService(ArgumentsServiceBase):
         parser.add_argument('--sentence-piece-vocabulary-size', type=int, default=1000,
                             help='Vocabulary size that will be used when training the sentence piece model')
 
-        parser.add_argument('--embedding-size', type=int, default=256,
-                            help='The size used for generating embeddings')
+        parser.add_argument('--encoder-embedding-size', type=int, default=128,
+                            help='The size used for generating embeddings in the encoder')
+        parser.add_argument('--decoder-embedding-size', type=int, default=16,
+                            help='The size used for generating embeddings in the decoder')
         parser.add_argument('--hidden-dimension', type=int, default=256,
                             help='The dimension size used for hidden layers')
         parser.add_argument('--dropout', type=float, default=0.0,

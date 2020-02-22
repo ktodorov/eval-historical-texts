@@ -6,6 +6,7 @@ from datasets.kbert_dataset import KBertDataset
 from datasets.joint_dataset import JointDataset
 from datasets.newseye_dataset import NewsEyeDataset
 from datasets.ocr_dataset import OCRDataset
+from datasets.ocr_sequence_dataset import OCRSequenceDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
 
 from services.arguments_service_base import ArgumentsServiceBase
@@ -14,6 +15,7 @@ from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
+from services.vocabulary_service import VocabularyService
 
 
 class DatasetService:
@@ -24,7 +26,8 @@ class DatasetService:
             tokenizer_service: TokenizerService,
             file_service: FileService,
             log_service: LogService,
-            pretrained_representations_service: PretrainedRepresentationsService):
+            pretrained_representations_service: PretrainedRepresentationsService,
+            vocabulary_service: VocabularyService):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
@@ -32,6 +35,7 @@ class DatasetService:
         self._file_service = file_service
         self._log_service = log_service
         self._pretrained_representations_service = pretrained_representations_service
+        self._vocabulary_service = vocabulary_service
 
     def get_dataset(self, run_type: RunType, language: str) -> DatasetBase:
         """Loads and returns the dataset based on run type ``(Train, Validation, Test)`` and the language
@@ -77,6 +81,19 @@ class DatasetService:
                     self._tokenizer_service,
                     self._log_service,
                     self._mask_service,
+                    self._pretrained_representations_service,
+                    run_type,
+                    language,
+                    self._arguments_service.get_argument('device'),
+                    reduction_size,
+                    self._arguments_service.get_argument('max_articles_length'),
+                    include_pretrained=self._arguments_service.get_argument('include_pretrained_model'))
+            elif configuration == Configuration.SequenceToCharacter:
+                result = OCRSequenceDataset(
+                    self._file_service,
+                    self._tokenizer_service,
+                    self._vocabulary_service,
+                    self._log_service,
                     self._pretrained_representations_service,
                     run_type,
                     language,

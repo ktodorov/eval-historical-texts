@@ -33,7 +33,7 @@ class TokenizerService:
         elif configuration == Configuration.XLNet:
             self._tokenizer = XLNetTokenizer.from_pretrained(
                 pretrained_weights)
-        elif configuration == Configuration.MultiFit:
+        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter:
             vocabulary_path = os.path.join('data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
             if not os.path.exists(vocabulary_path):
                 raise Exception(f'Vocabulary not found in {vocabulary_path}')

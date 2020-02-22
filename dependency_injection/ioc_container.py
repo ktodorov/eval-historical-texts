@@ -18,6 +18,7 @@ from models.model_base import ModelBase
 from models.kbert_model import KBertModel
 from models.kxlnet_model import KXLNetModel
 from models.multifit_model import MultiFitModel
+from models.sequence_model import SequenceModel
 from models.joint_model import JointModel
 
 from optimizers.optimizer_base import OptimizerBase
@@ -40,6 +41,7 @@ from services.pretrained_representations_service import PretrainedRepresentation
 from services.test_service import TestService
 from services.tokenizer_service import TokenizerService
 from services.train_service import TrainService
+from services.vocabulary_service import VocabularyService
 
 import logging
 
@@ -110,6 +112,13 @@ class IocContainer(containers.DeclarativeContainer):
         MetricsService
     )
 
+    vocabulary_service = providers.Singleton(
+        VocabularyService,
+        arguments_service=arguments_service,
+        data_service=data_service,
+        file_service=file_service
+    )
+
     pretrained_representations_service = providers.Singleton(
         PretrainedRepresentationsService,
         include_pretrained=arguments_service_instance.get_argument('include_pretrained_model'),
@@ -126,7 +135,8 @@ class IocContainer(containers.DeclarativeContainer):
         tokenizer_service=tokenizer_service,
         file_service=file_service,
         log_service=log_service,
-        pretrained_representations_service=pretrained_representations_service
+        pretrained_representations_service=pretrained_representations_service,
+        vocabulary_service=vocabulary_service
     )
 
     dataloader_service = providers.Factory(
@@ -166,20 +176,31 @@ class IocContainer(containers.DeclarativeContainer):
                 arguments_service=arguments_service,
                 model=model
             )
-        elif configuration == Configuration.MultiFit:
+        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter:
             loss_function = providers.Singleton(
                 CrossEntropyLoss,
                 device=device
             )
 
-            model = providers.Singleton(
-                MultiFitModel,
-                arguments_service=arguments_service,
-                data_service=data_service,
-                tokenizer_service=tokenizer_service,
-                metrics_service=metrics_service,
-                log_service=log_service
-            )
+            if configuration == Configuration.MultiFit:
+                model = providers.Singleton(
+                    MultiFitModel,
+                    arguments_service=arguments_service,
+                    data_service=data_service,
+                    tokenizer_service=tokenizer_service,
+                    metrics_service=metrics_service,
+                    log_service=log_service
+                )
+            else:
+                model = providers.Singleton(
+                    SequenceModel,
+                    arguments_service=arguments_service,
+                    data_service=data_service,
+                    tokenizer_service=tokenizer_service,
+                    metrics_service=metrics_service,
+                    log_service=log_service,
+                    vocabulary_service=vocabulary_service
+                )
 
             optimizer = providers.Singleton(
                 AdamOptimizer,

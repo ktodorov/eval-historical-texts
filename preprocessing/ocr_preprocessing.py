@@ -13,6 +13,8 @@ from enums.language import Language
 from entities.language_data import LanguageData
 from utils import path_utils
 
+from services.vocabulary_service import VocabularyService
+
 ocr_prefix = '[OCR_toInput] '
 ocr_aligned_prefix = '[OCR_aligned] '
 gs_prefix = '[ GS_aligned] '
@@ -186,7 +188,8 @@ def read_data_file(data_file_name: str, output_full_path: str):
 
 def parse_language_data(
         dataset_folder_path: str,
-        tokenizer: PreTrainedTokenizer) -> LanguageData:
+        tokenizer: PreTrainedTokenizer,
+        vocabulary_service: VocabularyService) -> LanguageData:
 
     train_pickle_path = os.path.join(dataset_folder_path, 'train_pairs.pickle')
     with open(train_pickle_path, 'rb') as train_pickle_file:
@@ -206,13 +209,13 @@ def parse_language_data(
 #         file_path = os.path.join(dataset_folder_path, file_name)
 #         file_paths.append(file_path)
 
-    train_language_data = LanguageData([],[],[])
+    train_language_data = LanguageData([],[],[],[],[])
     for train_pair in train_pairs:
-        train_language_data.add_entry(None, train_pair[0], train_pair[1], tokenizer)
+        train_language_data.add_entry(None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenizer, vocabulary_service)
 
-    validation_language_data = LanguageData([],[],[])
+    validation_language_data = LanguageData([],[],[],[],[])
     for validation_pair in validation_pairs:
-        validation_language_data.add_entry(None, validation_pair[0], validation_pair[1], tokenizer)
+        validation_language_data.add_entry(None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenizer, vocabulary_service)
 
 #     split_index = int(len(file_paths) * 0.8)
 #     train_file_paths = file_paths[0:split_index]
@@ -271,10 +274,11 @@ def preprocess_data(
         train_data_path: str,
         test_data_path: str,
         data_output_path: str,
-        tokenizer: PreTrainedTokenizer):
+        tokenizer: PreTrainedTokenizer,
+        vocabulary_service: VocabularyService):
 
     train_language_data, validation_language_data = parse_language_data(
-        train_data_path, tokenizer)
+        train_data_path, tokenizer, vocabulary_service)
     train_language_data_filepath = os.path.join(
         data_output_path, f'train_language_data.pickle')
     validation_language_data_filepath = os.path.join(
