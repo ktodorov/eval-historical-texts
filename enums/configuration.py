@@ -5,3 +5,4 @@ class Configuration(ArgumentEnum):
     XLNet = 'xlnet'
     MultiFit = 'multi-fit'
     SequenceToCharacter = 'sequence-to-char'
+    TransformerSequence = 'transformer-sequence'

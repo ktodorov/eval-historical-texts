@@ -79,8 +79,8 @@ class DatasetService:
                 result = OCRDataset(
                     self._file_service,
                     self._tokenizer_service,
+                    self._vocabulary_service,
                     self._log_service,
-                    self._mask_service,
                     self._pretrained_representations_service,
                     run_type,
                     language,
@@ -88,7 +88,7 @@ class DatasetService:
                     reduction_size,
                     self._arguments_service.get_argument('max_articles_length'),
                     include_pretrained=self._arguments_service.get_argument('include_pretrained_model'))
-            elif configuration == Configuration.SequenceToCharacter:
+            elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
                 result = OCRSequenceDataset(
                     self._file_service,
                     self._tokenizer_service,

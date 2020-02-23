@@ -100,7 +100,9 @@ class ArgumentsService(ArgumentsServiceBase):
         parser.add_argument('--dropout', type=float, default=0.0,
                             help='Dropout probability')
         parser.add_argument('--number-of-layers', type=int, default=1,
-                            help='Number of layers used for RNN models')
+                            help='Number of layers used for RNN or Transformer models')
+        parser.add_argument('--number-of-heads', type=int, default=1,
+                            help='Number of heads used for Transformer models')
 
         # Translation
         parser.add_argument('--teacher-forcing-ratio', type=float, default=0.5,

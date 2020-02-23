@@ -12,9 +12,7 @@ from services.config_service import ConfigService
 
 class DataService:
 
-    def __init__(
-            self,
-            logger: logging.Logger):
+    def __init__(self):
 
         # determines relative disk directory for saving/loading
         self.stamp: str = ''

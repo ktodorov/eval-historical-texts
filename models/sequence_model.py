@@ -19,8 +19,8 @@ from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
 
-from models.multifit_encoder import MultiFitEncoder
-from models.multifit_decoder import MultiFitDecoder
+from models.sequence_encoder import SequenceEncoder
+from models.sequence_decoder import SequenceDecoder
 
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
@@ -48,7 +48,7 @@ class SequenceModel(ModelBase):
 
         self._output_dimension = self._vocabulary_service.vocabulary_size()
 
-        self._encoder = MultiFitEncoder(
+        self._encoder = SequenceEncoder(
             embedding_size=self._arguments_service.get_argument(
                 'encoder_embedding_size'),
             input_size=self._arguments_service.get_argument(
@@ -62,14 +62,12 @@ class SequenceModel(ModelBase):
                 'include_pretrained_model'),
             pretrained_hidden_size=self._arguments_service.get_argument(
                 'pretrained_model_size'),
-            pretrained_weights=arguments_service.get_argument(
-                'pretrained_weights'),
             learn_embeddings=arguments_service.get_argument(
                 'learn_encoder_embeddings'),
             bidirectional=True
         )
 
-        self._decoder = MultiFitDecoder(
+        self._decoder = SequenceDecoder(
             embedding_size=self._arguments_service.get_argument(
                 'decoder_embedding_size'),
             output_dimension=self._output_dimension,

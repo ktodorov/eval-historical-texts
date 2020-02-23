@@ -1,9 +1,12 @@
+import pickle
+
 from enums.language import Language
 from typing import Dict, List, Tuple
 from transformers import PreTrainedTokenizer
 import math
 
 from services.vocabulary_service import VocabularyService
+
 
 class LanguageData:
     def __init__(
@@ -75,6 +78,20 @@ class LanguageData:
         )
 
         return result
+
+    def load_data(self, filepath: str):
+        with open(filepath, 'rb') as data_file:
+            language_data: LanguageData = pickle.load(data_file)
+
+        if not language_data:
+            return
+
+        items_length = language_data.length
+
+        self._ocr_aligned = language_data._ocr_aligned if hasattr(language_data, '_ocr_aligned') else [None] * items_length
+        self._gs_aligned = language_data._gs_aligned if hasattr(language_data, '_gs_aligned') else [None] * items_length
+        self._ocr_texts = language_data._ocr_texts if hasattr(language_data, '_ocr_texts') else [None] * items_length
+        self._gs_texts = language_data._gs_texts if hasattr(language_data, '_gs_texts') else [None] * items_length
 
     @property
     def length(self) -> int:

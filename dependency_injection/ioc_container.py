@@ -9,7 +9,8 @@ import main
 
 from enums.configuration import Configuration
 
-from losses.cross_entropy_loss import CrossEntropyLoss
+from losses.sequence_loss import SequenceLoss
+from losses.transformer_sequence_loss import TransformerSequenceLoss
 from losses.loss_base import LossBase
 from losses.kbert_loss import KBertLoss
 from losses.joint_loss import JointLoss
@@ -19,6 +20,7 @@ from models.kbert_model import KBertModel
 from models.kxlnet_model import KXLNetModel
 from models.multifit_model import MultiFitModel
 from models.sequence_model import SequenceModel
+from models.transformer_model import TransformerModel
 from models.joint_model import JointModel
 
 from optimizers.optimizer_base import OptimizerBase
@@ -86,10 +88,7 @@ class IocContainer(containers.DeclarativeContainer):
         config=config
     )
 
-    data_service = providers.Factory(
-        DataService,
-        logger=logger,
-    )
+    data_service = providers.Factory(DataService)
 
     file_service = providers.Factory(
         FileService,
@@ -114,7 +113,6 @@ class IocContainer(containers.DeclarativeContainer):
 
     vocabulary_service = providers.Singleton(
         VocabularyService,
-        arguments_service=arguments_service,
         data_service=data_service,
         file_service=file_service
     )
@@ -176,13 +174,10 @@ class IocContainer(containers.DeclarativeContainer):
                 arguments_service=arguments_service,
                 model=model
             )
-        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter:
-            loss_function = providers.Singleton(
-                CrossEntropyLoss,
-                device=device
-            )
+        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
 
             if configuration == Configuration.MultiFit:
+                loss_function = providers.Singleton(SequenceLoss)
                 model = providers.Singleton(
                     MultiFitModel,
                     arguments_service=arguments_service,
@@ -191,7 +186,8 @@ class IocContainer(containers.DeclarativeContainer):
                     metrics_service=metrics_service,
                     log_service=log_service
                 )
-            else:
+            elif configuration == Configuration.SequenceToCharacter:
+                loss_function = providers.Singleton(SequenceLoss)
                 model = providers.Singleton(
                     SequenceModel,
                     arguments_service=arguments_service,
@@ -200,6 +196,17 @@ class IocContainer(containers.DeclarativeContainer):
                     metrics_service=metrics_service,
                     log_service=log_service,
                     vocabulary_service=vocabulary_service
+                )
+            elif configuration == Configuration.TransformerSequence:
+                loss_function = providers.Singleton(TransformerSequenceLoss)
+                model = providers.Singleton(
+                    TransformerModel,
+                    arguments_service=arguments_service,
+                    data_service=data_service,
+                    vocabulary_service=vocabulary_service,
+                    metrics_service=metrics_service,
+                    log_service=log_service,
+                    tokenizer_service=tokenizer_service
                 )
 
             optimizer = providers.Singleton(
