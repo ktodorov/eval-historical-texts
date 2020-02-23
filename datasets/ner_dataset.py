@@ -6,12 +6,14 @@ from enums.language import Language
 from preprocessing.ner_preprocessing import preprocess_data
 
 from services.file_service import FileService
+from services.tokenizer_service import TokenizerService
 
 
 class NERDataset(DatasetBase):
     def __init__(
             self,
             file_service: FileService,
+            tokenizer_service: TokenizerService,
             run_type: RunType,
             language: Language):
         super().__init__()
@@ -20,8 +22,8 @@ class NERDataset(DatasetBase):
         file_suffix = 'train' if run_type == RunType.Train else 'dev'
         language_suffix = self._get_language_suffix(language)
         file_path = os.path.join(data_path, f'HIPE-data-v0.9-{file_suffix}-{language_suffix}.tsv')
-        self.ne_collection = preprocess_data(file_path)
-        
+        self.ne_collection = preprocess_data(file_path, tokenizer_service)
+
         raise Exception('test')
 
 

@@ -105,6 +105,7 @@ class DatasetService:
             elif configuration == Configuration.RNNSimple:
                 result = NERDataset(
                     self._file_service,
+                    self._tokenizer_service,
                     run_type,
                     language)
 

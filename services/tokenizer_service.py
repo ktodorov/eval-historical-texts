@@ -33,12 +33,18 @@ class TokenizerService:
         elif configuration == Configuration.XLNet:
             self._tokenizer = XLNetTokenizer.from_pretrained(
                 pretrained_weights)
-        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
-            vocabulary_path = os.path.join('data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
+        elif (configuration == Configuration.MultiFit or
+              configuration == Configuration.SequenceToCharacter or
+              configuration == Configuration.TransformerSequence or
+              configuration == Configuration.RNNSimple):
+
+            vocabulary_path = os.path.join(
+                'data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
             if not os.path.exists(vocabulary_path):
                 raise Exception(f'Vocabulary not found in {vocabulary_path}')
 
-            self._tokenizer = BertWordPieceTokenizer(vocabulary_path, lowercase=False)
+            self._tokenizer = BertWordPieceTokenizer(
+                vocabulary_path, lowercase=False, add_special_tokens=(configuration != Configuration.RNNSimple))
 
     def load_tokenizer_model(self):
         data_path = self._file_service.get_data_path()
@@ -57,6 +63,10 @@ class TokenizerService:
     def decode_string(self, character_ids: List[int]) -> str:
         result = self._tokenizer.decode(character_ids)
         return result
+
+    def encode_string(self, text: str) -> List[int]:
+        encoded_representation = self._tokenizer.encode(text)
+        return (encoded_representation.ids, encoded_representation.tokens)
 
     def is_tokenizer_loaded(self) -> bool:
         return self._tokenizer_loaded
