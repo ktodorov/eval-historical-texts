@@ -8,6 +8,7 @@ from datasets.newseye_dataset import NewsEyeDataset
 from datasets.ocr_dataset import OCRDataset
 from datasets.ocr_sequence_dataset import OCRSequenceDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
+from datasets.ner_dataset import NERDataset
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.file_service import FileService
@@ -101,6 +102,11 @@ class DatasetService:
                     reduction_size,
                     self._arguments_service.get_argument('max_articles_length'),
                     include_pretrained=self._arguments_service.get_argument('include_pretrained_model'))
+            elif configuration == Configuration.RNNSimple:
+                result = NERDataset(
+                    self._file_service,
+                    run_type,
+                    language)
 
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(

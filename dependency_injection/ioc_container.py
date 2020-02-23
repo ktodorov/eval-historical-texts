@@ -14,6 +14,7 @@ from losses.transformer_sequence_loss import TransformerSequenceLoss
 from losses.loss_base import LossBase
 from losses.kbert_loss import KBertLoss
 from losses.joint_loss import JointLoss
+from losses.ner_loss import NERLoss
 
 from models.model_base import ModelBase
 from models.kbert_model import KBertModel
@@ -22,6 +23,7 @@ from models.multifit_model import MultiFitModel
 from models.sequence_model import SequenceModel
 from models.transformer_model import TransformerModel
 from models.joint_model import JointModel
+from models.ner_rnn_model import NERRNNModel
 
 from optimizers.optimizer_base import OptimizerBase
 from optimizers.adam_optimizer import AdamOptimizer
@@ -208,6 +210,19 @@ class IocContainer(containers.DeclarativeContainer):
                     log_service=log_service,
                     tokenizer_service=tokenizer_service
                 )
+
+            optimizer = providers.Singleton(
+                AdamOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+        elif configuration == Configuration.RNNSimple:
+            loss_function = providers.Singleton(NERLoss)
+            model = providers.Singleton(
+                NERRNNModel,
+                arguments_service=arguments_service,
+                data_service=data_service
+            )
 
             optimizer = providers.Singleton(
                 AdamOptimizer,

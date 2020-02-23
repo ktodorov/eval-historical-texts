@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 
 
+from services.arguments_service_base import ArgumentsServiceBase
 from losses.loss_base import LossBase
 
-class SequenceLoss(LossBase):
+class NERLoss(LossBase):
     def __init__(self):
         super().__init__()
         self._criterion = nn.CrossEntropyLoss(ignore_index=0)

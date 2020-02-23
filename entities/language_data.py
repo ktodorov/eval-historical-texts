@@ -1,6 +1,5 @@
 import pickle
 
-from enums.language import Language
 from typing import Dict, List, Tuple
 from transformers import PreTrainedTokenizer
 import math

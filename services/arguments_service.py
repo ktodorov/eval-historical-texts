@@ -4,6 +4,7 @@ from services.arguments_service_base import ArgumentsServiceBase
 
 from enums.metric_type import MetricType
 from enums.configuration import Configuration
+from enums.language import Language
 from enums.evaluation_type import EvaluationType
 from enums.output_format import OutputFormat
 
@@ -30,7 +31,7 @@ class ArgumentsService(ArgumentsServiceBase):
                             help="run in evaluation mode")
         parser.add_argument("--patience", type=int, default=30,
                             help="how long will the model wait for improvement before stopping training")
-        parser.add_argument("--language", type=str, default='english',
+        parser.add_argument("--language", type=Language, choices=list(Language), default=Language.English,
                             help="which language to train on")
         parser.add_argument("--shuffle", action='store_false',
                             help="shuffle datasets while training")

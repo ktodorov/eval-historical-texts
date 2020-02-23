@@ -48,8 +48,7 @@ class OCRDataset(DatasetBase):
 
         language_data_path = self._get_language_data_path(
             file_service,
-            run_type,
-            language)
+            run_type)
 
         self._language_data = self._load_language_data(
             log_service,
@@ -61,8 +60,7 @@ class OCRDataset(DatasetBase):
     def _get_language_data_path(
         self,
         file_service: FileService,
-        run_type: RunType,
-        language: str):
+        run_type: RunType):
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
@@ -70,7 +68,7 @@ class OCRDataset(DatasetBase):
         if not os.path.exists(language_data_path):
             train_data_path = file_service.get_pickles_path()
             test_data_path = None
-            preprocess_data(language, train_data_path, test_data_path,
+            preprocess_data(train_data_path, test_data_path,
                             output_data_path, self._tokenizer_service.tokenizer, self._vocabulary_service)
 
         return language_data_path

@@ -17,7 +17,8 @@ class VocabularyService:
             'vocabulary')
 
         if not vocabulary_data:
-            raise Exception('Vocabulary not found')
+            return
+            # raise Exception('Vocabulary not found')
 
         self._int2char: Dict[int, str] = vocabulary_data['int2char']
         self._char2int: Dict[str, int] = vocabulary_data['char2int']

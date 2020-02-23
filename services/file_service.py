@@ -30,7 +30,7 @@ class FileService:
 
         data_language_path = os.path.join(
             data_model_path,
-            self._arguments_service.get_argument('language'))
+            str(self._arguments_service.get_argument('language')))
 
         if not os.path.exists(data_language_path):
             os.mkdir(data_language_path)
@@ -62,7 +62,7 @@ class FileService:
 
         model_path = os.path.join(
             output_model_path,
-            self._arguments_service.get_argument('language'))
+            str(self._arguments_service.get_argument('language')))
 
         if not os.path.exists(model_path):
             os.mkdir(model_path)

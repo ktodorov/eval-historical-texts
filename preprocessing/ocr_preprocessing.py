@@ -9,7 +9,6 @@ import pickle
 
 from transformers import PreTrainedTokenizer
 
-from enums.language import Language
 from entities.language_data import LanguageData
 from utils import path_utils
 
@@ -270,7 +269,6 @@ def train_spm_model(
 
 
 def preprocess_data(
-        language: Language,
         train_data_path: str,
         test_data_path: str,
         data_output_path: str,
