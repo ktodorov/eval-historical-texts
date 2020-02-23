@@ -7,6 +7,8 @@ from torch import nn
 
 from enums.metric_type import MetricType
 
+from entities.metric import Metric
+
 from models.model_base import ModelBase
 from models.transformer_encoder import TransformerEncoder
 from models.transformer_decoder import TransformerDecoder
@@ -49,16 +51,24 @@ class TransformerModel(ModelBase):
             pf_dim=arguments_service.get_argument('hidden_dimension'),
             dropout=arguments_service.get_argument('dropout'),
             device=arguments_service.get_argument('device'),
+            include_pretrained=arguments_service.get_argument(
+                'include_pretrained_model'),
+            pretrained_hidden_size=arguments_service.get_argument(
+                'pretrained_model_size'),
             max_length=5000)
 
         self.decoder = TransformerDecoder(
-            vocabulary_service.vocabulary_size(),
+            output_dim=vocabulary_service.vocabulary_size(),
             hid_dim=arguments_service.get_argument('hidden_dimension'),
             n_layers=arguments_service.get_argument('number_of_layers'),
             n_heads=arguments_service.get_argument('number_of_heads'),
             pf_dim=arguments_service.get_argument('hidden_dimension'),
             dropout=arguments_service.get_argument('dropout'),
             device=arguments_service.get_argument('device'),
+            include_pretrained=arguments_service.get_argument(
+                'include_pretrained_model'),
+            pretrained_hidden_size=arguments_service.get_argument(
+                'pretrained_model_size'),
             max_length=5000)
 
         self.src_pad_idx = 0
@@ -105,20 +115,23 @@ class TransformerModel(ModelBase):
     def forward(self, input_batch, debug=False, **kwargs):
         source, targets, lengths, pretrained_representations, _ = input_batch
 
+        # source = source[:, :-1]
+        cut_targets = targets[:, :-1]
+
         # src = [batch size, src len]
         # trg = [batch size, trg len]
 
         src_mask = self.make_src_mask(source)
-        trg_mask = self.make_trg_mask(targets)
+        trg_mask = self.make_trg_mask(cut_targets)
 
         # src_mask = [batch size, 1, 1, src len]
         # trg_mask = [batch size, 1, trg len, trg len]
 
-        enc_src = self.encoder(source, src_mask)
+        enc_src = self.encoder(source, src_mask, pretrained_representations)
 
         # enc_src = [batch size, src len, hid dim]
 
-        output, attention = self.decoder(targets, enc_src, trg_mask, src_mask)
+        output, _ = self.decoder(cut_targets, enc_src, trg_mask, src_mask)
 
         # output = [batch size, trg len, output dim]
         # attention = [batch size, n heads, trg len, src len]
@@ -130,7 +143,7 @@ class TransformerModel(ModelBase):
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()
 
-        targets = targets.cpu().detach().numpy()
+        targets = targets[:,1:].cpu().detach().numpy()
         predicted_characters = []
         target_characters = []
 
@@ -176,3 +189,17 @@ class TransformerModel(ModelBase):
                         [input_string, predicted_strings[i], target_strings[i]])
 
         return metrics, character_results
+
+    def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
+        if best_metric.is_new:
+            return True
+
+        best_loss = round(best_metric.get_current_loss(), 2)
+        new_loss = round(new_metric.get_current_loss(), 2)
+
+        if best_loss == new_loss:
+            best_levenshtein = best_metric.get_accuracy_metric(MetricType.LevenshteinDistance)
+            new_levenshtein = new_metric.get_accuracy_metric(MetricType.LevenshteinDistance)
+            return new_levenshtein <= best_levenshtein
+        else:
+            return best_loss > new_loss

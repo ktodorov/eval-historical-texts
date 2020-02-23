@@ -9,7 +9,6 @@ from services.file_service import FileService
 class VocabularyService:
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
             data_service: DataService,
             file_service: FileService):
 

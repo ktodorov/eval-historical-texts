@@ -13,15 +13,20 @@ class TransformerEncoder(nn.Module):
                  pf_dim,
                  dropout,
                  device,
-                 max_length=2000):
+                 max_length=2000,
+                 include_pretrained: bool = False,
+                 pretrained_hidden_size: int = None):
         super().__init__()
 
         self.device = device
+        self.include_pretrained = include_pretrained
 
         self.tok_embedding = nn.Embedding(input_dim, hid_dim)
         self.pos_embedding = nn.Embedding(max_length, hid_dim)
 
-        self.layers = nn.ModuleList([TransformerEncoderLayer(hid_dim,
+        additional_size = pretrained_hidden_size if include_pretrained else 0
+
+        self.layers = nn.ModuleList([TransformerEncoderLayer(hid_dim + additional_size,
                                                              n_heads,
                                                              pf_dim,
                                                              dropout,
@@ -32,7 +37,7 @@ class TransformerEncoder(nn.Module):
 
         self.scale = torch.sqrt(torch.FloatTensor([hid_dim])).to(device)
 
-    def forward(self, src, src_mask):
+    def forward(self, src, src_mask, pretrained_representations=None):
 
         # src = [batch size, src len]
         # src_mask = [batch size, src len]
@@ -49,6 +54,9 @@ class TransformerEncoder(nn.Module):
             (self.tok_embedding(src) * self.scale) + self.pos_embedding(pos))
 
         # src = [batch size, src len, hid dim]
+
+        if self.include_pretrained:
+            src = torch.cat((src, pretrained_representations), dim=2)
 
         for layer in self.layers:
             src = layer(src, src_mask)

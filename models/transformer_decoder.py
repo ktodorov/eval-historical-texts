@@ -13,7 +13,9 @@ class TransformerDecoder(nn.Module):
                  pf_dim,
                  dropout,
                  device,
-                 max_length=100):
+                 max_length=100,
+                 include_pretrained: bool = False,
+                 pretrained_hidden_size: int = None):
         super().__init__()
 
         self.device = device
@@ -22,10 +24,12 @@ class TransformerDecoder(nn.Module):
         self.pos_embedding = nn.Embedding(max_length, hid_dim)
 
         self.layers = nn.ModuleList([TransformerDecoderLayer(hid_dim,
-                                                  n_heads,
-                                                  pf_dim,
-                                                  dropout,
-                                                  device)
+                                                             n_heads,
+                                                             pf_dim,
+                                                             dropout,
+                                                             device,
+                                                             include_pretrained=include_pretrained,
+                                                             pretrained_hidden_size=pretrained_hidden_size)
                                      for _ in range(n_layers)])
 
         self.fc_out = nn.Linear(hid_dim, output_dim)

@@ -18,8 +18,8 @@ from services.tokenizer_service import TokenizerService
 from services.metrics_service import MetricsService
 from services.log_service import LogService
 
-from models.multifit_encoder import MultiFitEncoder
-from models.multifit_decoder import MultiFitDecoder
+from models.sequence_encoder import SequenceEncoder
+from models.sequence_decoder import SequenceDecoder
 
 
 class MultiFitModel(ModelBase):
@@ -47,7 +47,7 @@ class MultiFitModel(ModelBase):
         self._teacher_forcing_ratio: int = self._arguments_service.get_argument(
             'teacher_forcing_ratio')
 
-        self._encoder = MultiFitEncoder(
+        self._encoder = SequenceEncoder(
             embedding_size=self._arguments_service.get_argument(
                 'encoder_embedding_size'),
             input_size=self._arguments_service.get_argument(
@@ -61,13 +61,11 @@ class MultiFitModel(ModelBase):
                 'include_pretrained_model'),
             pretrained_hidden_size=self._arguments_service.get_argument(
                 'pretrained_model_size'),
-            pretrained_weights=arguments_service.get_argument(
-                'pretrained_weights'),
             learn_embeddings=arguments_service.get_argument(
                 'learn_encoder_embeddings')
         )
 
-        self._decoder = MultiFitDecoder(
+        self._decoder = SequenceDecoder(
             embedding_size=self._arguments_service.get_argument(
                 'decoder_embedding_size'),
             output_dimension=self._output_dimension,

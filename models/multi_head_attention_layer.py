@@ -1,8 +1,16 @@
 import torch
 from torch import nn
 
+
 class MultiHeadAttentionLayer(nn.Module):
-    def __init__(self, hid_dim, n_heads, dropout, device):
+    def __init__(
+            self,
+            hid_dim,
+            n_heads,
+            dropout,
+            device,
+            include_pretrained: bool = False,
+            pretrained_hidden_size: int = None):
         super().__init__()
 
         assert hid_dim % n_heads == 0
@@ -11,9 +19,11 @@ class MultiHeadAttentionLayer(nn.Module):
         self.n_heads = n_heads
         self.head_dim = hid_dim // n_heads
 
+        additional_size = pretrained_hidden_size if include_pretrained else 0
+
         self.fc_q = nn.Linear(hid_dim, hid_dim)
-        self.fc_k = nn.Linear(hid_dim, hid_dim)
-        self.fc_v = nn.Linear(hid_dim, hid_dim)
+        self.fc_k = nn.Linear(hid_dim+additional_size, hid_dim)
+        self.fc_v = nn.Linear(hid_dim+additional_size, hid_dim)
 
         self.fc_o = nn.Linear(hid_dim, hid_dim)
 

@@ -69,9 +69,9 @@ class OCRDataset(DatasetBase):
 
         if not os.path.exists(language_data_path):
             train_data_path = file_service.get_pickles_path()
-            test_data_path = None # os.path.join('data', 'ocr', 'eval')
+            test_data_path = None
             preprocess_data(language, train_data_path, test_data_path,
-                            output_data_path, self._tokenizer_service.tokenizer)
+                            output_data_path, self._tokenizer_service.tokenizer, self._vocabulary_service)
 
         return language_data_path
 
@@ -82,24 +82,25 @@ class OCRDataset(DatasetBase):
             run_type: RunType,
             reduction: float,
             max_articles_length: int):
-        with open(language_data_path, 'rb') as data_file:
-            language_data: LanguageData = pickle.load(data_file)
 
-            if reduction:
-                items_length = int(language_data.length * reduction)
-                language_data_items = language_data.get_entries(
-                    items_length)
-                language_data = LanguageData(
-                    language_data_items[0],
-                    language_data_items[1],
-                    language_data_items[2],
-                    language_data_items[3],
-                    language_data_items[4])
+        language_data = LanguageData()
+        language_data.load_data(language_data_path)
 
-            print(
-                f'Loaded {language_data.length} entries for {run_type.to_str()}')
-            log_service.log_summary(
-                key=f'\'{run_type.to_str()}\' entries amount', value=language_data.length)
+        if reduction:
+            items_length = int(language_data.length * reduction)
+            language_data_items = language_data.get_entries(
+                items_length)
+            language_data = LanguageData(
+                language_data_items[0],
+                language_data_items[1],
+                language_data_items[2],
+                language_data_items[3],
+                language_data_items[4])
+
+        print(
+            f'Loaded {language_data.length} entries for {run_type.to_str()}')
+        log_service.log_summary(
+            key=f'\'{run_type.to_str()}\' entries amount', value=language_data.length)
 
         return language_data
 

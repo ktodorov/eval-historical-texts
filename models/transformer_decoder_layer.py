@@ -11,14 +11,21 @@ class TransformerDecoderLayer(nn.Module):
                  n_heads,
                  pf_dim,
                  dropout,
-                 device):
+                 device,
+                 include_pretrained: bool = False,
+                 pretrained_hidden_size: int = None):
         super().__init__()
 
         self.layer_norm = nn.LayerNorm(hid_dim)
         self.self_attention = MultiHeadAttentionLayer(
             hid_dim, n_heads, dropout, device)
         self.encoder_attention = MultiHeadAttentionLayer(
-            hid_dim, n_heads, dropout, device)
+            hid_dim,
+            n_heads,
+            dropout,
+            device,
+            include_pretrained=include_pretrained,
+            pretrained_hidden_size=pretrained_hidden_size)
         self.positionwise_feedforward = PositionwiseFeedforwardLayer(hid_dim,
                                                                      pf_dim,
                                                                      dropout)

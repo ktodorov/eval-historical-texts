@@ -253,7 +253,7 @@ class TrainService:
                 i, data_loader_length, evaluation=True)
 
             loss_batch, metrics_batch, character_results = self._perform_batch_iteration(
-                batch, train_mode=False, output_characters=True)
+                batch, train_mode=False, output_characters=(len(all_character_results) < 30))
 
             if math.isnan(loss_batch):
                 raise Exception(

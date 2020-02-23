@@ -3,7 +3,7 @@ from torch import nn
 from torch.functional import F
 
 
-class MultiFitDecoder(nn.Module):
+class SequenceDecoder(nn.Module):
     def __init__(
             self,
             embedding_size: int,
@@ -11,7 +11,7 @@ class MultiFitDecoder(nn.Module):
             number_of_layers: int,
             output_dimension: int,
             dropout: float = 0):
-        super(MultiFitDecoder, self).__init__()
+        super().__init__()
 
         self.embedding = nn.Embedding(output_dimension, embedding_size)
         self.rnn = nn.GRU(embedding_size + hidden_dimension,
