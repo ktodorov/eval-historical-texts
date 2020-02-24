@@ -7,19 +7,21 @@ from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
 from models.model_base import ModelBase
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.semantic_arguments_service import SemanticArgumentsService
 from services.data_service import DataService
 
 
 class KBertModel(ModelBase):
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: SemanticArgumentsService,
             data_service: DataService):
         super(KBertModel, self).__init__(data_service)
 
         self._bert_model = self._model_type.from_pretrained(
-            arguments_service.get_argument('pretrained_weights'))
+            arguments_service.pretrained_weights)
+
+        self._arguments_service = arguments_service
 
     def forward(self, input_batch, **kwargs):
         if isinstance(input_batch, tuple):
@@ -51,8 +53,7 @@ class KBertModel(ModelBase):
             best_metrics: object,
             name_prefix: str = None) -> bool:
 
-        checkpoint_name = self._arguments_service.get_argument(
-            'checkpoint_name')
+        checkpoint_name = self._arguments_service.checkpoint_name
 
         if checkpoint_name:
             name_prefix = f'{name_prefix}_{checkpoint_name}'
@@ -77,8 +78,7 @@ class KBertModel(ModelBase):
             load_model_dict: bool = True,
             load_model_only: bool = False) -> ModelCheckpoint:
 
-        checkpoint_name = self._arguments_service.get_argument(
-            'checkpoint_name')
+        checkpoint_name = self._arguments_service.checkpoint_name
 
         if checkpoint_name:
             name_prefix = f'{name_prefix}_{checkpoint_name}'
@@ -100,7 +100,7 @@ class KBertModel(ModelBase):
         pretrained_weights_path = self._get_pretrained_path(path, name_prefix)
 
         self._bert_model = self._model_type.from_pretrained(
-            pretrained_weights_path).to(self._arguments_service.get_argument('device'))
+            pretrained_weights_path).to(self._arguments_service.device)
 
     def _get_pretrained_path(self, path: str, name_prefix: str, create_if_missing: bool = False):
         file_name = f'{name_prefix}_pretrained_weights'

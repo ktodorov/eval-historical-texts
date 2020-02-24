@@ -31,7 +31,7 @@ class DataLoaderService:
         :rtype: Tuple[DataLoader, DataLoader]
         """
 
-        language = self._arguments_service.get_argument('language')
+        language = self._arguments_service.language
 
         train_dataset = self._dataset_service.get_dataset(
             RunType.Train, language)
@@ -41,15 +41,15 @@ class DataLoaderService:
 
         data_loader_train: DataLoader = DataLoader(
             train_dataset,
-            batch_size=self._arguments_service.get_argument('batch_size'),
-            shuffle=self._arguments_service.get_argument('shuffle'))
+            batch_size=self._arguments_service.batch_size,
+            shuffle=self._arguments_service.shuffle)
 
         if train_dataset.use_collate_function():
             data_loader_train.collate_fn = train_dataset.collate_function
 
         data_loader_validation = DataLoader(
             validation_dataset,
-            batch_size=self._arguments_service.get_argument('batch_size'),
+            batch_size=self._arguments_service.batch_size,
             shuffle=False)
 
         if validation_dataset.use_collate_function():
@@ -63,14 +63,14 @@ class DataLoaderService:
         :return: the test dataloader
         :rtype: DataLoader
         """
-        language = self._arguments_service.get_argument('language')
+        language = self._arguments_service.language
 
         test_dataset = self._dataset_service.get_dataset(
             RunType.Test, language)
 
         data_loader_test: DataLoader = DataLoader(
             test_dataset,
-            batch_size=self._arguments_service.get_argument('batch_size'),
+            batch_size=self._arguments_service.batch_size,
             shuffle=False)
 
         if test_dataset.use_collate_function():

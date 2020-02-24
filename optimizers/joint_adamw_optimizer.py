@@ -17,7 +17,7 @@ class JointAdamWOptimizer(OptimizerBase):
         super(JointAdamWOptimizer, self).__init__()
 
         model1_parameters, model2_parameters = model.parameters()
-        learning_rate = arguments_service.get_argument('learning_rate')
+        learning_rate = arguments_service.learning_rate
         self._optimizer1 = AdamW(model1_parameters, lr=learning_rate)
         self._optimizer2 = AdamW(model2_parameters, lr=learning_rate)
 

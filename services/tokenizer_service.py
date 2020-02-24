@@ -8,20 +8,18 @@ from tokenizers import BertWordPieceTokenizer
 import sentencepiece as spm
 
 from enums.configuration import Configuration
-from services.arguments_service_base import ArgumentsServiceBase
+from services.pretrained_arguments_service import PretrainedArgumentsService
 from services.file_service import FileService
 
 
 class TokenizerService:
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: PretrainedArgumentsService,
             file_service: FileService):
 
-        pretrained_weights = arguments_service.get_argument(
-            'pretrained_weights')
-        configuration: Configuration = arguments_service.get_argument(
-            'configuration')
+        pretrained_weights = arguments_service.pretrained_weights
+        configuration = arguments_service.configuration
 
         self._file_service = file_service
         self._arguments_service = arguments_service

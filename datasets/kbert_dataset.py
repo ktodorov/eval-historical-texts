@@ -4,7 +4,7 @@ import torch
 import pickle
 
 from datasets.dataset_base import DatasetBase
-from services.arguments_service_base import ArgumentsServiceBase
+from services.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService
@@ -19,13 +19,12 @@ class KBertDataset(DatasetBase):
     def __init__(
             self,
             language: str,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: SemanticArgumentsService,
             mask_service: MaskService,
             file_service: FileService,
             tokenizer_service: TokenizerService,
             log_service: LogService,
             corpus_id: int = 1,
-            reduction: float = None,
             **kwargs):
         super(KBertDataset, self).__init__()
 
@@ -37,8 +36,7 @@ class KBertDataset(DatasetBase):
 
         if not os.path.exists(ids_path):
             semeval_data_path = os.path.join('data', 'semeval_trial_data')
-            pretrained_weights = self._arguments_service.get_argument(
-                'pretrained_weights')
+            pretrained_weights = self._arguments_service.pretrained_weights
 
             tokenizer = tokenizer_service.tokenizer
             preprocess_data(corpus_id, language, semeval_data_path,
@@ -47,6 +45,7 @@ class KBertDataset(DatasetBase):
         with open(ids_path, 'rb') as data_file:
             self._ids = pickle.load(data_file)
 
+            reduction = arguments_service.train_dataset_limit_size
             if reduction:
                 items_length = int(len(self._ids) * reduction)
                 self._ids = self._ids[:items_length]
@@ -80,8 +79,8 @@ class KBertDataset(DatasetBase):
 
         return self._sort_batch(
             torch.from_numpy(padded_sequences).to(
-                self._arguments_service.get_argument('device')),
-            torch.tensor(lengths).to(self._arguments_service.get_argument('device')))
+                self._arguments_service.device),
+            torch.tensor(lengths).to(self._arguments_service.device))
 
     def _sort_batch(self, batch, lengths):
         seq_lengths, perm_idx = lengths.sort(0, descending=True)

@@ -14,7 +14,7 @@ from models.transformer_encoder import TransformerEncoder
 from models.transformer_decoder import TransformerDecoder
 
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.transformer_arguments_service import TransformerArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 from services.vocabulary_service import VocabularyService
@@ -25,7 +25,7 @@ from services.tokenizer_service import TokenizerService
 class TransformerModel(ModelBase):
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: TransformerArgumentsService,
             data_service: DataService,
             vocabulary_service: VocabularyService,
             metrics_service: MetricsService,
@@ -38,42 +38,36 @@ class TransformerModel(ModelBase):
         self._log_service = log_service
         self._tokenizer_service = tokenizer_service
 
-        self._device = arguments_service.get_argument('device')
-        self._metric_types: List[MetricType] = arguments_service.get_argument(
-            'metric_types')
+        self._device = arguments_service.device
+        self._metric_types = arguments_service.metric_types
 
         self.encoder = TransformerEncoder(
-            input_dim=arguments_service.get_argument(
-                'sentence_piece_vocabulary_size'),
-            hid_dim=arguments_service.get_argument('hidden_dimension'),
-            n_layers=arguments_service.get_argument('number_of_layers'),
-            n_heads=arguments_service.get_argument('number_of_heads'),
-            pf_dim=arguments_service.get_argument('hidden_dimension'),
-            dropout=arguments_service.get_argument('dropout'),
-            device=arguments_service.get_argument('device'),
-            include_pretrained=arguments_service.get_argument(
-                'include_pretrained_model'),
-            pretrained_hidden_size=arguments_service.get_argument(
-                'pretrained_model_size'),
+            input_dim=arguments_service.pretrained_vocabulary_size,
+            hid_dim=arguments_service.hidden_dimension,
+            n_layers=arguments_service.number_of_layers,
+            n_heads=arguments_service.number_of_heads,
+            pf_dim=arguments_service.hidden_dimension,
+            dropout=arguments_service.dropout,
+            device=arguments_service.device,
+            include_pretrained=arguments_service.include_pretrained_model,
+            pretrained_hidden_size=arguments_service.pretrained_model_size,
             max_length=5000)
 
         self.decoder = TransformerDecoder(
             output_dim=vocabulary_service.vocabulary_size(),
-            hid_dim=arguments_service.get_argument('hidden_dimension'),
-            n_layers=arguments_service.get_argument('number_of_layers'),
-            n_heads=arguments_service.get_argument('number_of_heads'),
-            pf_dim=arguments_service.get_argument('hidden_dimension'),
-            dropout=arguments_service.get_argument('dropout'),
-            device=arguments_service.get_argument('device'),
-            include_pretrained=arguments_service.get_argument(
-                'include_pretrained_model'),
-            pretrained_hidden_size=arguments_service.get_argument(
-                'pretrained_model_size'),
+            hid_dim=arguments_service.hidden_dimension,
+            n_layers=arguments_service.number_of_layers,
+            n_heads=arguments_service.number_of_heads,
+            pf_dim=arguments_service.hidden_dimension,
+            dropout=arguments_service.dropout,
+            device=arguments_service.device,
+            include_pretrained=arguments_service.include_pretrained_model,
+            pretrained_hidden_size=arguments_service.pretrained_model_size,
             max_length=5000)
 
         self.src_pad_idx = 0
         self.trg_pad_idx = vocabulary_service.pad_token
-        self.device = arguments_service.get_argument('device')
+        self.device = arguments_service.device
 
         self.initialize_weights()
 

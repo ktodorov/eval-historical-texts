@@ -6,7 +6,7 @@ import pickle
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
 from entities.language_data import LanguageData
-from services.arguments_service_base import ArgumentsServiceBase
+from services.postocr_arguments_service import PostOCRArgumentsService
 from services.data_service import DataService
 from services.file_service import FileService
 from services.mask_service import MaskService
@@ -21,7 +21,7 @@ class NewsEyeDataset(DatasetBase):
     def __init__(
             self,
             language: str,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: PostOCRArgumentsService,
             file_service: FileService,
             tokenizer_service: TokenizerService,
             run_type: RunType,
@@ -38,7 +38,7 @@ class NewsEyeDataset(DatasetBase):
             full_data_path = os.path.join(
                 'data', 'ICDAR2019_POCR_competition_dataset', 'ICDAR2019_POCR_competition_full_22M_without_Finnish')
 
-            vocabulary_size = self._arguments_service.get_argument('sentence_piece_vocabulary_size')
+            vocabulary_size = self._arguments_service.pretrained_vocabulary_size
             train_spm_model(full_data_path, output_data_path, language, vocabulary_size)
             tokenizer_service.load_tokenizer_model()
 
@@ -87,11 +87,11 @@ class NewsEyeDataset(DatasetBase):
 
         return self._sort_batch(
             torch.from_numpy(padded_sequences).to(
-                self._arguments_service.get_argument('device')),
+                self._arguments_service.device),
             torch.from_numpy(padded_targets).to(
-                self._arguments_service.get_argument('device')),
+                self._arguments_service.device),
             torch.tensor(lengths).to(
-                self._arguments_service.get_argument('device')))
+                self._arguments_service.device))
 
     def _sort_batch(self, batch, targets, lengths):
         seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)

@@ -12,7 +12,7 @@ from enums.metric_type import MetricType
 
 from models.model_base import ModelBase
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 
@@ -20,37 +20,32 @@ from services.metrics_service import MetricsService
 class NERRNNModel(ModelBase):
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: NERArgumentsService,
             data_service: DataService,
             metrics_service: MetricsService):
         super().__init__(data_service)
 
-        vocab_size = arguments_service.get_argument('sentence_piece_vocabulary_size')
-        embedding_size = arguments_service.get_argument('encoder_embedding_size')
-        lstm_hidden_dim = arguments_service.get_argument('hidden_dimension')
-        dropout = arguments_service.get_argument('dropout')
         number_of_tags = 11
 
-        self._include_pretrained = arguments_service.get_argument('include_pretrained_model')
-        additional_size = arguments_service.get_argument('pretrained_model_size') if self._include_pretrained else 0
-        self._learn_embeddings = arguments_service.get_argument('learn_encoder_embeddings')
+        self._include_pretrained = arguments_service.include_pretrained_model
+        additional_size = arguments_service.pretrained_model_size if self._include_pretrained else 0
+        self._learn_embeddings = arguments_service.learn_new_embeddings
 
         self._metrics_service = metrics_service
-        self._metric_types: List[MetricType] = arguments_service.get_argument(
-            'metric_types')
+        self._metric_types = arguments_service.metric_types
 
         # maps each token to an embedding_dim vector
         lstm_input_size = additional_size
         if self._learn_embeddings:
-            self.embedding = nn.Embedding(vocab_size, embedding_size)
-            self.dropout = nn.Dropout(dropout)
-            lstm_input_size += embedding_size
+            self.embedding = nn.Embedding(arguments_service.pretrained_vocabulary_size, arguments_service.embeddings_size)
+            self.dropout = nn.Dropout(arguments_service.dropout)
+            lstm_input_size += arguments_service.embeddings_size
 
         # the LSTM takens embedded sentence
-        self.lstm = nn.LSTM(lstm_input_size, lstm_hidden_dim, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(lstm_input_size, arguments_service.hidden_dimension, batch_first=True, bidirectional=True)
 
         # fc layer transforms the output to give the final output layer
-        self.fc = nn.Linear(lstm_hidden_dim * 2, number_of_tags)
+        self.fc = nn.Linear(arguments_service.hidden_dimension * 2, number_of_tags)
 
     def forward(self, input_batch, debug=False, **kwargs):
         sequences, targets, lengths, pretrained_representations = input_batch

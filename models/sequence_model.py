@@ -12,7 +12,7 @@ from enums.metric_type import MetricType
 
 from models.model_base import ModelBase
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.postocr_arguments_service import PostOCRArgumentsService
 from services.data_service import DataService
 from services.tokenizer_service import TokenizerService
 from services.metrics_service import MetricsService
@@ -28,7 +28,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 class SequenceModel(ModelBase):
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: PostOCRArgumentsService,
             data_service: DataService,
             tokenizer_service: TokenizerService,
             metrics_service: MetricsService,
@@ -39,43 +39,31 @@ class SequenceModel(ModelBase):
         self._metrics_service = metrics_service
         self._log_service = log_service
         self._tokenizer_service = tokenizer_service
-        self._arguments_service = arguments_service
         self._vocabulary_service = vocabulary_service
 
-        self._device = arguments_service.get_argument('device')
-        self._metric_types: List[MetricType] = arguments_service.get_argument(
-            'metric_types')
+        self._device = arguments_service.device
+        self._metric_types = arguments_service.metric_types
 
         self._output_dimension = self._vocabulary_service.vocabulary_size()
 
         self._encoder = SequenceEncoder(
-            embedding_size=self._arguments_service.get_argument(
-                'encoder_embedding_size'),
-            input_size=self._arguments_service.get_argument(
-                'sentence_piece_vocabulary_size'),
-            hidden_dimension=self._arguments_service.get_argument(
-                'hidden_dimension'),
-            number_of_layers=self._arguments_service.get_argument(
-                'number_of_layers'),
-            dropout=self._arguments_service.get_argument('dropout'),
-            include_pretrained=self._arguments_service.get_argument(
-                'include_pretrained_model'),
-            pretrained_hidden_size=self._arguments_service.get_argument(
-                'pretrained_model_size'),
-            learn_embeddings=arguments_service.get_argument(
-                'learn_encoder_embeddings'),
+            embedding_size=arguments_service.encoder_embedding_size,
+            input_size=arguments_service.pretrained_vocabulary_size,
+            hidden_dimension=arguments_service.hidden_dimension,
+            number_of_layers=arguments_service.number_of_layers,
+            dropout=arguments_service.dropout,
+            include_pretrained=arguments_service.include_pretrained_model,
+            pretrained_hidden_size=arguments_service.pretrained_model_size,
+            learn_embeddings=arguments_service.learn_new_embeddings,
             bidirectional=True
         )
 
         self._decoder = SequenceDecoder(
-            embedding_size=self._arguments_service.get_argument(
-                'decoder_embedding_size'),
+            embedding_size=arguments_service.decoder_embedding_size,
             output_dimension=self._output_dimension,
-            hidden_dimension=self._arguments_service.get_argument(
-                'hidden_dimension') * 2,
-            number_of_layers=self._arguments_service.get_argument(
-                'number_of_layers'),
-            dropout=self._arguments_service.get_argument('dropout')
+            hidden_dimension=arguments_service.hidden_dimension * 2,
+            number_of_layers=arguments_service.number_of_layers,
+            dropout=arguments_service.dropout
         )
 
         self._teacher_forcing_ratio = 0.5
@@ -83,7 +71,6 @@ class SequenceModel(ModelBase):
         self.apply(self.init_weights)
 
     def init_hidden(self, batch_size, hidden_dimension):
-
         # initialize the hidden state and the cell state to zeros
         return (torch.zeros(batch_size, hidden_dimension).to(self._device),
                 torch.zeros(batch_size, hidden_dimension).to(self._device))
@@ -122,11 +109,6 @@ class SequenceModel(ModelBase):
 
             outputs[:, t] = output
 
-            # # we must not compute loss for padded targets
-            # for i in range(batch_size):
-            #     if targets[i, t] == self._vocabulary_service.pad_token:
-            #         outputs[i, t] = 0
-
             # decide if we are going to use teacher forcing or not
             teacher_force = random.random() < self._teacher_forcing_ratio
 
@@ -151,7 +133,8 @@ class SequenceModel(ModelBase):
         target_characters = []
 
         for i in range(targets.shape[0]):
-            indices = np.array((targets[i] != self._vocabulary_service.pad_token), dtype=bool)
+            indices = np.array(
+                (targets[i] != self._vocabulary_service.pad_token), dtype=bool)
             predicted_characters.append(predictions[i][indices])
             target_characters.append(targets[i][indices])
 

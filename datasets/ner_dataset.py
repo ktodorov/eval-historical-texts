@@ -13,6 +13,7 @@ from enums.run_type import RunType
 from enums.language import Language
 from preprocessing.ner_preprocessing import preprocess_data
 
+from services.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
 from services.pretrained_representations_service import PretrainedRepresentationsService
@@ -21,28 +22,29 @@ from services.pretrained_representations_service import PretrainedRepresentation
 class NERDataset(DatasetBase):
     def __init__(
             self,
+            arguments_service: PostOCRArgumentsService,
             file_service: FileService,
             tokenizer_service: TokenizerService,
             pretrained_representations_service: PretrainedRepresentationsService,
-            run_type: RunType,
-            language: Language,
-            device: torch.device,
-            max_articles_length: int = 1000,
-            include_pretrained: bool = False,
-            limit_size: int = None):
+            run_type: RunType):
         super().__init__()
 
-        self._device = device
+        self._device = arguments_service.device
         self._pretrained_representations_service = pretrained_representations_service
-        self._include_pretrained = include_pretrained
+        self._include_pretrained = arguments_service.include_pretrained_model
         self._pretrained_model_size = self._pretrained_representations_service.get_pretrained_model_size()
         self._max_length = self._pretrained_representations_service.get_pretrained_max_length()
 
         data_path = file_service.get_data_path()
         file_suffix = 'train' if run_type == RunType.Train else 'dev'
-        language_suffix = self._get_language_suffix(language)
-        file_path = os.path.join(data_path, f'HIPE-data-v0.9-{file_suffix}-{language_suffix}.tsv')
-        self.ne_collection = preprocess_data(file_path, tokenizer_service, limit_size)
+        language_suffix = self._get_language_suffix(arguments_service.language)
+        file_path = os.path.join(
+            data_path, f'HIPE-data-v0.9-{file_suffix}-{language_suffix}.tsv')
+
+        self.ne_collection = preprocess_data(
+            file_path,
+            tokenizer_service,
+            arguments_service.train_dataset_limit_size if run_type == RunType.Train else arguments_service.validation_dataset_limit_size)
 
         print(f'Loaded {len(self.ne_collection)} items for \'{run_type}\' set')
 
@@ -99,7 +101,6 @@ class NERDataset(DatasetBase):
 
         return pretrained_result
 
-
     def _get_language_suffix(self, language: Language):
         if language == Language.English:
             return 'en'
@@ -128,7 +129,8 @@ class NERDataset(DatasetBase):
 
         padded_sequences = np.zeros(
             (batch_size, max_length), dtype=np.int64) * -1
-        padded_targets = np.zeros((batch_size, max_length), dtype=np.int64) * -1
+        padded_targets = np.zeros(
+            (batch_size, max_length), dtype=np.int64) * -1
 
         padded_pretrained_representations = []
         if self._include_pretrained:
@@ -158,4 +160,3 @@ class NERDataset(DatasetBase):
             pretrained_embeddings = pretrained_embeddings[perm_idx]
 
         return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings
-
