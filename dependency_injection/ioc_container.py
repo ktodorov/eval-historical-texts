@@ -221,7 +221,8 @@ class IocContainer(containers.DeclarativeContainer):
             model = providers.Singleton(
                 NERRNNModel,
                 arguments_service=arguments_service,
-                data_service=data_service
+                data_service=data_service,
+                metrics_service=metrics_service
             )
 
             optimizer = providers.Singleton(

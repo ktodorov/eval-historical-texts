@@ -66,7 +66,7 @@ class TokenizerService:
 
     def encode_string(self, text: str) -> List[int]:
         encoded_representation = self._tokenizer.encode(text)
-        return (encoded_representation.ids, encoded_representation.tokens)
+        return (encoded_representation.ids, encoded_representation.tokens, encoded_representation.offsets)
 
     def is_tokenizer_loaded(self) -> bool:
         return self._tokenizer_loaded

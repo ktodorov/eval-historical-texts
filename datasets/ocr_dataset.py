@@ -34,8 +34,7 @@ class OCRDataset(DatasetBase):
             device: torch.device,
             reduction: float = None,
             max_articles_length: int = 1000,
-            include_pretrained: bool = False,
-            **kwargs):
+            include_pretrained: bool = False):
         super(OCRDataset, self).__init__()
 
         self._device = device

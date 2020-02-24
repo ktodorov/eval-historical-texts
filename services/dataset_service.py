@@ -106,8 +106,13 @@ class DatasetService:
                 result = NERDataset(
                     self._file_service,
                     self._tokenizer_service,
+                    self._pretrained_representations_service,
                     run_type,
-                    language)
+                    language,
+                    self._arguments_service.get_argument('device'),
+                    self._arguments_service.get_argument('max_articles_length'),
+                    self._arguments_service.get_argument('include_pretrained_model'),
+                    reduction_size)
 
         elif joint_model:
             number_of_models: int = self._arguments_service.get_argument(

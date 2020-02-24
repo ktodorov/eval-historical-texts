@@ -8,7 +8,8 @@ from services.tokenizer_service import TokenizerService
 
 def preprocess_data(
     file_path: str,
-    tokenizer_service: TokenizerService) -> NECollection:
+    tokenizer_service: TokenizerService,
+    limit: int = None) -> NECollection:
     if not os.path.exists(file_path):
         raise Exception('NER File not found')
 
@@ -28,5 +29,8 @@ def preprocess_data(
                 current_sentence.tokenize_text(tokenizer_service)
                 collection.add_line(current_sentence)
                 current_sentence = NELine()
+
+                if limit and len(collection) >= limit:
+                    break
 
     return collection

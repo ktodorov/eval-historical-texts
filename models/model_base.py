@@ -27,7 +27,7 @@ class ModelBase(nn.Module):
         return None
 
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        return {MetricType.JaccardSimilarity: 0}
+        return {MetricType.JaccardSimilarity: 0}, None
 
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         return True
