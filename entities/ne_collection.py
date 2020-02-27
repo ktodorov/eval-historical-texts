@@ -1,8 +1,10 @@
+from typing import List
+
 from entities.ne_line import NELine
 
 class NECollection:
     def __init__(self):
-        self.lines = []
+        self.lines: List[NELine] = []
 
     def add_line(self, line: NELine):
         self.lines.append(line)
@@ -11,6 +13,15 @@ class NECollection:
         entities = []
         for line in self.lines:
             for coarse_entity in line.ne_coarse_lit:
+                if coarse_entity not in entities:
+                    entities.append(coarse_entity)
+
+        return entities
+
+    def get_unique_fine_entities(self):
+        entities = []
+        for line in self.lines:
+            for coarse_entity in line.ne_fine_lit:
                 if coarse_entity not in entities:
                     entities.append(coarse_entity)
 

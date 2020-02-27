@@ -21,14 +21,14 @@ from services.vocabulary_service import VocabularyService
 
 class DatasetService:
     def __init__(
-            self,
-            arguments_service: ArgumentsServiceBase,
-            mask_service: MaskService,
-            tokenizer_service: TokenizerService,
-            file_service: FileService,
-            log_service: LogService,
-            pretrained_representations_service: PretrainedRepresentationsService,
-            vocabulary_service: VocabularyService):
+        self,
+        arguments_service: ArgumentsServiceBase,
+        mask_service: MaskService,
+        tokenizer_service: TokenizerService,
+        file_service: FileService,
+        log_service: LogService,
+        pretrained_representations_service: PretrainedRepresentationsService,
+        vocabulary_service: VocabularyService):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service

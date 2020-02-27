@@ -9,6 +9,7 @@ from typing import List, Dict
 
 from entities.metric import Metric
 from enums.metric_type import MetricType
+from enums.ner_type import NERType
 
 from models.model_base import ModelBase
 
@@ -25,14 +26,13 @@ class NERRNNModel(ModelBase):
             metrics_service: MetricsService):
         super().__init__(data_service)
 
-        number_of_tags = 11
-
         self._include_pretrained = arguments_service.include_pretrained_model
         additional_size = arguments_service.pretrained_model_size if self._include_pretrained else 0
         self._learn_embeddings = arguments_service.learn_new_embeddings
 
         self._metrics_service = metrics_service
         self._metric_types = arguments_service.metric_types
+        number_of_tags = 11 if arguments_service.label_type == NERType.Coarse else 38
 
         # maps each token to an embedding_dim vector
         lstm_input_size = additional_size

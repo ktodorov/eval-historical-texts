@@ -2,8 +2,7 @@ import argparse
 
 from services.pretrained_arguments_service import PretrainedArgumentsService
 
-from enums.metric_type import MetricType
-from enums.configuration import Configuration
+from enums.ner_type import NERType
 
 
 class NERArgumentsService(PretrainedArgumentsService):
@@ -21,6 +20,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help='Dropout probability')
         parser.add_argument('--number-of-layers', type=int, default=1,
                             help='Number of layers used for the RNN')
+        parser.add_argument('--label-type', type=NERType, choices=list(NERType), default=NERType.Coarse,
+                            help='Label type that will be used for classification. Default is Coarse')
 
     @property
     def embeddings_size(self) -> int:
@@ -37,3 +38,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def number_of_layers(self) -> int:
         return self._get_argument('number_of_layers')
+
+    @property
+    def label_type(self) -> NERType:
+        return self._get_argument('label_type')
