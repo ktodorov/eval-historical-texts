@@ -19,7 +19,7 @@ def main(
     # print the arguments that the program was initialized with
     arguments_service.print_arguments()
 
-    if arguments_service.get_argument('evaluate'):
+    if arguments_service.evaluate:
         test_service.test()
     else:
         train_service.train()

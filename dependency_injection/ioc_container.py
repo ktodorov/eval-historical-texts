@@ -8,12 +8,14 @@ import dependency_injector.providers as providers
 import main
 
 from enums.configuration import Configuration
+from enums.challenge import Challenge
 
 from losses.sequence_loss import SequenceLoss
 from losses.transformer_sequence_loss import TransformerSequenceLoss
 from losses.loss_base import LossBase
 from losses.kbert_loss import KBertLoss
 from losses.joint_loss import JointLoss
+from losses.ner_loss import NERLoss
 
 from models.model_base import ModelBase
 from models.kbert_model import KBertModel
@@ -22,13 +24,18 @@ from models.multifit_model import MultiFitModel
 from models.sequence_model import SequenceModel
 from models.transformer_model import TransformerModel
 from models.joint_model import JointModel
+from models.ner_rnn_model import NERRNNModel
 
 from optimizers.optimizer_base import OptimizerBase
 from optimizers.adam_optimizer import AdamOptimizer
 from optimizers.adamw_optimizer import AdamWOptimizer
 from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
 
-from services.arguments_service import ArgumentsService
+from services.postocr_arguments_service import PostOCRArgumentsService
+from services.transformer_arguments_service import TransformerArgumentsService
+from services.ner_arguments_service import NERArgumentsService
+from services.semantic_arguments_service import SemanticArgumentsService
+from services.arguments_service_base import ArgumentsServiceBase
 from services.config_service import ConfigService
 from services.data_service import DataService
 from services.dataloader_service import DataLoaderService
@@ -57,6 +64,22 @@ def initialize_seed(seed: int, device: str):
         torch.backends.cudnn.benchmark = False
         torch.cuda.manual_seed_all(seed)
 
+def get_argument_service_type(challenge: Challenge, configuration: Configuration):
+    argument_service_type = None
+    if challenge == Challenge.PostOCRCorrection or challenge == Challenge.PostOCRErrorDetection:
+        if configuration == Configuration.TransformerSequence:
+            argument_service_type = TransformerArgumentsService
+        else:
+            argument_service_type = PostOCRArgumentsService
+    elif challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
+        argument_service_type = NERArgumentsService
+    elif challenge == Challenge.SemanticChange:
+        argument_service_type = SemanticArgumentsService
+    else:
+        raise Exception('Challenge not supported')
+
+    return argument_service_type
+
 
 class IocContainer(containers.DeclarativeContainer):
     """Application IoC container."""
@@ -66,16 +89,22 @@ class IocContainer(containers.DeclarativeContainer):
 
     # Services
 
+    arguments_service_base = ArgumentsServiceBase(raise_errors_on_invalid_args=False)
+
+    challenge = arguments_service_base.challenge
+    seed = arguments_service_base.seed
+    device = arguments_service_base.device
+    configuration = arguments_service_base.configuration
+    joint_model = arguments_service_base.joint_model
+    external_logging_enabled = arguments_service_base.enable_external_logging
+
+    argument_service_type = get_argument_service_type(challenge, configuration)
     arguments_service = providers.Singleton(
-        ArgumentsService
+        argument_service_type
     )
 
-    arguments_service_instance = arguments_service()
-    initialize_seed(
-        arguments_service_instance.get_argument('seed'),
-        arguments_service_instance.get_argument('device'))
+    initialize_seed(seed, device)
 
-    external_logging_enabled: bool = arguments_service_instance.get_argument('enable_external_logging')
 
     log_service = providers.Singleton(
         LogService,
@@ -119,11 +148,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     pretrained_representations_service = providers.Singleton(
         PretrainedRepresentationsService,
-        include_pretrained=arguments_service_instance.get_argument('include_pretrained_model'),
-        pretrained_model_size=arguments_service_instance.get_argument('pretrained_model_size'),
-        pretrained_weights=arguments_service_instance.get_argument('pretrained_weights'),
-        pretrained_max_length=arguments_service_instance.get_argument('pretrained_max_length'),
-        device=arguments_service_instance.get_argument('device')
+        arguments_service=arguments_service
     )
 
     dataset_service = providers.Factory(
@@ -153,10 +178,6 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service
     )
 
-    configuration: Configuration = arguments_service_instance.get_argument(
-        'configuration')
-    joint_model: bool = arguments_service_instance.get_argument('joint_model')
-    device: torch.device = arguments_service_instance.get_argument('device')
     if not joint_model:
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
             loss_function = providers.Singleton(
@@ -208,6 +229,20 @@ class IocContainer(containers.DeclarativeContainer):
                     log_service=log_service,
                     tokenizer_service=tokenizer_service
                 )
+
+            optimizer = providers.Singleton(
+                AdamOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+        elif configuration == Configuration.RNNSimple:
+            loss_function = providers.Singleton(NERLoss)
+            model = providers.Singleton(
+                NERRNNModel,
+                arguments_service=arguments_service,
+                data_service=data_service,
+                metrics_service=metrics_service
+            )
 
             optimizer = providers.Singleton(
                 AdamOptimizer,

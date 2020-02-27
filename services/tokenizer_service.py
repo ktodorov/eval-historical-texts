@@ -8,20 +8,18 @@ from tokenizers import BertWordPieceTokenizer
 import sentencepiece as spm
 
 from enums.configuration import Configuration
-from services.arguments_service_base import ArgumentsServiceBase
+from services.pretrained_arguments_service import PretrainedArgumentsService
 from services.file_service import FileService
 
 
 class TokenizerService:
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: PretrainedArgumentsService,
             file_service: FileService):
 
-        pretrained_weights = arguments_service.get_argument(
-            'pretrained_weights')
-        configuration: Configuration = arguments_service.get_argument(
-            'configuration')
+        pretrained_weights = arguments_service.pretrained_weights
+        configuration = arguments_service.configuration
 
         self._file_service = file_service
         self._arguments_service = arguments_service
@@ -33,12 +31,18 @@ class TokenizerService:
         elif configuration == Configuration.XLNet:
             self._tokenizer = XLNetTokenizer.from_pretrained(
                 pretrained_weights)
-        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
-            vocabulary_path = os.path.join('data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
+        elif (configuration == Configuration.MultiFit or
+              configuration == Configuration.SequenceToCharacter or
+              configuration == Configuration.TransformerSequence or
+              configuration == Configuration.RNNSimple):
+
+            vocabulary_path = os.path.join(
+                'data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
             if not os.path.exists(vocabulary_path):
                 raise Exception(f'Vocabulary not found in {vocabulary_path}')
 
-            self._tokenizer = BertWordPieceTokenizer(vocabulary_path, lowercase=False)
+            self._tokenizer = BertWordPieceTokenizer(
+                vocabulary_path, lowercase=False, add_special_tokens=(configuration != Configuration.RNNSimple))
 
     def load_tokenizer_model(self):
         data_path = self._file_service.get_data_path()
@@ -57,6 +61,10 @@ class TokenizerService:
     def decode_string(self, character_ids: List[int]) -> str:
         result = self._tokenizer.decode(character_ids)
         return result
+
+    def encode_string(self, text: str) -> List[int]:
+        encoded_representation = self._tokenizer.encode(text)
+        return (encoded_representation.ids, encoded_representation.tokens, encoded_representation.offsets)
 
     def is_tokenizer_loaded(self) -> bool:
         return self._tokenizer_loaded

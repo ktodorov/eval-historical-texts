@@ -6,3 +6,4 @@ class Configuration(ArgumentEnum):
     MultiFit = 'multi-fit'
     SequenceToCharacter = 'sequence-to-char'
     TransformerSequence = 'transformer-sequence'
+    RNNSimple = 'rnn-simple'

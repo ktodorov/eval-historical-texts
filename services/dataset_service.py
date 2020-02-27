@@ -8,6 +8,7 @@ from datasets.newseye_dataset import NewsEyeDataset
 from datasets.ocr_dataset import OCRDataset
 from datasets.ocr_sequence_dataset import OCRSequenceDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
+from datasets.ner_dataset import NERDataset
 
 from services.arguments_service_base import ArgumentsServiceBase
 from services.file_service import FileService
@@ -20,14 +21,14 @@ from services.vocabulary_service import VocabularyService
 
 class DatasetService:
     def __init__(
-            self,
-            arguments_service: ArgumentsServiceBase,
-            mask_service: MaskService,
-            tokenizer_service: TokenizerService,
-            file_service: FileService,
-            log_service: LogService,
-            pretrained_representations_service: PretrainedRepresentationsService,
-            vocabulary_service: VocabularyService):
+        self,
+        arguments_service: ArgumentsServiceBase,
+        mask_service: MaskService,
+        tokenizer_service: TokenizerService,
+        file_service: FileService,
+        log_service: LogService,
+        pretrained_representations_service: PretrainedRepresentationsService,
+        vocabulary_service: VocabularyService):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
@@ -48,9 +49,8 @@ class DatasetService:
         :return: the dataset
         :rtype: DatasetBase
         """
-        joint_model: bool = self._arguments_service.get_argument('joint_model')
-        configuration: Configuration = self._arguments_service.get_argument(
-            'configuration')
+        joint_model: bool = self._arguments_service.joint_model
+        configuration: Configuration = self._arguments_service.configuration
 
         if run_type == RunType.Test and (configuration == Configuration.KBert or configuration == Configuration.XLNet):
             return SemEvalTestDataset(
@@ -59,12 +59,6 @@ class DatasetService:
                 self._tokenizer_service)
 
         if not joint_model:
-            reduction_size = self._arguments_service.get_argument(
-                'train_dataset_reduction_size')
-            if run_type == RunType.Validation:
-                reduction_size = self._arguments_service.get_argument(
-                    'validation_dataset_reduction_size')
-
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
                 result = KBertDataset(
                     language,
@@ -72,39 +66,36 @@ class DatasetService:
                     self._mask_service,
                     self._file_service,
                     self._tokenizer_service,
-                    self._log_service,
-                    reduction=reduction_size)
+                    self._log_service)
 
             elif configuration == Configuration.MultiFit:
                 result = OCRDataset(
+                    self._arguments_service,
                     self._file_service,
                     self._tokenizer_service,
                     self._vocabulary_service,
                     self._log_service,
                     self._pretrained_representations_service,
-                    run_type,
-                    language,
-                    self._arguments_service.get_argument('device'),
-                    reduction_size,
-                    self._arguments_service.get_argument('max_articles_length'),
-                    include_pretrained=self._arguments_service.get_argument('include_pretrained_model'))
+                    run_type)
             elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
                 result = OCRSequenceDataset(
+                    self._arguments_service,
                     self._file_service,
                     self._tokenizer_service,
                     self._vocabulary_service,
                     self._log_service,
                     self._pretrained_representations_service,
-                    run_type,
-                    language,
-                    self._arguments_service.get_argument('device'),
-                    reduction_size,
-                    self._arguments_service.get_argument('max_articles_length'),
-                    include_pretrained=self._arguments_service.get_argument('include_pretrained_model'))
+                    run_type)
+            elif configuration == Configuration.RNNSimple:
+                result = NERDataset(
+                    self._arguments_service,
+                    self._file_service,
+                    self._tokenizer_service,
+                    self._pretrained_representations_service,
+                    run_type)
 
         elif joint_model:
-            number_of_models: int = self._arguments_service.get_argument(
-                'joint_model_amount')
+            number_of_models: int = self._arguments_service.joint_model_amount
             sub_datasets = self._create_datasets(language, number_of_models)
             result = JointDataset(sub_datasets)
         else:
@@ -113,8 +104,7 @@ class DatasetService:
         return result
 
     def _create_datasets(self, language, number_of_datasets: int):
-        configuration: Configuration = self._arguments_service.get_argument(
-            'configuration')
+        configuration = self._arguments_service.configuration
 
         result = []
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:

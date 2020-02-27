@@ -17,10 +17,9 @@ class ModelService:
         self._data_service = data_service
 
     def create_model(self) -> ModelBase:
-        configuration: Configuration = self._arguments_service.get_argument(
-            'configuration')
+        configuration: Configuration = self._arguments_service.configuration
 
-        device = self._arguments_service.get_argument('device')
+        device = self._arguments_service.device
 
         if configuration == Configuration.KBert:
             return KBertModel(self._arguments_service, self._data_service).to(device)

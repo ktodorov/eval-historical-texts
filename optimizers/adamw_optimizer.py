@@ -16,7 +16,7 @@ class AdamWOptimizer(OptimizerBase):
             model: ModelBase):
         super(AdamWOptimizer, self).__init__()
 
-        learning_rate = arguments_service.get_argument('learning_rate')
+        learning_rate = arguments_service.learning_rate
         self._optimizer = AdamW(model.parameters(), lr=learning_rate)
 
     def step(self):

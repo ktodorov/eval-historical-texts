@@ -56,7 +56,7 @@ class MaskService:
         indices_random = torch.bernoulli(torch.full(
             labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
         random_words = torch.randint(len(tokenizer), labels.shape, dtype=torch.long,
-                                     device=self._arguments_service.get_argument('device'))
+                                     device=self._arguments_service.device)
         inputs[indices_random] = random_words[indices_random]
 
         # The rest of the time (10% of the time) we keep the masked input tokens unchanged

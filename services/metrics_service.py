@@ -1,4 +1,6 @@
 import jellyfish
+from sklearn.metrics import f1_score
+
 
 class MetricsService:
     def calculate_jaccard_similarity(self, list1: list, list2: list) -> float:
@@ -8,4 +10,8 @@ class MetricsService:
 
     def calculate_normalized_levenshtein_distance(self, string1: str, string2: str) -> int:
         result = float(jellyfish.levenshtein_distance(string1, string2)) / max(len(string1), len(string2))
+        return result
+
+    def calculate_f1_score(self, predictions, targets):
+        result = f1_score(targets, predictions, average='micro')
         return result

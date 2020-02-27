@@ -9,7 +9,7 @@ from transformers import BertModel
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
 from entities.language_data import LanguageData
-from services.arguments_service_base import ArgumentsServiceBase
+from services.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
@@ -24,45 +24,38 @@ from utils import path_utils
 class OCRDataset(DatasetBase):
     def __init__(
             self,
+            arguments_service: PostOCRArgumentsService,
             file_service: FileService,
             tokenizer_service: TokenizerService,
             vocabulary_service: VocabularyService,
             log_service: LogService,
             pretrained_representations_service: PretrainedRepresentationsService,
-            run_type: RunType,
-            language: str,
-            device: torch.device,
-            reduction: float = None,
-            max_articles_length: int = 1000,
-            include_pretrained: bool = False,
-            **kwargs):
+            run_type: RunType):
         super(OCRDataset, self).__init__()
 
-        self._device = device
+        self._device = arguments_service.device
         self._tokenizer_service = tokenizer_service
         self._pretrained_representations_service = pretrained_representations_service
-        self._include_pretrained = include_pretrained
+        self._include_pretrained = arguments_service.include_pretrained_model
         self._pretrained_model_size = self._pretrained_representations_service.get_pretrained_model_size()
         self._max_length = self._pretrained_representations_service.get_pretrained_max_length()
         self._vocabulary_service = vocabulary_service
 
         language_data_path = self._get_language_data_path(
             file_service,
-            run_type,
-            language)
+            run_type)
 
         self._language_data = self._load_language_data(
             log_service,
             language_data_path,
             run_type,
-            reduction,
-            max_articles_length)
+            arguments_service.train_dataset_limit_size if run_type == RunType.Train else arguments_service.validation_dataset_limit_size,
+            arguments_service.max_articles_length)
 
     def _get_language_data_path(
         self,
         file_service: FileService,
-        run_type: RunType,
-        language: str):
+        run_type: RunType):
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
@@ -70,7 +63,7 @@ class OCRDataset(DatasetBase):
         if not os.path.exists(language_data_path):
             train_data_path = file_service.get_pickles_path()
             test_data_path = None
-            preprocess_data(language, train_data_path, test_data_path,
+            preprocess_data(train_data_path, test_data_path,
                             output_data_path, self._tokenizer_service.tokenizer, self._vocabulary_service)
 
         return language_data_path
@@ -87,9 +80,8 @@ class OCRDataset(DatasetBase):
         language_data.load_data(language_data_path)
 
         if reduction:
-            items_length = int(language_data.length * reduction)
             language_data_items = language_data.get_entries(
-                items_length)
+                reduction)
             language_data = LanguageData(
                 language_data_items[0],
                 language_data_items[1],

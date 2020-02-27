@@ -33,7 +33,7 @@ class LogService:
                 config=arguments_service._arguments,
                 entity='eval-historical-texts',
                 force=True
-                # resume=arguments_service.get_argument('resume_training'),
+                # resume=arguments_service.resume_training,
                 # id='' #TODO
             )
 

@@ -46,9 +46,8 @@ class TrainService:
 
         self._loss_function = loss_function
         self._optimizer = optimizer
-        self._model = model.to(arguments_service.get_argument('device'))
-        self._patience: int = self._arguments_service.get_argument('patience')
-        self._debug: bool = self._arguments_service.get_argument('debug')
+        self._model = model.to(arguments_service.device)
+        self._patience: int = self._arguments_service.patience
 
     def train(self) -> bool:
         """
@@ -72,7 +71,7 @@ class TrainService:
             start_epoch = 0
             start_iteration = 0
 
-            if self._arguments_service.get_argument('resume_training'):
+            if self._arguments_service.resume_training:
                 model_checkpoint = self._load_model()
                 if model_checkpoint:
                     best_metrics = model_checkpoint.best_metrics
@@ -81,7 +80,7 @@ class TrainService:
                     metric.initialize(best_metrics, start_iteration)
 
             # run
-            for epoch in range(start_epoch, self._arguments_service.get_argument('epochs')):
+            for epoch in range(start_epoch, self._arguments_service.epochs):
                 self._log_service.log_summary('Epoch', epoch)
 
                 best_metrics, patience = self._perform_epoch_iteration(
@@ -136,7 +135,7 @@ class TrainService:
             self._log_service.log_progress(i, data_loader_length)
 
             loss_batch, accuracies_batch, _ = self._perform_batch_iteration(
-                batch, debug=self._debug)
+                batch)
             if math.isnan(loss_batch):
                 raise Exception(
                     f'loss is NaN during training at iteration {i}')
@@ -149,7 +148,7 @@ class TrainService:
 
             # run on validation set and print progress to terminal
             # if we have eval_frequency or if we have finished the epoch
-            if (batches_passed % self._arguments_service.get_argument('eval_freq')) == 0 or (i + 1 == data_loader_length):
+            if (batches_passed % self._arguments_service.eval_freq) == 0 or (i + 1 == data_loader_length):
                 validation_metric = self._evaluate()
 
                 if math.isnan(validation_metric.get_current_loss()):
@@ -191,10 +190,10 @@ class TrainService:
 
             # check if runtime is expired
             time_passed = self._log_service.get_time_passed()
-            if ((time_passed.total_seconds() > (self._arguments_service.get_argument('max_training_minutes') * 60)) and
-                    self._arguments_service.get_argument('max_training_minutes') > 0):
+            if ((time_passed.total_seconds() > (self._arguments_service.max_training_minutes * 60)) and
+                    self._arguments_service.max_training_minutes > 0):
                 raise KeyboardInterrupt(
-                    f"Process killed because {self._arguments_service.get_argument('max_training_minutes')} minutes passed")
+                    f"Process killed because {self._arguments_service.max_training_minutes} minutes passed")
 
             if patience == 0:
                 break
@@ -205,8 +204,7 @@ class TrainService:
             self,
             batch: torch.Tensor,
             train_mode: bool = True,
-            output_characters: bool = False,
-            debug: bool = False) -> Tuple[float, Dict[MetricType, float]]:
+            output_characters: bool = False) -> Tuple[float, Dict[MetricType, float]]:
         """
         runs forward pass on batch and backward pass if in train_mode
         """
@@ -217,7 +215,7 @@ class TrainService:
         else:
             self._model.eval()
 
-        outputs = self._model.forward(batch, debug=debug)
+        outputs = self._model.forward(batch)
 
         accuracy = 0
         if train_mode:

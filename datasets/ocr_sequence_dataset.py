@@ -9,7 +9,7 @@ from transformers import BertModel
 from datasets.ocr_dataset import OCRDataset
 from enums.run_type import RunType
 from entities.language_data import LanguageData
-from services.arguments_service_base import ArgumentsServiceBase
+from services.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
@@ -24,45 +24,36 @@ from utils import path_utils
 class OCRSequenceDataset(OCRDataset):
     def __init__(
             self,
+            arguments_service: PostOCRArgumentsService,
             file_service: FileService,
             tokenizer_service: TokenizerService,
             vocabulary_service: VocabularyService,
             log_service: LogService,
             pretrained_representations_service: PretrainedRepresentationsService,
             run_type: RunType,
-            language: str,
-            device: torch.device,
-            reduction: float = None,
-            max_articles_length: int = 1000,
-            include_pretrained: bool = False,
             **kwargs):
         super().__init__(
+            arguments_service,
             file_service,
             tokenizer_service,
             vocabulary_service,
             log_service,
             pretrained_representations_service,
             run_type,
-            language,
-            device,
-            reduction,
-            max_articles_length,
-            include_pretrained,
             **kwargs)
 
     def _get_language_data_path(
         self,
         file_service: FileService,
-        run_type: RunType,
-        language: str):
+        run_type: RunType):
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
 
         if not os.path.exists(language_data_path):
             train_data_path = file_service.get_pickles_path()
-            test_data_path = None # os.path.join('data', 'ocr', 'eval')
-            preprocess_data(language, train_data_path, test_data_path,
+            test_data_path = None
+            preprocess_data(train_data_path, test_data_path,
                             output_data_path, self._tokenizer_service.tokenizer, self._vocabulary_service)
 
         return language_data_path

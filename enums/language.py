@@ -1,19 +1,19 @@
-from enum import Enum
+from enums.argument_enum import ArgumentEnum
 
 
-class Language(Enum):
-    Bulgarian = 0
-    Czech = 1
-    German = 2
-    English = 3
-    Spanish = 4
-    Finnish = 5
-    French = 6
-    Dutch = 7
-    Polish = 8
-    Slovak = 9
-    Latin = 10
-    Swedish = 11
+class Language(ArgumentEnum):
+    Bulgarian = 'bulgarian'
+    Czech = 'czech'
+    German = 'german'
+    English = 'english'
+    Spanish = 'spanish'
+    Finnish = 'finnish'
+    French = 'french'
+    Dutch = 'dutch'
+    Polish = 'polish'
+    Slovak = 'slovak'
+    Latin = 'latin'
+    Swedish = 'swedish'
 
     @staticmethod
     def from_str(language_string: str):
