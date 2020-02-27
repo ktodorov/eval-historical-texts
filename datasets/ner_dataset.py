@@ -72,7 +72,7 @@ class NERDataset(DatasetBase):
                 token_ids, chunk_size=self._max_length, overlap_size=2)
 
         pretrained_outputs = torch.zeros(
-            (len(token_ids_splits), self._max_length, self._pretrained_model_size)).to(self._device) * -1
+            (len(token_ids_splits), min(self._max_length, len(token_ids)), self._pretrained_model_size)).to(self._device) * -1
 
         for i, token_ids_split in enumerate(token_ids_splits):
             token_ids_tensor = torch.Tensor(
