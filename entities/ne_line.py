@@ -45,7 +45,7 @@ class NELine:
         offsets = self.get_token_offsets()
 
 
-        token_ids, encoded_tokens, encoded_offsets = tokenizer_service.encode_string(
+        token_ids, encoded_tokens, encoded_offsets, _ = tokenizer_service.encode_sequence(
             text)
 
         # it means that the tokenizer has split some of the words, therefore we need to add

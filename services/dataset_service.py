@@ -2,7 +2,7 @@ from enums.configuration import Configuration
 from enums.run_type import RunType
 
 from datasets.dataset_base import DatasetBase
-from datasets.kbert_dataset import KBertDataset
+from datasets.semantic_change_dataset import SemanticChangeDataset
 from datasets.joint_dataset import JointDataset
 from datasets.newseye_dataset import NewsEyeDataset
 from datasets.ocr_dataset import OCRDataset
@@ -60,7 +60,7 @@ class DatasetService:
 
         if not joint_model:
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
-                result = KBertDataset(
+                result = SemanticChangeDataset(
                     language,
                     self._arguments_service,
                     self._mask_service,
@@ -108,7 +108,7 @@ class DatasetService:
 
         result = []
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
-            result = [KBertDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenizer_service, self._log_service, corpus_id=i+1)
+            result = [SemanticChangeDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenizer_service, self._log_service, corpus_id=i+1)
                       for i in range(number_of_datasets)]
         else:
             raise Exception('Unsupported configuration')

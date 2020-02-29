@@ -149,15 +149,18 @@ class TrainService:
             # run on validation set and print progress to terminal
             # if we have eval_frequency or if we have finished the epoch
             if (batches_passed % self._arguments_service.eval_freq) == 0 or (i + 1 == data_loader_length):
-                validation_metric = self._evaluate()
+                if not self._arguments_service.skip_validation:
+                    validation_metric = self._evaluate()
 
-                if math.isnan(validation_metric.get_current_loss()):
-                    raise Exception(
-                        f'combined loss is NaN during evaluating at iteration {i}; losses are - {validation_metric._losses}')
+                    if math.isnan(validation_metric.get_current_loss()):
+                        raise Exception(
+                            f'combined loss is NaN during evaluating at iteration {i}; losses are - {validation_metric._losses}')
 
-                if math.isnan(metric.get_current_loss()):
-                    raise Exception(
-                        f'combined loss is NaN during evaluating at iteration {i}; losses are - {metric._losses}')
+                    if math.isnan(metric.get_current_loss()):
+                        raise Exception(
+                            f'combined loss is NaN during evaluating at iteration {i}; losses are - {metric._losses}')
+                else:
+                    validation_metric = Metric(metric=metric)
 
                 new_best = self._model.compare_metric(
                     best_metrics, validation_metric)

@@ -1,9 +1,8 @@
 import os
 
-from typing import List
+from typing import Tuple, List
 
-from transformers import PreTrainedTokenizer, BertTokenizer, XLNetTokenizer
-from tokenizers import BertWordPieceTokenizer
+from tokenizers import BertWordPieceTokenizer, Tokenizer
 
 import sentencepiece as spm
 
@@ -24,25 +23,14 @@ class TokenizerService:
         self._file_service = file_service
         self._arguments_service = arguments_service
         self._tokenizer_loaded = True
-        self._tokenizer: PreTrainedTokenizer = None
+        self._tokenizer: Tokenizer = None
 
-        if configuration == Configuration.KBert:
-            self._tokenizer = BertTokenizer.from_pretrained(pretrained_weights)
-        elif configuration == Configuration.XLNet:
-            self._tokenizer = XLNetTokenizer.from_pretrained(
-                pretrained_weights)
-        elif (configuration == Configuration.MultiFit or
-              configuration == Configuration.SequenceToCharacter or
-              configuration == Configuration.TransformerSequence or
-              configuration == Configuration.RNNSimple):
+        vocabulary_path = os.path.join('data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
+        if not os.path.exists(vocabulary_path):
+            raise Exception(f'Vocabulary not found in {vocabulary_path}')
 
-            vocabulary_path = os.path.join(
-                'data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
-            if not os.path.exists(vocabulary_path):
-                raise Exception(f'Vocabulary not found in {vocabulary_path}')
-
-            self._tokenizer = BertWordPieceTokenizer(
-                vocabulary_path, lowercase=False, add_special_tokens=(configuration != Configuration.RNNSimple))
+        self._tokenizer = BertWordPieceTokenizer(
+            vocabulary_path, lowercase=False, add_special_tokens=(configuration != Configuration.RNNSimple))
 
     def load_tokenizer_model(self):
         data_path = self._file_service.get_data_path()
@@ -53,6 +41,10 @@ class TokenizerService:
         self._tokenizer.Load(tokenizer_path)
         self._tokenizer_loaded = True
 
+    def encode_tokens(self, tokens: List[str]) -> List[int]:
+        result = [self.tokenizer.token_to_id(x) for x in tokens]
+        return result
+
     def decode_tokens(self, character_ids: List[int]) -> List[str]:
         result = [self._tokenizer.id_to_token(
             character_id) for character_id in character_ids]
@@ -62,16 +54,25 @@ class TokenizerService:
         result = self._tokenizer.decode(character_ids)
         return result
 
-    def encode_string(self, text: str) -> List[int]:
-        encoded_representation = self._tokenizer.encode(text)
-        return (encoded_representation.ids, encoded_representation.tokens, encoded_representation.offsets)
+    def encode_sequence(self, sequence: str) -> Tuple[List[int], List[str], List[Tuple[int,int]], List[int]]:
+        encoded_representation = self._tokenizer.encode(sequence)
+        return (
+            encoded_representation.ids,
+            encoded_representation.tokens,
+            encoded_representation.offsets,
+            encoded_representation.special_tokens_mask)
+
+    def encode_sequences(self, sequences: List[str]) -> List[Tuple[List[int], List[str], List[Tuple[int,int]], List[int]]]:
+        encoded_representations = self._tokenizer.encode_batch(sequences)
+        return [(x.ids, x.tokens, x.offsets, x.special_tokens_mask) for x in encoded_representations]
 
     def is_tokenizer_loaded(self) -> bool:
         return self._tokenizer_loaded
 
     @property
-    def tokenizer(self):
-        return self._tokenizer
+    def vocabulary_size(self) -> int:
+        return self._tokenizer.get_vocab_size()
 
-    def get_sub_tokenizer(self):
-        return self._bert_tokenizer
+    @property
+    def tokenizer(self) -> Tokenizer:
+        return self._tokenizer

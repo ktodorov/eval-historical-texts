@@ -17,9 +17,7 @@ class ArgumentsServiceBase:
         self._raise_errors_on_invalid_args = raise_errors_on_invalid_args
         self._arguments: argparse.Namespace = {}
 
-
         self._parse_arguments()
-
 
     def print_arguments(self):
         """Prints the arguments which the program was initialized with
@@ -27,7 +25,8 @@ class ArgumentsServiceBase:
         print(f'Arguments initialized: {self._arguments}')
 
     def _parse_arguments(self):
-        parser = CustomArgumentParser(raise_errors_on_invalid_args=self._raise_errors_on_invalid_args)
+        parser = CustomArgumentParser(
+            raise_errors_on_invalid_args=self._raise_errors_on_invalid_args)
 
         self._add_base_arguments(parser)
         self._add_specific_arguments(parser)
@@ -90,6 +89,8 @@ class ArgumentsServiceBase:
                             help='Limit the train dataset. By default no limit is done.')
         parser.add_argument('--validation-dataset-limit-size', type=int, default=None,
                             help='Limit the validation dataset. By default no limit is done.')
+        parser.add_argument('--skip-validation', action='store_true',
+                            help='Whether validation should be skipped, meaning no validation dataset is loaded and no evaluation is done while training. By default is false')
 
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         pass
@@ -211,3 +212,7 @@ class ArgumentsServiceBase:
     @property
     def enable_external_logging(self) -> bool:
         return self._get_argument('enable_external_logging')
+
+    @property
+    def skip_validation(self) -> bool:
+        return self._get_argument('skip_validation')

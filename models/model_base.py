@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from datetime import datetime
 
-from typing import Dict
+from typing import Dict, List, Tuple
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
@@ -26,8 +26,8 @@ class ModelBase(nn.Module):
     def forward(self):
         return None
 
-    def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        return {MetricType.JaccardSimilarity: 0}, None
+    def calculate_accuracies(self, batch, outputs, output_characters=False) -> Tuple[Dict[MetricType, float], List[str]]:
+        return ({}, None)
 
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         return True

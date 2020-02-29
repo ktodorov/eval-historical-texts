@@ -36,9 +36,6 @@ class DataLoaderService:
         train_dataset = self._dataset_service.get_dataset(
             RunType.Train, language)
 
-        validation_dataset = self._dataset_service.get_dataset(
-            RunType.Validation, language)
-
         data_loader_train: DataLoader = DataLoader(
             train_dataset,
             batch_size=self._arguments_service.batch_size,
@@ -47,13 +44,19 @@ class DataLoaderService:
         if train_dataset.use_collate_function():
             data_loader_train.collate_fn = train_dataset.collate_function
 
-        data_loader_validation = DataLoader(
-            validation_dataset,
-            batch_size=self._arguments_service.batch_size,
-            shuffle=False)
+        if not self._arguments_service.skip_validation:
+            validation_dataset = self._dataset_service.get_dataset(
+                RunType.Validation, language)
 
-        if validation_dataset.use_collate_function():
-            data_loader_validation.collate_fn = validation_dataset.collate_function
+            data_loader_validation = DataLoader(
+                validation_dataset,
+                batch_size=self._arguments_service.batch_size,
+                shuffle=False)
+
+            if validation_dataset.use_collate_function():
+                data_loader_validation.collate_fn = validation_dataset.collate_function
+        else:
+            data_loader_validation = None
 
         return (data_loader_train, data_loader_validation)
 

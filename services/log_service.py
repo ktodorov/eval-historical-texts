@@ -77,6 +77,15 @@ class LogService:
         train_accuracies = train_metric.get_current_accuracies()
         validation_loss = validation_metric.get_current_loss()
         validation_accuracies = validation_metric.get_current_accuracies()
+        if train_accuracies and len(train_accuracies) > 0:
+            train_accuracy = list(train_accuracies.values())[0]
+        else:
+            train_accuracy = 0
+
+        if validation_accuracies and len(validation_accuracies) > 0:
+            validation_accuracy = list(validation_accuracies.values())[0]
+        else:
+            validation_accuracy = 0
 
         print(colored(
             self._log_template.format(
@@ -87,9 +96,9 @@ class LogService:
                 iterations,
                 100. * (1 + iteration) / iterations,
                 train_loss,
-                list(train_accuracies.values())[0],
+                train_accuracy,
                 validation_loss,
-                list(validation_accuracies.values())[0],
+                validation_accuracy,
                 "BEST" if new_best else ""), self._evaluation_color))
 
         if self._external_logging_enabled:

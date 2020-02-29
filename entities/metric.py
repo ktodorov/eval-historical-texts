@@ -3,12 +3,19 @@ import numpy as np
 
 from enums.metric_type import MetricType
 
-
 class Metric:
-    def __init__(self, amount_limit: int = 5):
+    def __init__(
+        self,
+        amount_limit: int = 5,
+        metric = None):
         self._accuracies: Dict[MetricType, List[float]] = {}
         self._losses: List[float] = []
         self._amount_limit = amount_limit
+
+        if metric:
+            self.add_accuracies(metric.get_current_accuracies())
+            self.add_loss(metric.get_current_loss())
+
 
     def add_accuracies(self, accuracies: Dict[MetricType, float]):
         for key, value in accuracies.items():

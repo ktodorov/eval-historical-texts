@@ -13,9 +13,15 @@ class SemanticArgumentsService(PretrainedArgumentsService):
 
         parser.add_argument('--word-distance-threshold', type=float, default=100.0,
                             help='The threshold which will be used to compare against word distance for the SemEval challenge')
+        parser.add_argument('--corpus', type=int, required=True,
+                            help='The corpus to be used')
 
 
 
     @property
     def word_distance_threshold(self) -> float:
         return self._get_argument('word_distance_threshold')
+
+    @property
+    def corpus(self) -> int:
+        return self._get_argument('corpus')
