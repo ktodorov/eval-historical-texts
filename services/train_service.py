@@ -66,7 +66,7 @@ class TrainService:
 
             best_metrics = Metric(amount_limit=None)
             patience = self._patience
-            metric = Metric(amount_limit=10)
+            metric = Metric(amount_limit=self._arguments_service.eval_freq)
 
             start_epoch = 0
             start_iteration = 0
