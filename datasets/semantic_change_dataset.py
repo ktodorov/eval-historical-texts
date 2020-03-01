@@ -52,6 +52,9 @@ class SemanticChangeDataset(DatasetBase):
         with open(ids_path, 'rb') as data_file:
             self._ids = pickle.load(data_file)
 
+            if arguments_service.pretrained_max_length:
+                self._ids = [x for x in self._ids if len(x[0]) < arguments_service.pretrained_max_length]
+
             reduction = arguments_service.train_dataset_limit_size
             if reduction:
                 items_length = int(len(self._ids) * reduction)
