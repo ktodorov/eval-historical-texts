@@ -159,7 +159,8 @@ class IocContainer(containers.DeclarativeContainer):
         file_service=file_service,
         log_service=log_service,
         pretrained_representations_service=pretrained_representations_service,
-        vocabulary_service=vocabulary_service
+        vocabulary_service=vocabulary_service,
+        metrics_service=metrics_service
     )
 
     dataloader_service = providers.Factory(

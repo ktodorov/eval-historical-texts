@@ -17,6 +17,7 @@ from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
+from services.metrics_service import MetricsService
 
 
 class DatasetService:
@@ -27,6 +28,7 @@ class DatasetService:
         tokenizer_service: TokenizerService,
         file_service: FileService,
         log_service: LogService,
+        metrics_service: MetricsService,
         pretrained_representations_service: PretrainedRepresentationsService,
         vocabulary_service: VocabularyService):
 
@@ -37,6 +39,7 @@ class DatasetService:
         self._log_service = log_service
         self._pretrained_representations_service = pretrained_representations_service
         self._vocabulary_service = vocabulary_service
+        self._metrics_service = metrics_service
 
     def get_dataset(self, run_type: RunType, language: str) -> DatasetBase:
         """Loads and returns the dataset based on run type ``(Train, Validation, Test)`` and the language
@@ -74,6 +77,7 @@ class DatasetService:
                     self._file_service,
                     self._tokenizer_service,
                     self._vocabulary_service,
+                    self._metrics_service,
                     self._log_service,
                     self._pretrained_representations_service,
                     run_type)
@@ -83,6 +87,7 @@ class DatasetService:
                     self._file_service,
                     self._tokenizer_service,
                     self._vocabulary_service,
+                    self._metrics_service,
                     self._log_service,
                     self._pretrained_representations_service,
                     run_type)

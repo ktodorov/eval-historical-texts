@@ -1,10 +1,10 @@
 import pickle
 
 from typing import Dict, List, Tuple
-from transformers import PreTrainedTokenizer
 import math
 
 from services.vocabulary_service import VocabularyService
+from services.tokenizer_service import TokenizerService
 
 
 class LanguageData:
@@ -29,11 +29,11 @@ class LanguageData:
             gs_aligned_entry: List[str],
             ocr_text: str,
             gs_text: str,
-            tokenizer: PreTrainedTokenizer,
+            tokenizer_service: TokenizerService,
             vocabulary_service: VocabularyService):
 
-        ocr_ids = [tokenizer.token_to_id(x) for x in ocr_aligned_entry]
-        gs_ids = [tokenizer.token_to_id(x) for x in gs_aligned_entry]
+        ocr_ids = tokenizer_service.encode_tokens(ocr_aligned_entry)
+        gs_ids = tokenizer_service.encode_tokens(gs_aligned_entry)
 
         ocr_vocab_ids = vocabulary_service.string_to_ids(ocr_text)
         ocr_vocab_ids.insert(0, vocabulary_service.cls_token)

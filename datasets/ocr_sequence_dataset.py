@@ -15,8 +15,9 @@ from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
+from services.metrics_service import MetricsService
 
-from preprocessing.ocr_preprocessing import train_spm_model, preprocess_data, combine_data
+from preprocessing.ocr_preprocessing import preprocess_data
 
 from utils import path_utils
 
@@ -28,6 +29,7 @@ class OCRSequenceDataset(OCRDataset):
             file_service: FileService,
             tokenizer_service: TokenizerService,
             vocabulary_service: VocabularyService,
+            metrics_service: MetricsService,
             log_service: LogService,
             pretrained_representations_service: PretrainedRepresentationsService,
             run_type: RunType,
@@ -37,6 +39,7 @@ class OCRSequenceDataset(OCRDataset):
             file_service,
             tokenizer_service,
             vocabulary_service,
+            metrics_service,
             log_service,
             pretrained_representations_service,
             run_type,
@@ -50,11 +53,19 @@ class OCRSequenceDataset(OCRDataset):
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
 
+        pickles_path = file_service.get_pickles_path()
+        challenge_path = file_service.get_challenge_path()
+        full_data_path = os.path.join(challenge_path, 'full')
+
         if not os.path.exists(language_data_path):
             train_data_path = file_service.get_pickles_path()
-            test_data_path = None
-            preprocess_data(train_data_path, test_data_path,
-                            output_data_path, self._tokenizer_service.tokenizer, self._vocabulary_service)
+            preprocess_data(
+                self._tokenizer_service,
+                self._metrics_service,
+                self._vocabulary_service,
+                pickles_path,
+                full_data_path,
+                output_data_path)
 
         return language_data_path
 

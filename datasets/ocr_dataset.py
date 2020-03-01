@@ -15,8 +15,9 @@ from services.tokenizer_service import TokenizerService
 from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
+from services.metrics_service import MetricsService
 
-from preprocessing.ocr_preprocessing import train_spm_model, preprocess_data, combine_data
+from preprocessing.ocr_preprocessing import preprocess_data
 
 from utils import path_utils
 
@@ -28,18 +29,21 @@ class OCRDataset(DatasetBase):
             file_service: FileService,
             tokenizer_service: TokenizerService,
             vocabulary_service: VocabularyService,
+            metrics_service: MetricsService,
             log_service: LogService,
             pretrained_representations_service: PretrainedRepresentationsService,
             run_type: RunType):
         super(OCRDataset, self).__init__()
 
-        self._device = arguments_service.device
         self._tokenizer_service = tokenizer_service
+        self._metrics_service = metrics_service
+        self._vocabulary_service = vocabulary_service
+
+        self._device = arguments_service.device
         self._pretrained_representations_service = pretrained_representations_service
         self._include_pretrained = arguments_service.include_pretrained_model
         self._pretrained_model_size = self._pretrained_representations_service.get_pretrained_model_size()
         self._max_length = self._pretrained_representations_service.get_pretrained_max_length()
-        self._vocabulary_service = vocabulary_service
 
         language_data_path = self._get_language_data_path(
             file_service,

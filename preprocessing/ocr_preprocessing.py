@@ -7,276 +7,33 @@ import functools
 import sys
 import pickle
 
+from typing import List
+
 from transformers import PreTrainedTokenizer
 
 from entities.language_data import LanguageData
 from utils import path_utils
 
 from services.vocabulary_service import VocabularyService
-
-ocr_prefix = '[OCR_toInput] '
-ocr_aligned_prefix = '[OCR_aligned] '
-gs_prefix = '[ GS_aligned] '
-
-
-def combine_data(ocr_path: str, newseye_path: str, trove_path: str):
-    newseye_2017_path = os.path.join(newseye_path, '2017')
-    newseye_2019_path = os.path.join(newseye_path, '2019')
-
-    move_data(newseye_2017_path, ocr_path, 'newseye-2017')
-    move_data(newseye_2019_path, ocr_path, 'newseye-2019')
-
-    if not os.path.exists(trove_path):
-        os.mkdir(trove_path)
-        download_trove_files(trove_path)
-
-    move_trove_data(trove_path, ocr_path, 'trove')
-    combine_full_data(ocr_path)
-
-
-def move_data(data_path: str, output_path: str, unique_prefix: str):
-    for subdir_name in os.listdir(data_path):
-        subdir_path = os.path.join(data_path, subdir_name)
-        if not os.path.isdir(subdir_path):
-            continue
-
-        for language_name in os.listdir(subdir_path):
-            if not language_name.startswith('eng') and not language_name.startswith('EN'):
-                continue
-
-            language_path = os.path.join(subdir_path, language_name)
-            for data_file_name in os.listdir(language_path):
-                data_file_path = os.path.join(language_path, data_file_name)
-                with open(data_file_path, 'r', encoding='utf-8') as data_file:
-                    data_file_text = data_file.read()
-                    data_file_text = data_file_text.replace('#', '')
-                    data_file_text = data_file_text.replace('@', '')
-                    output_file_path = os.path.join(
-                        output_path, subdir_name, f'{unique_prefix}_{data_file_name}')
-                    with open(output_file_path, 'w', encoding='utf-8') as output_file:
-                        output_file.write(data_file_text)
-
-
-def move_trove_data(data_path: str, output_path: str, unique_prefix: str):
-    output_full_path = os.path.join(output_path, 'full')
-    output_train_path = os.path.join(output_path, 'train')
-    output_eval_path = os.path.join(output_path, 'eval')
-    process_trove_files(data_path, output_full_path, unique_prefix)
-
-    trove_file_names = list(filter(lambda x: x.startswith(
-        'trove'), os.listdir(output_full_path)))
-
-    eval_indices = random.sample(
-        range(len(trove_file_names)), int(0.3 * len(trove_file_names)))
-
-    for i, trove_file_name in enumerate(trove_file_names):
-        trove_file_path = os.path.join(output_full_path, trove_file_name)
-        if i in eval_indices:
-            eval_file_path = os.path.join(output_eval_path, trove_file_name)
-            copyfile(trove_file_path, eval_file_path)
-        else:
-            train_file_path = os.path.join(output_train_path, trove_file_name)
-            copyfile(trove_file_path, train_file_path)
-
-
-def download_trove_files(output_path: str):
-    dataset1_file_urls = [
-        f'http://overproof.projectcomputing.com/datasets/dataset1/rawTextAndHumanCorrectionPairs/smh{i}.txt' for i in range(1842, 1955)]
-
-    for i, dataset1_file_url in enumerate(dataset1_file_urls):
-        try:
-            urllib.request.urlretrieve(
-                dataset1_file_url, os.path.join(output_path, f'd1-{i}.txt'))
-        except:
-            print(
-                f'There was error downloading file at url \'{dataset1_file_url}\'')
-            continue
-
-    dataset2_file_url = 'http://overproof.projectcomputing.com/datasets/dataset2/rawTextAndHumanCorrectionAndOverproofCorrectionTriples/allArticles.txt'
-    urllib.request.urlretrieve(
-        dataset2_file_url, os.path.join(output_path, f'd2.txt'))
-
-    dataset3_file_url = 'http://overproof.projectcomputing.com/datasets/dataset3/rawTextAndHumanCorrectionAndOverproofCorrectionTriples/allArticles.txt'
-    urllib.request.urlretrieve(
-        dataset3_file_url, os.path.join(output_path, f'd3.txt'))
-
-
-def process_trove_files(data_path: str, output_full_path: str, unique_prefix: str):
-    title_prefix = '*$*OVERPROOF*$*'
-    separator = '||@@||'
-
-    counter = 0
-
-    for data_file_name in os.listdir(data_path):
-        articles_ocr = []
-        articles_gs = []
-
-        data_file_path = os.path.join(data_path, data_file_name)
-        with open(data_file_path, 'r', encoding='utf-8') as data_file:
-            file_content_lines = data_file.readlines()
-            current_article_ocr = []
-            current_article_gs = []
-            for file_line in file_content_lines:
-
-                if file_line.startswith(title_prefix):
-                    if len(current_article_gs) > 0:
-                        gs_text = ' '.join(current_article_gs)
-                        articles_gs.append(gs_text)
-                        ocr_text = ' '.join(current_article_ocr)
-                        articles_ocr.append(ocr_text)
-
-                        current_article_gs = []
-                        current_article_ocr = []
-                    continue
-
-                if file_line == separator:
-                    continue
-
-                text_strings = file_line.split(separator)
-                text_strings = [text_string.replace(
-                    '#', '') for text_string in text_strings]
-                text_strings = [text_string.replace(
-                    '@', '') for text_string in text_strings]
-                text_strings = [text_string.replace(
-                    '\n', '') for text_string in text_strings]
-
-                current_article_ocr.append(text_strings[0])
-                current_article_gs.append(text_strings[1])
-
-        for i in range(len(articles_gs)):
-            with open(os.path.join(output_full_path, f'{unique_prefix}-{counter}.txt'), 'w', encoding='utf-8') as article_file:
-                article_file.write(f'{ocr_prefix}\n')
-                article_file.write(f'{ocr_aligned_prefix}{articles_ocr[i]}\n')
-                article_file.write(f'{gs_prefix}{articles_gs[i]}\n')
-
-            counter += 1
-
-
-def combine_full_data(output_path: str):
-    output_full_path = os.path.join(output_path, 'full')
-    sub_files = os.listdir(output_full_path)
-    full_text = ''
-
-    pool = Pool(processes=4)
-    copier = functools.partial(
-        read_data_file, output_full_path=output_full_path)
-
-    texts = pool.map(copier, sub_files)
-
-    # for i, data_file_name in enumerate(sub_files):
-    #     read_data_file(output_full_path, data_file_name)
-
-    full_text = '\n'.join(texts)
-    full_file_path = os.path.join(output_path, 'full.txt')
-    with open(full_file_path, 'w', encoding='utf-8') as full_file:
-        full_file.write(full_text)
-
-
-def read_data_file(data_file_name: str, output_full_path: str):
-    full_text = ''
-    # print(f'\r{i}\\{len(sub_files)}         ', end='')
-    data_file_path = os.path.join(output_full_path, data_file_name)
-    with open(data_file_path, 'r', encoding='utf-8') as data_file:
-        for line in data_file.readlines():
-            line_text = line[len(ocr_prefix):]
-            if line_text:
-                full_text += f'{line_text}\n'
-
-    return full_text
-
-
-def parse_language_data(
-        dataset_folder_path: str,
-        tokenizer: PreTrainedTokenizer,
-        vocabulary_service: VocabularyService) -> LanguageData:
-
-    train_pickle_path = os.path.join(dataset_folder_path, 'train_pairs.pickle')
-    with open(train_pickle_path, 'rb') as train_pickle_file:
-        train_pairs = pickle.load(train_pickle_file)
-
-    validation_pickle_path = os.path.join(dataset_folder_path, 'eval_pairs.pickle')
-    with open(validation_pickle_path, 'rb') as validation_pickle_file:
-        validation_pairs = pickle.load(validation_pickle_file)
-
-#     start_position = 14
-
-#     if not os.path.exists(dataset_folder_path):
-#         raise Exception('Folder path does not exist')
-
-#     file_paths = []
-#     for file_name in os.listdir(dataset_folder_path):
-#         file_path = os.path.join(dataset_folder_path, file_name)
-#         file_paths.append(file_path)
-
-    train_language_data = LanguageData([],[],[],[],[])
-    for train_pair in train_pairs:
-        train_language_data.add_entry(None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenizer, vocabulary_service)
-
-    validation_language_data = LanguageData([],[],[],[],[])
-    for validation_pair in validation_pairs:
-        validation_language_data.add_entry(None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenizer, vocabulary_service)
-
-#     split_index = int(len(file_paths) * 0.8)
-#     train_file_paths = file_paths[0:split_index]
-#     validation_file_paths = file_paths[split_index:]
-
-#     pool = Pool(processes=4)
-
-#     print('\rProcessing TRAIN data...', end='')
-#     train_file_data = pool.map(read_ocr_file, train_file_paths)
-#     for i, data in enumerate(train_file_data):
-#         print(
-#             f'\rProcessing TRAIN data...Saving ({i}\\{len(train_file_data)})', end='')
-#         train_language_data.add_entry(data[0], data[1], data[2], tokenizer)
-#     print('Processing TRAIN data...Done     ')
-
-#     print('\rProcessing VALIDATION data...', end='')
-#     validation_file_data = pool.map(read_ocr_file, validation_file_paths)
-#     for i, data in enumerate(validation_file_data):
-#         print(
-#             f'\rProcessing VALIDATION data...Saving ({i}\\{len(validation_file_data)})', end='')
-#         validation_language_data.add_entry(
-#             data[0], data[1], data[2], tokenizer)
-#     print('Processing VALIDATION data...Done     ')
-
-    return train_language_data, validation_language_data
-
-
-# start_position = 14
-
-
-def read_ocr_file(file_path: str):
-    with open(file_path, 'r', encoding='utf-8') as language_file:
-        text_data: List[str] = language_file.read().split('\n')
-
-        return(
-            text_data[0][start_position:],
-            text_data[1][start_position:],
-            text_data[2][start_position:])
-
-
-def train_spm_model(
-        dataset_folder_path: str,
-        data_output_path: str,
-        vocabulary_size: int):
-
-    if not os.path.exists(dataset_folder_path):
-        raise Exception('Folder path does not exist')
-
-    model_prefix = os.path.join(data_output_path, 'tokenizer')
-    spm.SentencePieceTrainer.Train(
-        f'--input={dataset_folder_path} --model_prefix={model_prefix} --vocab_size={vocabulary_size}')
+from services.tokenizer_service import TokenizerService
+from services.metrics_service import MetricsService
 
 
 def preprocess_data(
-        train_data_path: str,
-        test_data_path: str,
-        data_output_path: str,
-        tokenizer: PreTrainedTokenizer,
-        vocabulary_service: VocabularyService):
+        tokenizer_service: TokenizerService,
+        metrics_service: MetricsService,
+        vocabulary_service: VocabularyService,
+        pickles_path: str,
+        full_data_path: str,
+        data_output_path: str):
 
     train_language_data, validation_language_data = parse_language_data(
-        train_data_path, tokenizer, vocabulary_service)
+        tokenizer_service,
+        metrics_service,
+        vocabulary_service,
+        pickles_path,
+        full_data_path)
+
     train_language_data_filepath = os.path.join(
         data_output_path, f'train_language_data.pickle')
     validation_language_data_filepath = os.path.join(
@@ -288,14 +45,281 @@ def preprocess_data(
     with open(validation_language_data_filepath, 'wb') as validation_handle:
         pickle.dump(validation_language_data, validation_handle, protocol=-1)
 
-    # test_language_data = parse_language_data(
-    #     test_data_path, tokenizer)
-    # test_language_data_filepath = os.path.join(
-    #     data_output_path, f'test_language_data.pickle')
 
-    # with open(test_language_data_filepath, 'wb') as handle:
-    #     pickle.dump(test_language_data, handle, protocol=-1)
+def read_ocr_file(file_path: str, start_position: int):
+    with open(file_path, 'r', encoding='utf-8') as language_file:
+        text_data: List[str] = language_file.read().split('\n')
+
+        return(text_data[1][start_position:], text_data[2][start_position:])
 
 
-if __name__ == '__main__':
-    combine_data()
+def save_data_files(full_data_path: str, full_ocr_path: str, full_gs_path: str):
+    ocr_aligned_lengths = []
+    gs_aligned_lengths = []
+    file_paths = []
+
+    for i, file_name in enumerate(os.listdir(full_data_path)):
+        file_paths.append(os.path.join(full_data_path, file_name))
+
+    number_of_files = len(file_paths)
+    file_data = []
+    for i, file_path in enumerate(file_paths):
+        print(f'{i}/{number_of_files}             \r', end='')
+        file_data.append(read_ocr_file(file_path, start_position=14))
+
+    ocr_file_data = [x[0] for x in file_data]
+    gs_file_data = [x[1] for x in file_data]
+
+    with open(full_ocr_path, 'wb') as ocr_handle:
+        pickle.dump(ocr_file_data, ocr_handle, protocol=-1)
+
+    with open(full_gs_path, 'wb') as gs_handle:
+        pickle.dump(gs_file_data, gs_handle, protocol=-1)
+
+    return ocr_file_data, gs_file_data
+
+
+def read_data(
+        full_data_path: str,
+        full_ocr_path: str,
+        full_gs_path: str,
+        full_ocr_tokens_path: str,
+        full_gs_tokens_path: str,
+        tokenizer_service: TokenizerService):
+
+    if not os.path.exists(full_ocr_path) or not os.path.exists(full_gs_path):
+        ocr_file_data, gs_file_data = save_data_files(
+            full_data_path,
+            full_ocr_path,
+            full_gs_path)
+    else:
+        with open(full_ocr_path, 'rb') as ocr_handle:
+            ocr_file_data = pickle.load(ocr_handle)
+
+        with open(full_gs_path, 'rb') as gs_handle:
+            gs_file_data = pickle.load(gs_handle)
+
+    if not os.path.exists(full_ocr_tokens_path) or not os.path.exists(full_gs_tokens_path):
+        ocr_tokens = []
+        gs_tokens = []
+        skipped_indices = []
+        for i in range(len(ocr_file_data)):
+            current_ids, _, _, _ = tokenizer_service.encode_sequence(
+                ocr_file_data[i])
+            if len(current_ids) > 2000:
+                skipped_indices.append(i)
+                continue
+
+            gs_ids, gs_tokens, _, _ = tokenizer_service.encode_sequence(
+                gs_file_data[i])
+            decoded_gs = ''.join(gs_tokens)
+            if (decoded_gs.count('#') / len(decoded_gs)) > 0.15:
+                continue
+
+            ocr_tokens.append(current_ids)
+            gs_tokens.append(gs_ids)
+
+        with open(full_ocr_tokens_path, 'wb') as ocr_handle:
+            pickle.dump(ocr_tokens, ocr_handle, protocol=-1)
+
+        with open(full_gs_tokens_path, 'wb') as gs_handle:
+            pickle.dump(gs_tokens, gs_handle, protocol=-1)
+
+        for index in sorted(skipped_indices, reverse=True):
+            del ocr_file_data[index]
+            del gs_file_data[index]
+
+        with open(full_ocr_path, 'wb') as ocr_handle:
+            pickle.dump(ocr_file_data, ocr_handle, protocol=-1)
+
+        with open(full_gs_path, 'wb') as gs_handle:
+            pickle.dump(gs_file_data, gs_handle, protocol=-1)
+    else:
+        with open(full_ocr_tokens_path, 'rb') as ocr_handle:
+            ocr_tokens = pickle.load(ocr_handle)
+
+        with open(full_gs_tokens_path, 'rb') as gs_handle:
+            gs_tokens = pickle.load(gs_handle)
+
+    return ocr_file_data, gs_file_data, ocr_tokens, gs_tokens
+
+
+def save_metrics_obj(token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances):
+    metrics_path = os.path.join(
+        '..', 'data', 'ocr', 'pickles', 'metrics.pickle')
+
+    metrics_obj = {
+        'token_pairs': token_pairs,
+        'decoded_pairs': decoded_pairs,
+        'jaccard_similarities': jaccard_similarities,
+        'levenshtein_distances': levenshtein_distances,
+    }
+
+    with open(metrics_path, 'wb') as metrics_handle:
+        pickle.dump(metrics_obj, metrics_handle, protocol=-1)
+
+    print('Saved metrics')
+
+
+def load_metrics_obj():
+    metrics_path = os.path.join(
+        '..', 'data', 'ocr', 'pickles', 'metrics.pickle')
+    if not os.path.exists(metrics_path):
+        return (None, None, None, None)
+
+    with open(metrics_path, 'rb') as metrics_handle:
+        metrics_obj = pickle.load(metrics_handle)
+
+    return (metrics_obj['token_pairs'],
+            metrics_obj['decoded_pairs'],
+            metrics_obj['jaccard_similarities'],
+            metrics_obj['levenshtein_distances'])
+
+
+def parse_metrics_obj(
+        tokenizer_service: TokenizerService,
+        metrics_service: MetricsService,
+        ocr_tokens: List[List[int]],
+        gs_tokens: List[List[int]],
+        ocr_file_data: List[str],
+        gs_file_data: List[str]):
+    token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = load_metrics_obj()
+
+    if not token_pairs:
+        token_pairs = [([tokenizer_service.decode_string(x) for x in ocr_tokens[i]], [
+                        tokenizer_service.decode_string(x) for x in gs_tokens[i]]) for i in range(len(ocr_tokens))]
+        save_metrics_obj(token_pairs, decoded_pairs,
+                         jaccard_similarities, levenshtein_distances)
+
+    if not decoded_pairs:
+        decoded_pairs = [(ocr_file_data[i], gs_file_data[i])
+                         for i in range(len(ocr_tokens))]
+        save_metrics_obj(token_pairs, decoded_pairs,
+                         jaccard_similarities, levenshtein_distances)
+
+    all_pairs = len(token_pairs)
+    if not jaccard_similarities:
+        jaccard_similarities = []
+        for i, token_pair in enumerate(token_pairs):
+            jaccard_similarities.append(
+                metrics_service.calculate_jaccard_similarity(token_pair[0], token_pair[1]))
+
+        save_metrics_obj(token_pairs, decoded_pairs,
+                         jaccard_similarities, levenshtein_distances)
+
+    if not levenshtein_distances:
+        levenshtein_distances = []
+
+    if len(levenshtein_distances) < all_pairs:
+        for i, decoded_pair in enumerate(decoded_pairs):
+            if i < len(levenshtein_distances):
+                continue
+
+            print(f'LEVENSHTEIN - {i}/{all_pairs}             \r', end='')
+            levenshtein_distances.append(
+                metrics_service.calculate_normalized_levenshtein_distance(decoded_pair[0], decoded_pair[1]))
+
+            if i % 5000 == 0:
+                save_metrics_obj(token_pairs, decoded_pairs,
+                                 jaccard_similarities, levenshtein_distances)
+
+        save_metrics_obj(token_pairs, decoded_pairs,
+                         jaccard_similarities, levenshtein_distances)
+
+    return token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances
+
+
+def load_split_data(
+        tokenizer_service: TokenizerService,
+        metrics_service: MetricsService,
+        full_data_path: str,
+        full_ocr_path: str,
+        full_gs_path: str,
+        full_ocr_tokens_path: str,
+        full_gs_tokens_path: str,
+        train_pickle_path: str,
+        validation_pickle_path: str):
+
+    if not os.path.exists(train_pickle_path) or not os.path.exists(validation_pickle_path):
+        ocr_file_data, gs_file_data, ocr_tokens, gs_tokens = read_data(
+            full_data_path,
+            full_ocr_path,
+            full_gs_path,
+            full_ocr_tokens_path,
+            full_gs_tokens_path,
+            tokenizer_service)
+
+        token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = parse_metrics_obj(
+            tokenizer_service,
+            metrics_service,
+            ocr_tokens,
+            gs_tokens,
+            ocr_file_data,
+            gs_file_data)
+
+        eval_indices = random.sample(
+            range(len(token_pairs)), int(0.2 * len(token_pairs)))
+
+        train_pairs = []
+        eval_pairs = []
+        for i in range(len(token_pairs)):
+            if i in eval_indices:
+                eval_pairs.append([token_pairs[i], decoded_pairs[i]])
+            else:
+                train_pairs.append([token_pairs[i], decoded_pairs[i]])
+
+        with open(train_pickle_path, 'wb') as train_handle:
+            pickle.dump(train_pairs, train_handle, protocol=-1)
+
+        with open(validation_pickle_path, 'wb') as eval_handle:
+            pickle.dump(eval_pairs, eval_handle, protocol=-1)
+    else:
+        with open(train_pickle_path, 'rb') as train_pickle_file:
+            train_pairs = pickle.load(train_pickle_file)
+
+        with open(validation_pickle_path, 'rb') as validation_pickle_file:
+            validation_pairs = pickle.load(validation_pickle_file)
+
+    return train_pairs, eval_pairs
+
+
+def parse_language_data(
+        tokenizer_service: TokenizerService,
+        metrics_service: MetricsService,
+        vocabulary_service: VocabularyService,
+        pickles_path: str,
+        full_data_path: str) -> LanguageData:
+
+    train_pickle_path = os.path.join(pickles_path, 'train_pairs.pickle')
+    validation_pickle_path = os.path.join(pickles_path, 'eval_pairs.pickle')
+
+    full_ocr_path = os.path.join(pickles_path, 'combined_ocr.pickle')
+    full_gs_path = os.path.join(pickles_path, 'combined_gs.pickle')
+
+    full_ocr_tokens_path = os.path.join(
+        pickles_path, 'combined_ocr_tokens.pickle')
+    full_gs_tokens_path = os.path.join(
+        pickles_path, 'combined_gs_tokens.pickle')
+
+    train_pairs, validation_pairs = load_split_data(
+        tokenizer_service,
+        metrics_service,
+        full_data_path,
+        full_ocr_path,
+        full_gs_path,
+        full_ocr_tokens_path,
+        full_gs_tokens_path,
+        train_pickle_path,
+        validation_pickle_path)
+
+    train_language_data = LanguageData([], [], [], [], [])
+    for train_pair in train_pairs:
+        train_language_data.add_entry(
+            None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenizer_service, vocabulary_service)
+
+    validation_language_data = LanguageData([], [], [], [], [])
+    for validation_pair in validation_pairs:
+        validation_language_data.add_entry(
+            None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenizer_service, vocabulary_service)
+
+    return train_language_data, validation_language_data

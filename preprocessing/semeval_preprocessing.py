@@ -20,7 +20,12 @@ def generate_transformer_tokens(
         with open(text_file_path, 'r', encoding='utf-8') as text_file:
             lines.extend(text_file.readlines())
 
-    encodings = tokenizer_service.encode_sequences(lines)
+    encodings = []
+    counter = 0
+    step = 500
+    while counter < len(lines):
+        encodings.extend(tokenizer_service.encode_sequences(lines[counter:counter+step]))
+        counter += step
 
     input_ids = [(x[0], x[3]) for x in encodings]
     return input_ids
