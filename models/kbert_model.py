@@ -29,7 +29,7 @@ class KBertModel(ModelBase):
             outputs = self._bert_model.forward(inputs, masked_lm_labels=labels)
         else:
             inputs = input_batch
-            outputs = self._bert_model.forward(inputs)
+            outputs = self._bert_model.forward(inputs, masked_lm_labels=inputs)
 
         return outputs[0]
 

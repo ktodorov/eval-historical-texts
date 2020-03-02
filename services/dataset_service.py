@@ -59,7 +59,8 @@ class DatasetService:
             return SemEvalTestDataset(
                 language,
                 self._arguments_service,
-                self._tokenizer_service)
+                self._tokenizer_service,
+                self._file_service)
 
         if not joint_model:
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):

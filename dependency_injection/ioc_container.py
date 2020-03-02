@@ -40,7 +40,8 @@ from services.config_service import ConfigService
 from services.data_service import DataService
 from services.dataloader_service import DataLoaderService
 from services.dataset_service import DatasetService
-from services.evaluation_service import EvaluationService
+from services.evaluation.base_evaluation_service import BaseEvaluationService
+from services.evaluation.semantic_change_evaluation_service import SemanticChangeEvaluationService
 from services.file_service import FileService
 from services.log_service import LogService
 from services.mask_service import MaskService
@@ -63,6 +64,7 @@ def initialize_seed(seed: int, device: str):
     if device == 'cuda':
         torch.backends.cudnn.benchmark = False
         torch.cuda.manual_seed_all(seed)
+
 
 def get_argument_service_type(challenge: Challenge, configuration: Configuration):
     argument_service_type = None
@@ -89,7 +91,8 @@ class IocContainer(containers.DeclarativeContainer):
 
     # Services
 
-    arguments_service_base = ArgumentsServiceBase(raise_errors_on_invalid_args=False)
+    arguments_service_base = ArgumentsServiceBase(
+        raise_errors_on_invalid_args=False)
 
     challenge = arguments_service_base.challenge
     seed = arguments_service_base.seed
@@ -104,7 +107,6 @@ class IocContainer(containers.DeclarativeContainer):
     )
 
     initialize_seed(seed, device)
-
 
     log_service = providers.Singleton(
         LogService,
@@ -169,10 +171,6 @@ class IocContainer(containers.DeclarativeContainer):
         dataset_service=dataset_service
     )
 
-    evaluation_service = providers.Factory(
-        EvaluationService
-    )
-
     model_service = providers.Factory(
         ModelService,
         arguments_service=arguments_service,
@@ -195,6 +193,12 @@ class IocContainer(containers.DeclarativeContainer):
                 AdamWOptimizer,
                 arguments_service=arguments_service,
                 model=model
+            )
+
+            evaluation_service = providers.Factory(
+                SemanticChangeEvaluationService,
+                arguments_service=arguments_service,
+                file_service=file_service
             )
         elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
 
@@ -236,6 +240,10 @@ class IocContainer(containers.DeclarativeContainer):
                 arguments_service=arguments_service,
                 model=model
             )
+
+            evaluation_service = providers.Factory(
+                BaseEvaluationService
+            )
         elif configuration == Configuration.RNNSimple:
             loss_function = providers.Singleton(NERLoss)
             model = providers.Singleton(
@@ -249,6 +257,10 @@ class IocContainer(containers.DeclarativeContainer):
                 AdamOptimizer,
                 arguments_service=arguments_service,
                 model=model
+            )
+
+            evaluation_service = providers.Factory(
+                BaseEvaluationService
             )
     elif joint_model:
 
@@ -268,6 +280,12 @@ class IocContainer(containers.DeclarativeContainer):
 
             loss_function = providers.Singleton(
                 JointLoss
+            )
+
+            evaluation_service = providers.Factory(
+                SemanticChangeEvaluationService,
+                arguments_service=arguments_service,
+                file_service=file_service
             )
         else:
             raise Exception(

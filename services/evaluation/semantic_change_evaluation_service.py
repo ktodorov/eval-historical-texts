@@ -1,0 +1,78 @@
+import os
+from typing import List, Dict
+
+import numpy as np
+import torch
+from scipy import spatial
+
+from enums.evaluation_type import EvaluationType
+
+from services.semantic_arguments_service import SemanticArgumentsService
+from services.file_service import FileService
+from services.evaluation.base_evaluation_service import BaseEvaluationService
+
+
+class SemanticChangeEvaluationService(BaseEvaluationService):
+    def __init__(
+        self,
+        arguments_service: SemanticArgumentsService,
+        file_service: FileService):
+        super().__init__()
+
+        self._arguments_service = arguments_service
+        self._file_service = file_service
+
+    def evaluate_batch(self, output: torch.Tensor, evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
+        output_numpy = [x.cpu().detach().numpy() for x in output]
+
+        evaluation_results = {}
+        for evaluation_type in evaluation_types:
+            evaluation_results[evaluation_type] = []
+
+        # cosine distance
+        if EvaluationType.CosineDistance in evaluation_types:
+            cosine_distance = spatial.distance.cosine(
+                output_numpy[0], output_numpy[1])
+
+            evaluation_results[EvaluationType.CosineDistance].append(
+                cosine_distance)
+
+        # euclidean distance
+        if EvaluationType.EuclideanDistance in evaluation_types:
+            euclidean_distance = spatial.distance.euclidean(
+                output_numpy[0], output_numpy[1])
+            evaluation_results[EvaluationType.EuclideanDistance].append(
+                euclidean_distance)
+
+        return evaluation_results
+
+    def save_results(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
+        checkpoint_folder = self._file_service.get_checkpoints_path()
+        output_file_task1 = os.path.join(
+            checkpoint_folder, 'task1.txt')
+        output_file_task2 = os.path.join(
+            checkpoint_folder, 'task2.txt')
+
+        threshold = self._arguments_service.word_distance_threshold
+
+        task1_dict = {}
+        distances = evaluation[EvaluationType.EuclideanDistance]
+
+        for i, target_word in enumerate(targets):
+            if distances[i] > threshold:
+                task1_dict[target_word] = 1
+            else:
+                task1_dict[target_word] = 0
+
+        abs_distances = [abs(distance) for distance in distances]
+        max_args = list(np.argsort(abs_distances))
+
+        with open(output_file_task1, 'w', encoding='utf-8') as task1_file:
+            for word, class_prediction in task1_dict.items():
+                task1_file.write(f'{word}\t{class_prediction}\n')
+
+        with open(output_file_task2, 'w', encoding='utf-8') as task2_file:
+            for i, target in enumerate(targets):
+                task2_file.write(f'{target}\t{max_args.index(i)}\n')
+
+        print('Output saved')
