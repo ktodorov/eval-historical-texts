@@ -102,4 +102,4 @@ class SemanticChangeDataset(DatasetBase):
         seq_lengths, perm_idx = lengths.sort(0, descending=True)
         seq_tensor = sequences[perm_idx]
         mask_tensor = masks[perm_idx]
-        return self._mask_service.mask_tokens(seq_tensor, masks, seq_lengths)
+        return self._mask_service.mask_tokens(seq_tensor, mask_tensor, seq_lengths)
