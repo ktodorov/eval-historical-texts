@@ -22,7 +22,7 @@ class ModelService:
         device = self._arguments_service.device
 
         if configuration == Configuration.KBert:
-            return KBertModel(self._arguments_service, self._data_service).to(device)
+            return KBertModel(self._arguments_service, self._data_service, output_hidden_states=True).to(device)
         elif configuration == Configuration.XLNet:
             return KXLNetModel(self._arguments_service, self._data_service).to(device)
 

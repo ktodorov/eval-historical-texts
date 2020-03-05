@@ -1,7 +1,7 @@
 import os
 from typing import Callable
 
-from transformers import BertForMaskedLM, BertPreTrainedModel
+from transformers import BertForMaskedLM, BertPreTrainedModel, BertConfig
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
@@ -15,11 +15,20 @@ class KBertModel(ModelBase):
     def __init__(
             self,
             arguments_service: SemanticArgumentsService,
-            data_service: DataService):
+            data_service: DataService,
+            output_hidden_states: bool = False):
         super(KBertModel, self).__init__(data_service)
 
-        self._bert_model = self._model_type.from_pretrained(
-            arguments_service.pretrained_weights)
+        self._output_hidden_states = output_hidden_states
+
+        if arguments_service.resume_training or arguments_service.evaluate:
+            self._bert_model = None
+        else:
+            config = BertConfig.from_pretrained(arguments_service.pretrained_weights)
+            config.output_hidden_states = output_hidden_states
+
+            self._bert_model: BertPreTrainedModel = self._model_type.from_pretrained(
+                arguments_service.pretrained_weights, config=config)
 
         self._arguments_service = arguments_service
 
@@ -27,11 +36,11 @@ class KBertModel(ModelBase):
         if isinstance(input_batch, tuple):
             (inputs, labels) = input_batch
             outputs = self._bert_model.forward(inputs, masked_lm_labels=labels)
+            return outputs[0]
         else:
             inputs = input_batch
-            outputs = self._bert_model.forward(inputs, masked_lm_labels=inputs)
-
-        return outputs[0]
+            outputs = self._bert_model.forward(inputs)
+            return outputs[1][-1]
 
     def named_parameters(self):
         return self._bert_model.named_parameters()
@@ -99,8 +108,11 @@ class KBertModel(ModelBase):
     def _load_kbert_model(self, path: str, name_prefix: str):
         pretrained_weights_path = self._get_pretrained_path(path, name_prefix)
 
+        config = BertConfig.from_pretrained(pretrained_weights_path)
+        config.output_hidden_states = self._output_hidden_states
+
         self._bert_model = self._model_type.from_pretrained(
-            pretrained_weights_path).to(self._arguments_service.device)
+            pretrained_weights_path, config=config).to(self._arguments_service.device)
 
     def _get_pretrained_path(self, path: str, name_prefix: str, create_if_missing: bool = False):
         file_name = f'{name_prefix}_pretrained_weights'

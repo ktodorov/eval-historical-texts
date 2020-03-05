@@ -33,6 +33,10 @@ class SemEvalTestDataset(DatasetBase):
         with open(targets_path, 'r', encoding='utf-8') as targets_file:
             self._target_words = targets_file.read().splitlines()
 
+        # English words end with POS tags (e.g. 'test_nn')
+        if language == Language.English:
+            self._target_words = [x[:-3] for x in self._target_words]
+
         encodings = tokenizer_service.encode_sequences(self._target_words)
         self._target_word_ids = [x[0] for x in encodings]
 

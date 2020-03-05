@@ -52,6 +52,7 @@ from services.test_service import TestService
 from services.tokenizer_service import TokenizerService
 from services.train_service import TrainService
 from services.vocabulary_service import VocabularyService
+from services.plot_service import PlotService
 
 import logging
 
@@ -83,11 +84,54 @@ def get_argument_service_type(challenge: Challenge, configuration: Configuration
     return argument_service_type
 
 
+def register_optimizer(
+        joint_model: bool,
+        evaluate: bool,
+        challenge: Challenge,
+        configuration: Configuration,
+        model: ModelBase,
+        arguments_service: ArgumentsServiceBase):
+    if evaluate:
+        return None
+
+    if not joint_model:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+            optimizer = providers.Singleton(
+                AdamWOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
+            optimizer = providers.Singleton(
+                AdamOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+        elif configuration == Configuration.RNNSimple:
+            optimizer = providers.Singleton(
+                AdamOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+    else:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+            optimizer = providers.Singleton(
+                JointAdamWOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
+        else:
+            raise Exception(
+                'No optimizer and loss defined for current configuration')
+
+    return optimizer
+
 class IocContainer(containers.DeclarativeContainer):
     """Application IoC container."""
 
     config = providers.Configuration('config')
-    logger = providers.Singleton(logging.Logger, name='example')
+    logger = providers.Singleton(logging.Logger,
+                                 name='example')
 
     # Services
 
@@ -99,6 +143,7 @@ class IocContainer(containers.DeclarativeContainer):
     device = arguments_service_base.device
     configuration = arguments_service_base.configuration
     joint_model = arguments_service_base.joint_model
+    evaluate = arguments_service_base.evaluate
     external_logging_enabled = arguments_service_base.enable_external_logging
 
     argument_service_type = get_argument_service_type(challenge, configuration)
@@ -124,6 +169,10 @@ class IocContainer(containers.DeclarativeContainer):
     file_service = providers.Factory(
         FileService,
         arguments_service=arguments_service
+    )
+
+    plot_service = providers.Factory(
+        PlotService
     )
 
     tokenizer_service = providers.Singleton(
@@ -189,16 +238,11 @@ class IocContainer(containers.DeclarativeContainer):
                 data_service=data_service
             )
 
-            optimizer = providers.Singleton(
-                AdamWOptimizer,
-                arguments_service=arguments_service,
-                model=model
-            )
-
             evaluation_service = providers.Factory(
                 SemanticChangeEvaluationService,
                 arguments_service=arguments_service,
-                file_service=file_service
+                file_service=file_service,
+                plot_service=plot_service
             )
         elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
 
@@ -235,12 +279,6 @@ class IocContainer(containers.DeclarativeContainer):
                     tokenizer_service=tokenizer_service
                 )
 
-            optimizer = providers.Singleton(
-                AdamOptimizer,
-                arguments_service=arguments_service,
-                model=model
-            )
-
             evaluation_service = providers.Factory(
                 BaseEvaluationService
             )
@@ -251,12 +289,6 @@ class IocContainer(containers.DeclarativeContainer):
                 arguments_service=arguments_service,
                 data_service=data_service,
                 metrics_service=metrics_service
-            )
-
-            optimizer = providers.Singleton(
-                AdamOptimizer,
-                arguments_service=arguments_service,
-                model=model
             )
 
             evaluation_service = providers.Factory(
@@ -272,12 +304,6 @@ class IocContainer(containers.DeclarativeContainer):
         )
 
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
-            optimizer = providers.Singleton(
-                JointAdamWOptimizer,
-                arguments_service=arguments_service,
-                model=model
-            )
-
             loss_function = providers.Singleton(
                 JointLoss
             )
@@ -285,13 +311,23 @@ class IocContainer(containers.DeclarativeContainer):
             evaluation_service = providers.Factory(
                 SemanticChangeEvaluationService,
                 arguments_service=arguments_service,
-                file_service=file_service
+                file_service=file_service,
+                plot_service=plot_service
             )
         else:
             raise Exception(
                 'No optimizer and loss defined for current configuration')
     else:
         raise Exception('Unsupported configuration')
+
+    optimizer = register_optimizer(
+        joint_model,
+        evaluate,
+        challenge,
+        configuration,
+        model,
+        arguments_service
+    )
 
     test_service = providers.Factory(
         TestService,

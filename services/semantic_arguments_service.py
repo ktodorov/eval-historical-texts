@@ -15,6 +15,8 @@ class SemanticArgumentsService(PretrainedArgumentsService):
                             help='The threshold which will be used to compare against word distance for the SemEval challenge')
         parser.add_argument('--corpus', type=int, required=True,
                             help='The corpus to be used')
+        parser.add_argument('--plot-distances', action='store_true',
+                            help='Plot distances of target words for the different time periods')
 
 
 
@@ -25,3 +27,7 @@ class SemanticArgumentsService(PretrainedArgumentsService):
     @property
     def corpus(self) -> int:
         return self._get_argument('corpus')
+
+    @property
+    def plot_distances(self) -> bool:
+        return self._get_argument('plot_distances')

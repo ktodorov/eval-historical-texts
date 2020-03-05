@@ -10,20 +10,23 @@ from enums.evaluation_type import EvaluationType
 from services.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
 from services.evaluation.base_evaluation_service import BaseEvaluationService
+from services.plot_service import PlotService
 
 
 class SemanticChangeEvaluationService(BaseEvaluationService):
     def __init__(
-        self,
-        arguments_service: SemanticArgumentsService,
-        file_service: FileService):
+            self,
+            arguments_service: SemanticArgumentsService,
+            file_service: FileService,
+            plot_service: PlotService):
         super().__init__()
 
         self._arguments_service = arguments_service
         self._file_service = file_service
+        self._plot_service = plot_service
 
-    def evaluate_batch(self, output: torch.Tensor, evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
-        output_numpy = [x.cpu().detach().numpy() for x in output]
+    def evaluate_batch(self, output: List[torch.Tensor], evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
+        output_numpy = [x.mean(dim=1).cpu().detach().numpy() for x in output]
 
         evaluation_results = {}
         for evaluation_type in evaluation_types:
@@ -47,6 +50,17 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         return evaluation_results
 
     def save_results(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
+        if self._arguments_service.plot_distances:
+            self._plot_service.plot_histogram(
+                evaluation[EvaluationType.CosineDistance],
+                number_of_bins=25,
+                title='Cosine distance')
+
+            self._plot_service.plot_histogram(
+                evaluation[EvaluationType.EuclideanDistance], 
+                number_of_bins=25,
+                title='Euclidean distance')
+
         checkpoint_folder = self._file_service.get_checkpoints_path()
         output_file_task1 = os.path.join(
             checkpoint_folder, 'task1.txt')
