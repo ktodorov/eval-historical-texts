@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
 
-matplotlib.rcParams['figure.dpi'] = 300
+# matplotlib.rcParams['figure.dpi'] = 300
 
 
 class PlotService:
@@ -37,15 +37,18 @@ class PlotService:
 
         bins = np.arange(start_x, end_x, distance_bin)
 
+        plt.hist(values, bins=bins, edgecolor='none')
+
         self._add_properties(
             title,
             save_path,
             filename)
 
-        ax = plt.subplot()
-        plt.hist(values, bins=bins, edgecolor='none')
 
-        plt.show()
+        if save_path is None or filename is None:
+            plt.show()
+
+        plt.clf()
 
     def plot_scatter(
             self,

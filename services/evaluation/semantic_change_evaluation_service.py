@@ -52,18 +52,24 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         return evaluation_results
 
     def save_results(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
-        if self._arguments_service.plot_distances:
-            self._plot_service.plot_histogram(
-                evaluation[EvaluationType.CosineDistance],
-                number_of_bins=25,
-                title='Cosine distance')
-
-            self._plot_service.plot_histogram(
-                evaluation[EvaluationType.EuclideanDistance], 
-                number_of_bins=25,
-                title='Euclidean distance')
-
         checkpoint_folder = self._file_service.get_checkpoints_path()
+        if self._arguments_service.plot_distances:
+            if EvaluationType.CosineDistance in evaluation.keys():
+                self._plot_service.plot_histogram(
+                    evaluation[EvaluationType.CosineDistance],
+                    number_of_bins=25,
+                    title='Cosine distance',
+                    save_path=checkpoint_folder,
+                    filename=f'cosine-distance-{str(self._arguments_service.language)}')
+
+            if EvaluationType.EuclideanDistance in evaluation.keys():
+                self._plot_service.plot_histogram(
+                    evaluation[EvaluationType.EuclideanDistance],
+                    number_of_bins=25,
+                    title='Euclidean distance',
+                    save_path=checkpoint_folder,
+                    filename=f'euclidean-distance-{str(self._arguments_service.language)}')
+
         output_file_task1 = os.path.join(
             checkpoint_folder, 'task1.txt')
         output_file_task2 = os.path.join(
