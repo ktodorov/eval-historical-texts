@@ -7,12 +7,14 @@ class ModelCheckpoint:
             model_dict: dict,
             epoch: int,
             iteration: int,
-            best_metrics: object):
+            best_metrics: object,
+            resets_left: int):
 
         self._model_dict = model_dict
         self._epoch = epoch
         self._iteration = iteration
         self._best_metrics = best_metrics
+        self._resets_left = resets_left
         self._date_saved = datetime.now()
 
     @property
@@ -34,3 +36,7 @@ class ModelCheckpoint:
     @property
     def date_saved(self) -> datetime:
         return self._date_saved
+
+    @property
+    def resets_left(self) -> int:
+        return self._resets_left

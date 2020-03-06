@@ -60,10 +60,11 @@ class JointModel(ModelBase):
             epoch: int,
             iteration: int,
             best_metrics: object,
+            resets_left: int,
             name_prefix: str = None) -> bool:
 
         saved = super().save(path, epoch, iteration, best_metrics,
-                             name_prefix, save_model_dict=False)
+                             resets_left, name_prefix, save_model_dict=False)
 
         if not saved:
             return saved

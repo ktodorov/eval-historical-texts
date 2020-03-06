@@ -59,6 +59,7 @@ class KBertModel(ModelBase):
             epoch: int,
             iteration: int,
             best_metrics: object,
+            resets_left: int,
             name_prefix: str = None) -> bool:
 
         checkpoint_name = self._arguments_service.checkpoint_name
@@ -67,7 +68,7 @@ class KBertModel(ModelBase):
             name_prefix = f'{name_prefix}_{checkpoint_name}'
 
         saved = super().save(path, epoch, iteration, best_metrics,
-                             name_prefix, save_model_dict=False)
+                             resets_left, name_prefix, save_model_dict=False)
 
         if not saved:
             return saved

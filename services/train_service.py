@@ -47,15 +47,15 @@ class TrainService:
         self._loss_function = loss_function
         self._optimizer = optimizer
         self._model = model.to(arguments_service.device)
-        self._patience: int = self._arguments_service.patience
+        self.data_loader_train: DataLoader = None
+        self.data_loader_validation: DataLoader = None
 
     def train(self) -> bool:
         """
          main training function
         """
 
-        (self.data_loader_train,
-         self.data_loader_validation) = self._dataloader_service.get_train_dataloaders()
+        self.data_loader_train, self.data_loader_validation = self._dataloader_service.get_train_dataloaders()
 
         epoch = 0
         self._log_service.start_logging_model(
@@ -65,11 +65,13 @@ class TrainService:
             self._log_service.initialize_evaluation()
 
             best_metrics = Metric(amount_limit=None)
-            patience = self._patience
+            patience = self._arguments_service.patience
             metric = Metric(amount_limit=self._arguments_service.eval_freq)
 
             start_epoch = 0
             start_iteration = 0
+            resets_left = self._arguments_service.resets_limit
+            reset_epoch_limit = self._arguments_service.training_reset_epoch_limit
 
             if self._arguments_service.resume_training:
                 model_checkpoint = self._load_model()
@@ -77,14 +79,16 @@ class TrainService:
                     best_metrics = model_checkpoint.best_metrics
                     start_epoch = model_checkpoint.epoch
                     start_iteration = model_checkpoint.iteration
+                    resets_left = model_checkpoint.resets_left
                     metric.initialize(best_metrics, start_iteration)
 
             # run
-            for epoch in range(start_epoch, self._arguments_service.epochs):
+            epoch = start_epoch
+            while epoch < self._arguments_service.epochs:
                 self._log_service.log_summary('Epoch', epoch)
 
                 best_metrics, patience = self._perform_epoch_iteration(
-                    epoch, best_metrics, patience, metric, start_iteration)
+                    epoch, best_metrics, patience, metric, resets_left, start_iteration)
 
                 start_iteration = 0  # reset the starting iteration
 
@@ -92,26 +96,49 @@ class TrainService:
                 sys.stdout.flush()
 
                 if patience == 0:
-                    print('Stopping training due to depleted patience')
-                    break
+                    if (self._arguments_service.reset_training_on_early_stop and resets_left > 0 and reset_epoch_limit > epoch):
+                        patience = self._arguments_service.patience
+                        resets_left -= 1
+                        print(
+                            f'Resetting training due to early stop activated. Resets left: {resets_left}')
+                    else:
+                        print('Stopping training due to depleted patience')
+                        break
+                else:
+                    epoch += 1
 
         except KeyboardInterrupt as e:
             print(f"Killed by user: {e}")
-            self._model.save(self._model_path, epoch, 0, best_metrics,
-                             name_prefix=f'KILLED_at_epoch_{epoch}')
+            self._model.save(
+                self._model_path,
+                epoch,
+                0,
+                best_metrics,
+                resets_left,
+                name_prefix=f'KILLED_at_epoch_{epoch}')
             return False
         except Exception as e:
             print(e)
-            self._model.save(self._model_path, epoch, 0, best_metrics,
-                             name_prefix=f'CRASH_at_epoch_{epoch}')
+            self._model.save(
+                self._model_path,
+                epoch,
+                0,
+                best_metrics,
+                resets_left,
+                name_prefix=f'CRASH_at_epoch_{epoch}')
             raise e
 
         # flush prints
         sys.stdout.flush()
 
         # example last save
-        self._model.save(self._model_path, epoch, 0, best_metrics,
-                         name_prefix=f'FINISHED_at_epoch_{epoch}')
+        self._model.save(
+            self._model_path,
+            epoch,
+            0,
+            best_metrics,
+            resets_left,
+            name_prefix=f'FINISHED_at_epoch_{epoch}')
         return True
 
     def _perform_epoch_iteration(
@@ -120,6 +147,7 @@ class TrainService:
             best_metrics: Metric,
             patience: int,
             metric: Metric,
+            resets_left: int,
             start_iteration: int = 0) -> Tuple[Metric, int]:
         """
         one epoch implementation
@@ -167,7 +195,7 @@ class TrainService:
                 if new_best:
                     best_metrics = validation_metric
                     self._model.save(self._model_path, epoch_num, i,
-                                     best_metrics, name_prefix=f'BEST')
+                                     best_metrics, resets_left, name_prefix=f'BEST')
 
                     best_accuracies = best_metrics.get_current_accuracies()
                     for key, value in best_accuracies.items():
@@ -175,7 +203,7 @@ class TrainService:
                             key=f'Best - {str(key)}', value=value)
                     self._log_service.log_summary(
                         key='Best loss', value=best_metrics.get_current_loss())
-                    patience = self._patience
+                    patience = self._arguments_service.patience
                 else:
                     patience -= 1
 

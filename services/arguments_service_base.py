@@ -96,6 +96,12 @@ class ArgumentsServiceBase:
                             help='Whether to run experiments instead of training or evaluation')
         parser.add_argument('--experiment-types', type=ExperimentType, choices=list(ExperimentType), default=None, nargs='*',
                             help='What types of experiments should be run')
+        parser.add_argument('--reset-training-on-early-stop', action='store_true',
+                            help='Whether resetting of training should be done if early stopping is activated and the first epoch has not yet been finished')
+        parser.add_argument('--resets-limit', type=int, default=1,
+                            help='How many times should the training be reset during first epoch if early stopping is activated. Default is 1')
+        parser.add_argument('--training-reset-epoch-limit', type=int, default=1,
+                            help='Until which epoch the training reset should be performed. Default is 1')
 
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         pass
@@ -225,7 +231,19 @@ class ArgumentsServiceBase:
     @property
     def run_experiments(self) -> bool:
         return self._get_argument('run_experiments')
-        
+
     @property
     def experiment_types(self) -> List[ExperimentType]:
         return self._get_argument('experiment_types')
+
+    @property
+    def reset_training_on_early_stop(self) -> bool:
+        return self._get_argument('reset_training_on_early_stop')
+
+    @property
+    def resets_limit(self) -> int:
+        return self._get_argument('resets_limit')
+
+    @property
+    def training_reset_epoch_limit(self) -> int:
+        return self._get_argument('training_reset_epoch_limit')

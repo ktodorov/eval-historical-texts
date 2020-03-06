@@ -41,13 +41,15 @@ class ModelBase(nn.Module):
             epoch: int,
             iteration: int,
             best_metrics: object,
+            resets_left: int,
             name_prefix: str = None,
             save_model_dict: bool = True) -> bool:
         model_checkpoint = ModelCheckpoint(
             model_dict=self.state_dict() if save_model_dict else {},
             epoch=epoch,
             iteration=iteration,
-            best_metrics=best_metrics)
+            best_metrics=best_metrics,
+            resets_left=resets_left)
 
         checkpoint_name = self._get_model_name(name_prefix)
         saved = self._data_service.save_python_obj(
