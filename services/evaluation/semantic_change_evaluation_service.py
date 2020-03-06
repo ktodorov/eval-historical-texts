@@ -3,7 +3,6 @@ from typing import List, Dict
 
 import numpy as np
 import torch
-from scipy import spatial
 
 from enums.evaluation_type import EvaluationType
 
@@ -11,6 +10,7 @@ from services.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
 from services.evaluation.base_evaluation_service import BaseEvaluationService
 from services.plot_service import PlotService
+from services.metrics_service import MetricsService
 
 
 class SemanticChangeEvaluationService(BaseEvaluationService):
@@ -18,12 +18,14 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
             self,
             arguments_service: SemanticArgumentsService,
             file_service: FileService,
-            plot_service: PlotService):
+            plot_service: PlotService,
+            metrics_service: MetricsService):
         super().__init__()
 
         self._arguments_service = arguments_service
         self._file_service = file_service
         self._plot_service = plot_service
+        self._metrics_service = metrics_service
 
     def evaluate_batch(self, output: List[torch.Tensor], evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
         output_numpy = [x.mean(dim=1).cpu().detach().numpy() for x in output]
@@ -34,7 +36,7 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
 
         # cosine distance
         if EvaluationType.CosineDistance in evaluation_types:
-            cosine_distance = spatial.distance.cosine(
+            cosine_distance = self._metrics_service.calculate_cosine_distance(
                 output_numpy[0], output_numpy[1])
 
             evaluation_results[EvaluationType.CosineDistance].append(
@@ -42,7 +44,7 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
 
         # euclidean distance
         if EvaluationType.EuclideanDistance in evaluation_types:
-            euclidean_distance = spatial.distance.euclidean(
+            euclidean_distance = self._metrics_service.calculate_euclidean_distance(
                 output_numpy[0], output_numpy[1])
             evaluation_results[EvaluationType.EuclideanDistance].append(
                 euclidean_distance)

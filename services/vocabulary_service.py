@@ -1,6 +1,9 @@
 import os
 from typing import List, Dict
 
+import nltk
+from nltk.corpus import wordnet as wn
+
 from services.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 from services.file_service import FileService
@@ -11,6 +14,9 @@ class VocabularyService:
             self,
             data_service: DataService,
             file_service: FileService):
+
+        self._data_service = data_service
+        self._file_service = file_service
 
         vocabulary_data = data_service.load_python_obj(
             file_service.get_pickles_path(),
@@ -37,6 +43,31 @@ class VocabularyService:
 
     def vocabulary_size(self) -> int:
         return len(self._int2char.keys())
+
+    def get_all_english_nouns(self, limit_amount: int = None) -> List[str]:
+        pickles_path = self._file_service.get_pickles_path()
+        english_nouns_path = os.path.join(pickles_path, 'english')
+        filename = f'english_nouns'
+        words = self._data_service.load_python_obj(
+            english_nouns_path, filename)
+        if words is not None:
+            return words
+
+        filepath = os.path.join(english_nouns_path, f'{filename}.txt')
+        if not os.path.exists(filepath):
+            return None
+
+        with open(filepath, 'r', encoding='utf-8') as noun_file:
+            words = [x.replace('\n', '') for x in noun_file.readlines()]
+
+        if limit_amount:
+            words = words[:limit_amount]
+
+        words = list(set(words))
+
+        self._data_service.save_python_obj(words, english_nouns_path, filename)
+
+        return words
 
     @property
     def cls_token(self) -> int:

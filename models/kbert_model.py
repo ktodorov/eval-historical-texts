@@ -21,7 +21,7 @@ class KBertModel(ModelBase):
 
         self._output_hidden_states = output_hidden_states
 
-        if arguments_service.resume_training or arguments_service.evaluate:
+        if arguments_service.resume_training or arguments_service.evaluate or arguments_service.run_experiments:
             self._bert_model = None
         else:
             config = BertConfig.from_pretrained(arguments_service.pretrained_weights)
@@ -38,8 +38,7 @@ class KBertModel(ModelBase):
             outputs = self._bert_model.forward(inputs, masked_lm_labels=labels)
             return outputs[0]
         else:
-            inputs = input_batch
-            outputs = self._bert_model.forward(inputs)
+            outputs = self._bert_model.forward(input_batch)
             return outputs[1][-1]
 
     def named_parameters(self):
@@ -109,7 +108,7 @@ class KBertModel(ModelBase):
         pretrained_weights_path = self._get_pretrained_path(path, name_prefix)
 
         config = BertConfig.from_pretrained(pretrained_weights_path)
-        config.output_hidden_states = self._output_hidden_states
+        config.output_hidden_states = True
 
         self._bert_model = self._model_type.from_pretrained(
             pretrained_weights_path, config=config).to(self._arguments_service.device)

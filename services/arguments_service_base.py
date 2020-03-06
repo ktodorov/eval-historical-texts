@@ -10,6 +10,7 @@ from enums.output_format import OutputFormat
 from enums.challenge import Challenge
 from enums.configuration import Configuration
 from enums.metric_type import MetricType
+from enums.experiment_type import ExperimentType
 
 
 class ArgumentsServiceBase:
@@ -91,6 +92,10 @@ class ArgumentsServiceBase:
                             help='Limit the validation dataset. By default no limit is done.')
         parser.add_argument('--skip-validation', action='store_true',
                             help='Whether validation should be skipped, meaning no validation dataset is loaded and no evaluation is done while training. By default is false')
+        parser.add_argument('--run-experiments', action='store_true',
+                            help='Whether to run experiments instead of training or evaluation')
+        parser.add_argument('--experiment-types', type=ExperimentType, choices=list(ExperimentType), default=None, nargs='*',
+                            help='What types of experiments should be run')
 
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         pass
@@ -216,3 +221,11 @@ class ArgumentsServiceBase:
     @property
     def skip_validation(self) -> bool:
         return self._get_argument('skip_validation')
+
+    @property
+    def run_experiments(self) -> bool:
+        return self._get_argument('run_experiments')
+        
+    @property
+    def experiment_types(self) -> List[ExperimentType]:
+        return self._get_argument('experiment_types')

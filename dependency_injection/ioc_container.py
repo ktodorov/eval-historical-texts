@@ -53,6 +53,7 @@ from services.tokenizer_service import TokenizerService
 from services.train_service import TrainService
 from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
+from services.experiment_service import ExperimentService
 
 import logging
 
@@ -87,11 +88,12 @@ def get_argument_service_type(challenge: Challenge, configuration: Configuration
 def register_optimizer(
         joint_model: bool,
         evaluate: bool,
+        run_experiments: bool,
         challenge: Challenge,
         configuration: Configuration,
         model: ModelBase,
         arguments_service: ArgumentsServiceBase):
-    if evaluate:
+    if evaluate or run_experiments:
         return None
 
     if not joint_model:
@@ -144,6 +146,7 @@ class IocContainer(containers.DeclarativeContainer):
     configuration = arguments_service_base.configuration
     joint_model = arguments_service_base.joint_model
     evaluate = arguments_service_base.evaluate
+    run_experiments = arguments_service_base.run_experiments
     external_logging_enabled = arguments_service_base.enable_external_logging
 
     argument_service_type = get_argument_service_type(challenge, configuration)
@@ -172,7 +175,8 @@ class IocContainer(containers.DeclarativeContainer):
     )
 
     plot_service = providers.Factory(
-        PlotService
+        PlotService,
+        data_service=data_service
     )
 
     tokenizer_service = providers.Singleton(
@@ -242,7 +246,8 @@ class IocContainer(containers.DeclarativeContainer):
                 SemanticChangeEvaluationService,
                 arguments_service=arguments_service,
                 file_service=file_service,
-                plot_service=plot_service
+                plot_service=plot_service,
+                metrics_service=metrics_service
             )
         elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
 
@@ -312,7 +317,8 @@ class IocContainer(containers.DeclarativeContainer):
                 SemanticChangeEvaluationService,
                 arguments_service=arguments_service,
                 file_service=file_service,
-                plot_service=plot_service
+                plot_service=plot_service,
+                metrics_service=metrics_service
             )
         else:
             raise Exception(
@@ -323,10 +329,23 @@ class IocContainer(containers.DeclarativeContainer):
     optimizer = register_optimizer(
         joint_model,
         evaluate,
+        run_experiments,
         challenge,
         configuration,
         model,
         arguments_service
+    )
+
+    experiment_service = providers.Factory(
+        ExperimentService,
+        arguments_service=arguments_service,
+        metrics_service=metrics_service,
+        file_service=file_service,
+        tokenizer_service=tokenizer_service,
+        vocabulary_service=vocabulary_service,
+        plot_service=plot_service,
+        data_service=data_service,
+        model=model
     )
 
     test_service = providers.Factory(
@@ -356,5 +375,6 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service,
         arguments_service=arguments_service,
         train_service=train_service,
-        test_service=test_service
+        test_service=test_service,
+        experiment_service=experiment_service
     )

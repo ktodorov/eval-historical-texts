@@ -64,7 +64,7 @@ class DataService:
 
         except FileNotFoundError:
             print("{} not loaded because file is missing".format(name))
-            return
+            return None
 
         print("Loaded {}".format(name))
         return obj
