@@ -35,9 +35,11 @@ class SemEvalTestDataset(DatasetBase):
 
         # English words end with POS tags (e.g. 'test_nn')
         if language == Language.English:
-            self._target_words = [x[:-3] for x in self._target_words]
+            target_words = [x[:-3] for x in self._target_words]
+        else:
+            target_words = self._target_words
 
-        encodings = tokenizer_service.encode_sequences(self._target_words)
+        encodings = tokenizer_service.encode_sequences(target_words)
         self._target_word_ids = [x[0] for x in encodings]
 
     def __len__(self):
