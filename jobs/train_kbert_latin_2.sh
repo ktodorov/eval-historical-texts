@@ -27,7 +27,7 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-srun python3 -u run.py --device cuda --seed 13 --eval-freq 1000 --patience 100 --configuration kbert --learning-rate 1e-5 --language $LANGUAGE --corpus $CORPUS --challenge semantic-change --batch-size 2 --pretrained-weights bert-base-multilingual-cased --pretrained-max-length 512 --pretrained-vocabulary-size 119547 --max-training-minutes 1440 --enable-external-logging --skip-validation --checkpoint-name $CORPUS > output/semeval-$LANGUAGE-$CORPUS-13.txt
+srun python3 -u run.py --device cuda --seed 13 --eval-freq 1000 --patience 100 --configuration kbert --learning-rate 1e-5 --language $LANGUAGE --corpus $CORPUS --challenge semantic-change --batch-size 2 --pretrained-weights bert-base-multilingual-cased --pretrained-max-length 512 --pretrained-vocabulary-size 119547 --max-training-minutes 1440 --enable-external-logging --skip-validation --checkpoint-name $CORPUS --reset-training-on-early-stop --training-reset-epoch-limit 1 --resets-limit 2 > output/semeval-$LANGUAGE-$CORPUS-13.txt
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb $HOME/eval-historical-texts/wandb
 cp -a "$TMPDIR"/eval-historical-texts/results $HOME/eval-historical-texts/results/from-scratch/sem-eval-$LANGUAGE-$CORPUS
