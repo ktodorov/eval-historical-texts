@@ -128,12 +128,11 @@ def register_optimizer(
 
     return optimizer
 
+
 class IocContainer(containers.DeclarativeContainer):
     """Application IoC container."""
 
-    config = providers.Configuration('config')
-    logger = providers.Singleton(logging.Logger,
-                                 name='example')
+    logger = providers.Singleton(logging.Logger, name='example')
 
     # Services
 
@@ -160,11 +159,6 @@ class IocContainer(containers.DeclarativeContainer):
         LogService,
         arguments_service=arguments_service,
         external_logging_enabled=external_logging_enabled
-    )
-
-    config_service = providers.Singleton(
-        ConfigService,
-        config=config
     )
 
     data_service = providers.Factory(DataService)
