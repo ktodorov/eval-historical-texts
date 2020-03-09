@@ -49,8 +49,8 @@ def move_data(data_path: str, output_path: str, unique_prefix: str):
                 data_file_path = os.path.join(language_path, data_file_name)
                 with open(data_file_path, 'r', encoding='utf-8') as data_file:
                     data_file_text = data_file.read()
-                    data_file_text = data_file_text.replace('#', '')
-                    data_file_text = data_file_text.replace('@', '')
+                    # data_file_text = data_file_text.replace('#', '')
+                    # data_file_text = data_file_text.replace('@', '')
                     output_file_path = os.path.join(
                         output_path, subdir_name, f'{unique_prefix}_{data_file_name}')
                     with open(output_file_path, 'w', encoding='utf-8') as output_file:
@@ -133,10 +133,10 @@ def process_trove_files(data_path: str, output_full_path: str, unique_prefix: st
                     continue
 
                 text_strings = file_line.split(separator)
-                text_strings = [text_string.replace(
-                    '#', '') for text_string in text_strings]
-                text_strings = [text_string.replace(
-                    '@', '') for text_string in text_strings]
+                # text_strings = [text_string.replace(
+                #     '#', '') for text_string in text_strings]
+                # text_strings = [text_string.replace(
+                #     '@', '') for text_string in text_strings]
                 text_strings = [text_string.replace(
                     '\n', '') for text_string in text_strings]
 

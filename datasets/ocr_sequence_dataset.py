@@ -18,6 +18,7 @@ from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 
 from preprocessing.ocr_preprocessing import preprocess_data
+import preprocessing.ocr_download as ocr_download
 
 from utils import path_utils
 
@@ -53,11 +54,16 @@ class OCRSequenceDataset(OCRDataset):
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
 
-        pickles_path = file_service.get_pickles_path()
-        challenge_path = file_service.get_challenge_path()
-        full_data_path = os.path.join(challenge_path, 'full')
-
         if not os.path.exists(language_data_path):
+            challenge_path = file_service.get_challenge_path()
+            full_data_path = os.path.join(challenge_path, 'full')
+            if not os.path.exists(full_data_path) or len(os.listdir(full_data_path)) == 0:
+                # ocr_path = os.path.join('data', 'ocr')
+                newseye_path = os.path.join('data', 'newseye')
+                trove_path = os.path.join('data', 'trove')
+                ocr_download.combine_data(challenge_path, newseye_path, trove_path)
+
+            pickles_path = file_service.get_pickles_path()
             train_data_path = file_service.get_pickles_path()
             preprocess_data(
                 self._tokenizer_service,
