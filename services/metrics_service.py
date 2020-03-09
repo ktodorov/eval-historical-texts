@@ -5,6 +5,9 @@ import scipy.spatial.distance as scipy_distances
 
 class MetricsService:
     def calculate_jaccard_similarity(self, list1: list, list2: list) -> float:
+        if len(list1) == 0 and len(list2) == 0:
+            return 0
+
         set1 = set(list1)
         set2 = set(list2)
         return len(set1.intersection(set2)) / len(set1.union(set2))
