@@ -50,8 +50,12 @@ class TokenizerService:
             character_id) for character_id in character_ids]
         return result
 
-    def decode_string(self, character_ids: List[int]) -> str:
+    def decode_string(self, character_ids: List[int]) -> List[str]:
         result = self._tokenizer.decode(character_ids)
+        return result
+
+    def id_to_token(self, character_id: int) -> str:
+        result = self._tokenizer.id_to_token(character_id)
         return result
 
     def encode_sequence(self, sequence: str) -> Tuple[List[int], List[str], List[Tuple[int,int]], List[int]]:

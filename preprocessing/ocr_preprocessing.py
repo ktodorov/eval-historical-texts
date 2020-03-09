@@ -7,7 +7,7 @@ import functools
 import sys
 import pickle
 
-from typing import List
+from typing import List, Tuple
 
 from transformers import PreTrainedTokenizer
 
@@ -46,11 +46,24 @@ def preprocess_data(
         pickle.dump(validation_language_data, validation_handle, protocol=-1)
 
 
-def read_ocr_file(file_path: str, start_position: int):
+def cut_string(text: str, chunk_length: int):
+    result = [text[i:i+chunk_length]
+              for i in range(0, len(text), chunk_length)]
+    return result
+
+
+def read_ocr_file(file_path: str, start_position: int) -> List[Tuple[str, str]]:
     with open(file_path, 'r', encoding='utf-8') as language_file:
         text_data: List[str] = language_file.read().split('\n')
 
-        return(text_data[1][start_position:], text_data[2][start_position:])
+        string_length = 50
+        ocr_strings = cut_string(text_data[1][start_position:], string_length)
+        gs_strings = cut_string(text_data[2][start_position:], string_length)
+
+        if len(ocr_strings) != len(gs_strings):
+            return None
+
+        return [(ocr_strings[i], gs_strings[i]) for i in range(len(ocr_strings))]
 
 
 def save_data_files(full_data_path: str, full_ocr_path: str, full_gs_path: str):
@@ -65,7 +78,9 @@ def save_data_files(full_data_path: str, full_ocr_path: str, full_gs_path: str):
     file_data = []
     for i, file_path in enumerate(file_paths):
         print(f'{i}/{number_of_files}             \r', end='')
-        file_data.append(read_ocr_file(file_path, start_position=14))
+        result = read_ocr_file(file_path, start_position=14)
+        if result is not None:
+            file_data.extend(result)
 
     ocr_file_data = [x[0] for x in file_data]
     gs_file_data = [x[1] for x in file_data]
@@ -110,11 +125,8 @@ def read_data(
                 skipped_indices.append(i)
                 continue
 
-            gs_ids, gs_tokens, _, _ = tokenizer_service.encode_sequence(
+            gs_ids, _, _, _ = tokenizer_service.encode_sequence(
                 gs_file_data[i])
-            decoded_gs = ''.join(gs_tokens)
-            if (decoded_gs.count('#') / len(decoded_gs)) > 0.15:
-                continue
 
             ocr_tokens.append(current_ids)
             gs_tokens.append(gs_ids)
@@ -144,9 +156,13 @@ def read_data(
     return ocr_file_data, gs_file_data, ocr_tokens, gs_tokens
 
 
-def save_metrics_obj(token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances):
-    metrics_path = os.path.join(
-        '..', 'data', 'ocr', 'pickles', 'metrics.pickle')
+def save_metrics_obj(
+        token_pairs,
+        decoded_pairs,
+        jaccard_similarities,
+        levenshtein_distances,
+        pickles_path: str):
+    metrics_path = os.path.join(pickles_path, 'metrics.pickle')
 
     metrics_obj = {
         'token_pairs': token_pairs,
@@ -161,9 +177,8 @@ def save_metrics_obj(token_pairs, decoded_pairs, jaccard_similarities, levenshte
     print('Saved metrics')
 
 
-def load_metrics_obj():
-    metrics_path = os.path.join(
-        '..', 'data', 'ocr', 'pickles', 'metrics.pickle')
+def load_metrics_obj(pickles_path: str):
+    metrics_path = os.path.join(pickles_path, 'metrics.pickle')
     if not os.path.exists(metrics_path):
         return (None, None, None, None)
 
@@ -182,49 +197,50 @@ def parse_metrics_obj(
         ocr_tokens: List[List[int]],
         gs_tokens: List[List[int]],
         ocr_file_data: List[str],
-        gs_file_data: List[str]):
-    token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = load_metrics_obj()
+        gs_file_data: List[str],
+        pickles_path: str):
+    token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = load_metrics_obj(pickles_path)
 
-    if not token_pairs:
-        token_pairs = [([tokenizer_service.decode_string(x) for x in ocr_tokens[i]], [
-                        tokenizer_service.decode_string(x) for x in gs_tokens[i]]) for i in range(len(ocr_tokens))]
+    if token_pairs is None:
+        token_pairs = [([tokenizer_service.id_to_token(x) for x in ocr_tokens[i]], [
+                        tokenizer_service.id_to_token(x) for x in gs_tokens[i]]) for i in range(len(ocr_tokens))]
         save_metrics_obj(token_pairs, decoded_pairs,
-                         jaccard_similarities, levenshtein_distances)
+                         jaccard_similarities, levenshtein_distances, pickles_path)
 
-    if not decoded_pairs:
+    if decoded_pairs is None:
         decoded_pairs = [(ocr_file_data[i], gs_file_data[i])
                          for i in range(len(ocr_tokens))]
         save_metrics_obj(token_pairs, decoded_pairs,
-                         jaccard_similarities, levenshtein_distances)
+                         jaccard_similarities, levenshtein_distances, pickles_path)
 
     all_pairs = len(token_pairs)
-    if not jaccard_similarities:
-        jaccard_similarities = []
-        for i, token_pair in enumerate(token_pairs):
-            jaccard_similarities.append(
-                metrics_service.calculate_jaccard_similarity(token_pair[0], token_pair[1]))
+    # if jaccard_similarities is None:
+    #     jaccard_similarities = []
+    #     for i, token_pair in enumerate(token_pairs):
+    #         jaccard_similarities.append(
+    #             metrics_service.calculate_jaccard_similarity(token_pair[0], token_pair[1]))
 
-        save_metrics_obj(token_pairs, decoded_pairs,
-                         jaccard_similarities, levenshtein_distances)
+    #     save_metrics_obj(token_pairs, decoded_pairs,
+    #                      jaccard_similarities, levenshtein_distances, pickles_path)
 
-    if not levenshtein_distances:
-        levenshtein_distances = []
+    # if levenshtein_distances is None:
+    #     levenshtein_distances = []
 
-    if len(levenshtein_distances) < all_pairs:
-        for i, decoded_pair in enumerate(decoded_pairs):
-            if i < len(levenshtein_distances):
-                continue
+    # if len(levenshtein_distances) < all_pairs:
+    #     for i, decoded_pair in enumerate(decoded_pairs):
+    #         if i < len(levenshtein_distances):
+    #             continue
 
-            print(f'LEVENSHTEIN - {i}/{all_pairs}             \r', end='')
-            levenshtein_distances.append(
-                metrics_service.calculate_normalized_levenshtein_distance(decoded_pair[0], decoded_pair[1]))
+    #         print(f'LEVENSHTEIN - {i}/{all_pairs}             \r', end='')
+    #         levenshtein_distances.append(
+    #             metrics_service.calculate_normalized_levenshtein_distance(decoded_pair[0], decoded_pair[1]))
 
-            if i % 5000 == 0:
-                save_metrics_obj(token_pairs, decoded_pairs,
-                                 jaccard_similarities, levenshtein_distances)
+    #         if i % 50000 == 0:
+    #             save_metrics_obj(token_pairs, decoded_pairs,
+    #                              jaccard_similarities, levenshtein_distances, pickles_path)
 
-        save_metrics_obj(token_pairs, decoded_pairs,
-                         jaccard_similarities, levenshtein_distances)
+    #     save_metrics_obj(token_pairs, decoded_pairs,
+    #                      jaccard_similarities, levenshtein_distances, pickles_path)
 
     return token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances
 
@@ -237,6 +253,7 @@ def load_split_data(
         full_gs_path: str,
         full_ocr_tokens_path: str,
         full_gs_tokens_path: str,
+        pickles_path: str,
         train_pickle_path: str,
         validation_pickle_path: str):
 
@@ -255,18 +272,25 @@ def load_split_data(
             ocr_tokens,
             gs_tokens,
             ocr_file_data,
-            gs_file_data)
+            gs_file_data,
+            pickles_path)
 
         eval_indices = random.sample(
             range(len(token_pairs)), int(0.2 * len(token_pairs)))
 
         train_pairs = []
-        eval_pairs = []
-        for i in range(len(token_pairs)):
-            if i in eval_indices:
-                eval_pairs.append([token_pairs[i], decoded_pairs[i]])
-            else:
-                train_pairs.append([token_pairs[i], decoded_pairs[i]])
+        eval_pairs = [ [token_pairs[i], decoded_pairs[i]] for i in eval_indices ]
+
+        eval_indices_dict = { i: False for i in range(len(token_pairs)) }
+        for i in eval_indices:
+            eval_indices_dict[i] = True
+
+        train_pairs = [ [token_pairs[i], decoded_pairs[i]] for i in range(len(token_pairs)) if not eval_indices_dict[i]]
+        # for i in range(len(token_pairs)):
+        #     if i in eval_indices:
+        #         eval_pairs.append([token_pairs[i], decoded_pairs[i]])
+        #     else:
+        #         train_pairs.append([token_pairs[i], decoded_pairs[i]])
 
         with open(train_pickle_path, 'wb') as train_handle:
             pickle.dump(train_pairs, train_handle, protocol=-1)
@@ -278,7 +302,7 @@ def load_split_data(
             train_pairs = pickle.load(train_pickle_file)
 
         with open(validation_pickle_path, 'rb') as validation_pickle_file:
-            validation_pairs = pickle.load(validation_pickle_file)
+            eval_pairs = pickle.load(validation_pickle_file)
 
     return train_pairs, eval_pairs
 
@@ -309,6 +333,7 @@ def parse_language_data(
         full_gs_path,
         full_ocr_tokens_path,
         full_gs_tokens_path,
+        pickles_path,
         train_pickle_path,
         validation_pickle_path)
 
