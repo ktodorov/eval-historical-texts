@@ -29,10 +29,11 @@ class LogService:
         self._external_logging_enabled = external_logging_enabled
         if self._external_logging_enabled:
             wandb.init(
-                project='default',
+                project=str(arguments_service.challenge),
                 config=arguments_service._arguments,
                 entity='eval-historical-texts',
-                force=True
+                force=True,
+                name=arguments_service.get_configuration_name()
                 # resume=arguments_service.resume_training,
                 # id='' #TODO
             )
