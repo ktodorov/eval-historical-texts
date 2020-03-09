@@ -13,7 +13,7 @@ from enums.ner_type import NERType
 
 from models.model_base import ModelBase
 
-from services.ner_arguments_service import NERArgumentsService
+from services.arguments.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 

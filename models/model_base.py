@@ -12,7 +12,7 @@ from entities.metric import Metric
 from enums.metric_type import MetricType
 
 from services.data_service import DataService
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 
 class ModelBase(nn.Module):

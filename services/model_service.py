@@ -4,7 +4,7 @@ from models.model_base import ModelBase
 from models.kbert_model import KBertModel
 from models.kxlnet_model import KXLNetModel
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 
 

@@ -4,7 +4,7 @@ import torch
 import pickle
 
 from datasets.dataset_base import DatasetBase
-from services.semantic_arguments_service import SemanticArgumentsService
+from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService

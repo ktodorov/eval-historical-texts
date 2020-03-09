@@ -2,7 +2,7 @@ from transformers import XLNetLMHeadModel, BertPreTrainedModel
 
 from models.kbert_model import KBertModel
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 
 class KXLNetModel(KBertModel):

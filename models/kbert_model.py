@@ -7,7 +7,7 @@ from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
 from models.model_base import ModelBase
 
-from services.semantic_arguments_service import SemanticArgumentsService
+from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.data_service import DataService
 
 

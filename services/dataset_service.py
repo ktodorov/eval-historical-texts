@@ -10,7 +10,7 @@ from datasets.ocr_sequence_dataset import OCRSequenceDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
 from datasets.ner_dataset import NERDataset
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenizer_service import TokenizerService

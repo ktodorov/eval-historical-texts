@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from losses.loss_base import LossBase
 
 class NERLoss(LossBase):

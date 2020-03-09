@@ -6,7 +6,7 @@ from typing import List
 
 from datasets.dataset_base import DatasetBase
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 from utils import path_utils
 

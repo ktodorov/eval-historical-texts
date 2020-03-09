@@ -8,7 +8,7 @@ from typing import List
 from enums.language import Language
 
 from datasets.dataset_base import DatasetBase
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.tokenizer_service import TokenizerService
 from services.file_service import FileService
 

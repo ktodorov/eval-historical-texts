@@ -1,12 +1,19 @@
 import argparse
 
-from services.pretrained_arguments_service import PretrainedArgumentsService
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 
 
 class SemanticArgumentsService(PretrainedArgumentsService):
     def __init__(self):
         super().__init__()
+
+    def get_configuration_name(self) -> str:
+        result = f'semeval-{str(self.language)}'
+        if self.corpus is not None:
+            result += f'-{str(self.corpus)}'
+
+        return result
 
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)
@@ -17,8 +24,6 @@ class SemanticArgumentsService(PretrainedArgumentsService):
                             help='The corpus to be used')
         parser.add_argument('--plot-distances', action='store_true',
                             help='Plot distances of target words for the different time periods')
-
-
 
     @property
     def word_distance_threshold(self) -> float:

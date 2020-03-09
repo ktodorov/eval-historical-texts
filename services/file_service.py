@@ -1,5 +1,5 @@
 import os
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 
 class FileService:

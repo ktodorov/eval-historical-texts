@@ -1,7 +1,7 @@
 from torch.optim.optimizer import Optimizer
 
 from models.model_base import ModelBase
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 from transformers import AdamW
 

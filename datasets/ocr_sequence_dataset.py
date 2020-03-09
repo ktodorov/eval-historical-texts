@@ -9,7 +9,7 @@ from transformers import BertModel
 from datasets.ocr_dataset import OCRDataset
 from enums.run_type import RunType
 from entities.language_data import LanguageData
-from services.postocr_arguments_service import PostOCRArgumentsService
+from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
 from services.log_service import LogService

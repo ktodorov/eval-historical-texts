@@ -31,12 +31,12 @@ from optimizers.adam_optimizer import AdamOptimizer
 from optimizers.adamw_optimizer import AdamWOptimizer
 from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
 
-from services.postocr_arguments_service import PostOCRArgumentsService
-from services.transformer_arguments_service import TransformerArgumentsService
-from services.ner_arguments_service import NERArgumentsService
-from services.semantic_arguments_service import SemanticArgumentsService
-from services.arguments_service_base import ArgumentsServiceBase
-from services.config_service import ConfigService
+from services.arguments.postocr_arguments_service import PostOCRArgumentsService
+from services.arguments.transformer_arguments_service import TransformerArgumentsService
+from services.arguments.ner_arguments_service import NERArgumentsService
+from services.arguments.semantic_arguments_service import SemanticArgumentsService
+from services.arguments.arguments_service_base import ArgumentsServiceBase
+
 from services.data_service import DataService
 from services.dataloader_service import DataLoaderService
 from services.dataset_service import DatasetService

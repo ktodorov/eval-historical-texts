@@ -10,7 +10,7 @@ from enums.experiment_type import ExperimentType
 
 from models.model_base import ModelBase
 
-from services.pretrained_arguments_service import PretrainedArgumentsService
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.metrics_service import MetricsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService

@@ -12,7 +12,7 @@ from enums.metric_type import MetricType
 
 from models.model_base import ModelBase
 
-from services.postocr_arguments_service import PostOCRArgumentsService
+from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.data_service import DataService
 from services.tokenizer_service import TokenizerService
 from services.metrics_service import MetricsService

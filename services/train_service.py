@@ -19,7 +19,7 @@ from entities.metric import Metric
 
 from enums.metric_type import MetricType
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.dataloader_service import DataLoaderService
 from services.file_service import FileService
 from services.log_service import LogService

@@ -1,6 +1,6 @@
 import argparse
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 from enums.metric_type import MetricType
 from enums.configuration import Configuration

@@ -14,7 +14,7 @@ from enums.language import Language
 from enums.ner_type import NERType
 from preprocessing.ner_preprocessing import preprocess_data
 
-from services.ner_arguments_service import NERArgumentsService
+from services.arguments.ner_arguments_service import NERArgumentsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
 from services.pretrained_representations_service import PretrainedRepresentationsService

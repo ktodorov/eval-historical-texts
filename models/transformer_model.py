@@ -14,7 +14,7 @@ from models.transformer_encoder import TransformerEncoder
 from models.transformer_decoder import TransformerDecoder
 
 
-from services.transformer_arguments_service import TransformerArgumentsService
+from services.arguments.transformer_arguments_service import TransformerArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 from services.vocabulary_service import VocabularyService

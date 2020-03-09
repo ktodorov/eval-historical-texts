@@ -1,6 +1,6 @@
 from transformers import BertModel
 
-from services.pretrained_arguments_service import PretrainedArgumentsService
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 class PretrainedRepresentationsService:
     def __init__(

@@ -7,7 +7,7 @@ from tokenizers import BertWordPieceTokenizer, Tokenizer
 import sentencepiece as spm
 
 from enums.configuration import Configuration
-from services.pretrained_arguments_service import PretrainedArgumentsService
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.file_service import FileService
 
 

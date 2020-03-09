@@ -6,7 +6,7 @@ import torch
 
 from enums.evaluation_type import EvaluationType
 
-from services.semantic_arguments_service import SemanticArgumentsService
+from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
 from services.evaluation.base_evaluation_service import BaseEvaluationService
 from services.plot_service import PlotService

@@ -6,7 +6,7 @@ import pickle
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
 from entities.language_data import LanguageData
-from services.postocr_arguments_service import PostOCRArgumentsService
+from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.data_service import DataService
 from services.file_service import FileService
 from services.mask_service import MaskService

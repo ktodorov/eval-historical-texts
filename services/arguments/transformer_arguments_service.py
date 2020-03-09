@@ -1,26 +1,24 @@
 import argparse
 
-from services.pretrained_arguments_service import PretrainedArgumentsService
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 
 
-class PostOCRArgumentsService(PretrainedArgumentsService):
+class TransformerArgumentsService(PretrainedArgumentsService):
     def __init__(self):
         super().__init__()
 
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)
 
-        parser.add_argument('--encoder-embedding-size', type=int, default=128,
-                            help='The size used for generating embeddings in the encoder')
-        parser.add_argument('--decoder-embedding-size', type=int, default=16,
-                            help='The size used for generating embeddings in the decoder')
         parser.add_argument('--hidden-dimension', type=int, default=256,
                             help='The dimension size used for hidden layers')
         parser.add_argument('--dropout', type=float, default=0.0,
                             help='Dropout probability')
         parser.add_argument('--number-of-layers', type=int, default=1,
                             help='Number of layers used for RNN or Transformer models')
+        parser.add_argument('--number-of-heads', type=int, default=1,
+                            help='Number of heads used for Transformer models')
         parser.add_argument('--max-articles-length', type=int, default=1000,
                             help='This is the maximum length of articles that will be used in models. Articles longer than this length will be cut.')
 
@@ -36,14 +34,6 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
 
 
     @property
-    def encoder_embedding_size(self) -> int:
-        return self._get_argument('encoder_embedding_size')
-
-    @property
-    def decoder_embedding_size(self) -> int:
-        return self._get_argument('decoder_embedding_size')
-
-    @property
     def hidden_dimension(self) -> int:
         return self._get_argument('hidden_dimension')
 
@@ -54,6 +44,10 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
     @property
     def number_of_layers(self) -> int:
         return self._get_argument('number_of_layers')
+
+    @property
+    def number_of_heads(self) -> int:
+        return self._get_argument('number_of_heads')
 
     @property
     def teacher_forcing_ratio(self) -> float:

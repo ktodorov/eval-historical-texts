@@ -25,6 +25,13 @@ class ArgumentsServiceBase:
         """
         print(f'Arguments initialized: {self._arguments}')
 
+    def get_configuration_name(self) -> str:
+        result = f'{str(self.challenge)}-{str(self.language)}'
+        if self.checkpoint_name is not None:
+            result += f'-{str(self.checkpoint_name)}'
+
+        return result
+
     def _parse_arguments(self):
         parser = CustomArgumentParser(
             raise_errors_on_invalid_args=self._raise_errors_on_invalid_args)

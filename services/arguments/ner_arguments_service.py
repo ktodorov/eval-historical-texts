@@ -1,6 +1,6 @@
 import argparse
 
-from services.pretrained_arguments_service import PretrainedArgumentsService
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 from enums.ner_type import NERType
 
@@ -8,6 +8,16 @@ from enums.ner_type import NERType
 class NERArgumentsService(PretrainedArgumentsService):
     def __init__(self):
         super().__init__()
+
+    def get_configuration_name(self) -> str:
+        result = f'ner-{str(self.language)}'
+        if self.include_pretrained_model:
+            result += '-pretr'
+
+        if not self.learn_new_embeddings:
+            result += '-no-emb'
+
+        return result
 
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)

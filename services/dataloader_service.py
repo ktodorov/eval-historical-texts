@@ -9,7 +9,7 @@ from transformers import BertTokenizer
 
 from enums.run_type import RunType
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.dataset_service import DatasetService
 from services.tokenizer_service import TokenizerService
 

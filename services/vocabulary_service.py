@@ -4,7 +4,7 @@ from typing import List, Dict
 import nltk
 from nltk.corpus import wordnet as wn
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 from services.file_service import FileService
 

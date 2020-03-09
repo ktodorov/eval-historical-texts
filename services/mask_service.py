@@ -3,7 +3,7 @@ import torch
 from typing import Tuple
 
 from services.tokenizer_service import TokenizerService
-from services.pretrained_arguments_service import PretrainedArgumentsService
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 
 class MaskService:

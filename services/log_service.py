@@ -5,7 +5,7 @@ import torch
 import numpy as np
 
 from entities.metric import Metric
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 
 class LogService:

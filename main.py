@@ -4,7 +4,7 @@ import random
 
 from transformers import *
 
-from services.arguments_service_base import ArgumentsServiceBase
+from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService
 from services.train_service import TrainService
 from services.test_service import TestService
