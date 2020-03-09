@@ -7,8 +7,6 @@ import logging
 from typing import List, Callable
 
 import matplotlib.pyplot as plt
-from services.config_service import ConfigService
-
 
 class DataService:
 

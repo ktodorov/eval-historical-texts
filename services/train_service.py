@@ -40,12 +40,12 @@ class TrainService:
 
         self._arguments_service = arguments_service
         self._model_path = file_service.get_checkpoints_path()
+        self._optimizer_base = optimizer
 
         self._log_service = log_service
         self._dataloader_service = dataloader_service
 
         self._loss_function = loss_function
-        self._optimizer = optimizer
         self._model = model.to(arguments_service.device)
         self.data_loader_train: DataLoader = None
         self.data_loader_validation: DataLoader = None
@@ -54,12 +54,7 @@ class TrainService:
         """
          main training function
         """
-
-        self.data_loader_train, self.data_loader_validation = self._dataloader_service.get_train_dataloaders()
-
         epoch = 0
-        self._log_service.start_logging_model(
-            self._model, self._loss_function.criterion)
 
         try:
             self._log_service.initialize_evaluation()
@@ -81,6 +76,11 @@ class TrainService:
                     start_iteration = model_checkpoint.iteration
                     resets_left = model_checkpoint.resets_left
                     metric.initialize(best_metrics, start_iteration)
+
+            self.data_loader_train, self.data_loader_validation = self._dataloader_service.get_train_dataloaders()
+            self._optimizer = self._optimizer_base.get_optimizer()
+            self._log_service.start_logging_model(
+                self._model, self._loss_function.criterion)
 
             # run
             epoch = start_epoch
