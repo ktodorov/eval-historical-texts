@@ -83,6 +83,7 @@ class OCRDataset(DatasetBase):
         language_data = LanguageData()
         language_data.load_data(language_data_path)
 
+        total_amount = language_data.length
         if reduction:
             language_data_items = language_data.get_entries(
                 reduction)
@@ -94,7 +95,7 @@ class OCRDataset(DatasetBase):
                 language_data_items[4])
 
         print(
-            f'Loaded {language_data.length} entries for {run_type.to_str()}')
+            f'Loaded {language_data.length} entries out of {total_amount} total for {run_type.to_str()}')
         log_service.log_summary(
             key=f'\'{run_type.to_str()}\' entries amount', value=language_data.length)
 
