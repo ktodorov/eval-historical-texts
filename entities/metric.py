@@ -1,3 +1,5 @@
+from __future__ import annotations # This is so we can use Metric as type hint
+
 from typing import Dict, List
 import numpy as np
 
@@ -7,14 +9,14 @@ class Metric:
     def __init__(
         self,
         amount_limit: int = 5,
-        metric = None):
+        metric: Metric = None):
         self._accuracies: Dict[MetricType, List[float]] = {}
         self._losses: List[float] = []
         self._amount_limit = amount_limit
 
         if metric:
-            self.add_accuracies(metric.get_current_accuracies())
-            self.add_loss(metric.get_current_loss())
+            self._amount_limit = metric._amount_limit
+            self.initialize(metric)
 
 
     def add_accuracies(self, accuracies: Dict[MetricType, float]):
@@ -48,12 +50,13 @@ class Metric:
     def get_current_loss(self) -> float:
         return np.mean(self._losses, axis=0)
 
-    def initialize(self, metric, iterations_passed: int):
-        self._losses = [metric.get_current_loss()]
+    def initialize(self, metric: Metric):
+        self._losses = metric._losses[-self._amount_limit:]
+
         self._accuracies = {}
-        accuracies = metric.get_current_accuracies()
+        accuracies = metric._accuracies
         for key, value in accuracies.items():
-            self._accuracies[key] = [value]
+            self._accuracies[key] = self._accuracies[key][-self._amount_limit:]
 
     @property
     def is_new(self) -> bool:

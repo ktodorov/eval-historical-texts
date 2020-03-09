@@ -75,7 +75,7 @@ class TrainService:
                     start_epoch = model_checkpoint.epoch
                     start_iteration = model_checkpoint.iteration
                     resets_left = model_checkpoint.resets_left
-                    metric.initialize(best_metrics, start_iteration)
+                    metric.initialize(best_metrics)
 
             self.data_loader_train, self.data_loader_validation = self._dataloader_service.get_train_dataloaders()
             self._optimizer = self._optimizer_base.get_optimizer()
