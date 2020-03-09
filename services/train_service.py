@@ -99,6 +99,9 @@ class TrainService:
                     if (self._arguments_service.reset_training_on_early_stop and resets_left > 0 and reset_epoch_limit > epoch):
                         patience = self._arguments_service.patience
                         resets_left -= 1
+                        self._log_service.log_summary(
+                            key='Resets left', value=resets_left)
+
                         print(
                             f'Resetting training due to early stop activated. Resets left: {resets_left}')
                     else:
@@ -152,8 +155,6 @@ class TrainService:
         """
         one epoch implementation
         """
-        train_accuracy = 0.0
-        train_loss = 0.0
         data_loader_length = len(self.data_loader_train)
 
         for i, batch in enumerate(self.data_loader_train):
@@ -164,46 +165,31 @@ class TrainService:
 
             loss_batch, accuracies_batch, _ = self._perform_batch_iteration(
                 batch)
-            if math.isnan(loss_batch):
-                raise Exception(
-                    f'loss is NaN during training at iteration {i}')
+            assert not math.isnan(
+                loss_batch), f'loss is NaN during training at iteration {i}'
 
             metric.add_loss(loss_batch)
             metric.add_accuracies(accuracies_batch)
 
             # calculate amount of batches and walltime passed
-            batches_passed = i + (epoch_num * len(self.data_loader_train))
+            batches_passed = i + (epoch_num * data_loader_length)
 
             # run on validation set and print progress to terminal
             # if we have eval_frequency or if we have finished the epoch
-            if (batches_passed % self._arguments_service.eval_freq) == 0 or (i + 1 == data_loader_length):
+            if self._should_evaluate(batches_passed, i, data_loader_length):
                 if not self._arguments_service.skip_validation:
                     validation_metric = self._evaluate()
-
-                    if math.isnan(validation_metric.get_current_loss()):
-                        raise Exception(
-                            f'combined loss is NaN during evaluating at iteration {i}; losses are - {validation_metric._losses}')
-
-                    if math.isnan(metric.get_current_loss()):
-                        raise Exception(
-                            f'combined loss is NaN during evaluating at iteration {i}; losses are - {metric._losses}')
                 else:
                     validation_metric = Metric(metric=metric)
+
+                assert not math.isnan(metric.get_current_loss(
+                )), f'combined loss is NaN during training at iteration {i}; losses are - {metric._losses}'
 
                 new_best = self._model.compare_metric(
                     best_metrics, validation_metric)
                 if new_best:
-                    best_metrics = validation_metric
-                    self._model.save(self._model_path, epoch_num, i,
-                                     best_metrics, resets_left, name_prefix=f'BEST')
-
-                    best_accuracies = best_metrics.get_current_accuracies()
-                    for key, value in best_accuracies.items():
-                        self._log_service.log_summary(
-                            key=f'Best - {str(key)}', value=value)
-                    self._log_service.log_summary(
-                        key='Best loss', value=best_metrics.get_current_loss())
-                    patience = self._arguments_service.patience
+                    best_metrics, patience = self._save_current_best_result(
+                        validation_metric, epoch_num, i, resets_left)
                 else:
                     patience -= 1
 
@@ -220,11 +206,7 @@ class TrainService:
                     key='Patience left', value=patience)
 
             # check if runtime is expired
-            time_passed = self._log_service.get_time_passed()
-            if ((time_passed.total_seconds() > (self._arguments_service.max_training_minutes * 60)) and
-                    self._arguments_service.max_training_minutes > 0):
-                raise KeyboardInterrupt(
-                    f"Process killed because {self._arguments_service.max_training_minutes} minutes passed")
+            self._validate_time_passed()
 
             if patience == 0:
                 break
@@ -299,4 +281,49 @@ class TrainService:
         targets = [x[2] for x in all_character_results]
         self._log_service.log_batch_results(inputs, predictions, targets)
 
+        assert not math.isnan(metric.get_current_loss(
+        )), f'combined loss is NaN during evaluation at iteration {i}; losses are - {metric._losses}'
+
         return metric
+
+    def _should_evaluate(
+            self,
+            batches_passed: int,
+            iteration: int,
+            data_loader_length: int):
+        # If we don't use validation set, then we must not evaluate before we pass at least `eval_freq` batches
+        if self._arguments_service.skip_validation and batches_passed < self._arguments_service.eval_freq:
+            return False
+
+        result = (batches_passed % self._arguments_service.eval_freq) == 0 or (
+            iteration + 1 == data_loader_length)
+        return result
+
+    def _validate_time_passed(self):
+        time_passed = self._log_service.get_time_passed()
+        if ((time_passed.total_seconds() > (self._arguments_service.max_training_minutes * 60)) and
+                self._arguments_service.max_training_minutes > 0):
+            raise KeyboardInterrupt(
+                f"Process killed because {self._arguments_service.max_training_minutes} minutes passed")
+
+    def _save_current_best_result(
+            self,
+            validation_metric: Metric,
+            epoch_num: int,
+            i: int,
+            resets_left: int):
+        best_metrics = validation_metric
+        self._model.save(self._model_path, epoch_num, i,
+                         best_metrics, resets_left, name_prefix=f'BEST')
+
+        best_accuracies = best_metrics.get_current_accuracies()
+
+        for key, value in best_accuracies.items():
+            self._log_service.log_summary(
+                key=f'Best - {str(key)}', value=value)
+
+        self._log_service.log_summary(
+            key='Best loss', value=best_metrics.get_current_loss())
+        patience = self._arguments_service.patience
+
+        return best_metrics, patience
