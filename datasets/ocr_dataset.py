@@ -57,9 +57,9 @@ class OCRDataset(DatasetBase):
             arguments_service.max_articles_length)
 
     def _get_language_data_path(
-        self,
-        file_service: FileService,
-        run_type: RunType):
+            self,
+            file_service: FileService,
+            run_type: RunType):
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
@@ -109,36 +109,26 @@ class OCRDataset(DatasetBase):
 
         _, ocr_aligned, gs_aligned, _, _ = result
 
-        pretrained_result = self._get_pretrained_representation(ocr_aligned)
+        return ocr_aligned, gs_aligned
 
-        return ocr_aligned, gs_aligned, pretrained_result
-
-    def _get_pretrained_representation(self, ocr_aligned: List[int]):
+    def _get_pretrained_representations(
+            self,
+            ocr_token_lists: List[List[int]]):
         if not self._include_pretrained:
             return []
 
-        ocr_aligned_splits = [ocr_aligned]
-        if len(ocr_aligned) > self._max_length:
-            ocr_aligned_splits = self._split_to_chunks(
-                ocr_aligned, chunk_size=self._max_length, overlap_size=2)
+        batch_size = len(ocr_token_lists)
+        lengths = [len(x) for x in ocr_token_lists]
+        max_length = max(lengths)
+        padded_tokens = np.zeros((batch_size, max_length), dtype=np.int64)
 
-        pretrained_outputs = torch.zeros(
-            (len(ocr_aligned_splits), self._max_length, self._pretrained_model_size)).to(self._device)
+        for i, ocr_token_list in enumerate(ocr_token_lists):
+            padded_tokens[i][:lengths[i]] = ocr_token_list
 
-        for i, ocr_aligned_split in enumerate(ocr_aligned_splits):
-            ocr_aligned_tensor = torch.Tensor(
-                ocr_aligned_split).unsqueeze(0).long().to(self._device)
-            pretrained_output = self._pretrained_representations_service.get_pretrained_representation(
-                ocr_aligned_tensor)
-
-            _, output_length, _ = pretrained_output.shape
-
-            pretrained_outputs[i, :output_length, :] = pretrained_output
-
-        pretrained_result = pretrained_outputs.view(
-            -1, self._pretrained_model_size)
-
-        return pretrained_result
+        padded_tokens_tensor = torch.tensor(padded_tokens).to(self._device)
+        pretrained_representations = self._pretrained_representations_service.get_pretrained_representation(
+            padded_tokens_tensor)
+        return pretrained_representations
 
     def _split_to_chunks(self, list_to_split: list, chunk_size: int, overlap_size: int):
         result = [list_to_split[i:i+chunk_size]
@@ -155,10 +145,13 @@ class OCRDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, pretrained_representations = batch_split
+        sequences, targets = batch_split
 
         lengths = np.array([[len(sequences[i]), len(targets[i])]
                             for i in range(batch_size)])
+
+        pretrained_representations = self._get_pretrained_representations(
+            sequences)
 
         max_length = lengths.max(axis=0)
 
@@ -166,31 +159,22 @@ class OCRDataset(DatasetBase):
             (batch_size, max_length[0]), dtype=np.int64)
         padded_targets = np.zeros((batch_size, max_length[1]), dtype=np.int64)
 
-        padded_pretrained_representations = []
-        if self._include_pretrained:
-            padded_pretrained_representations = torch.zeros(
-                (batch_size, max_length[0], self._pretrained_model_size)).to(self._device)
-
         for i, (sequence_length, target_length) in enumerate(lengths):
             padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
             padded_targets[i][0:target_length] = targets[i][0:target_length]
-
-            if self._include_pretrained:
-                padded_pretrained_representations[i][0:
-                                                     sequence_length] = pretrained_representations[i][0:sequence_length]
 
         return self._sort_batch(
             torch.from_numpy(padded_sequences).to(self._device),
             torch.from_numpy(padded_targets).to(self._device),
             torch.tensor(lengths, device=self._device),
-            padded_pretrained_representations)
+            pretrained_representations)
 
-    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings):
+    def _sort_batch(self, batch, targets, lengths, pretrained_representations):
         seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)
         seq_tensor = batch[perm_idx]
         targets_tensor = targets[perm_idx]
 
         if self._include_pretrained:
-            pretrained_embeddings = pretrained_embeddings[perm_idx]
+            pretrained_representations = pretrained_representations[perm_idx]
 
-        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings
+        return seq_tensor, targets_tensor, seq_lengths, pretrained_representations
