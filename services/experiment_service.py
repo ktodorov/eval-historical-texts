@@ -64,7 +64,8 @@ class ExperimentService:
         word_embeddings = self._get_word_embeddings(
             words, language_pickle_path)
 
-        words_to_check = ['cute', 'awful', 'meat']
+        words_to_check = ['plane', 'awful', 'player', 'lass',
+                          'edge', 'gas', 'contemplation', 'donkey', 'ball', 'attack']
 
         for word in words_to_check:
             self._calculate_word_closest(
