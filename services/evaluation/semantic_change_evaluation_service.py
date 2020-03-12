@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from enums.evaluation_type import EvaluationType
+from enums.threshold_calculation import ThresholdCalculation
 
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
@@ -75,11 +76,26 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         output_file_task2 = os.path.join(
             checkpoint_folder, 'task2.txt')
 
-        threshold = self._arguments_service.word_distance_threshold
+
+        if EvaluationType.CosineDistance in evaluation.keys() and EvaluationType.EuclideanDistance in evaluation.keys():
+            euclidean_distances = np.array(
+                evaluation[EvaluationType.EuclideanDistance]) / max(evaluation[EvaluationType.EuclideanDistance])
+            cosine_distances = np.array(
+                evaluation[EvaluationType.CosineDistance]) / max(evaluation[EvaluationType.CosineDistance])
+            distances = 0.5 * euclidean_distances + 0.5 * cosine_distances
+        elif EvaluationType.CosineDistance in evaluation.keys():
+            distances = evaluation[EvaluationType.CosineDistance]
+        elif EvaluationType.EuclideanDistance in evaluation.keys():
+            distances = evaluation[EvaluationType.EuclideanDistance]
+
+        if self._arguments_service.word_distance_threshold is not None:
+            threshold = self._arguments_service.word_distance_threshold
+        elif self._arguments_service.word_distance_threshold_calculation == ThresholdCalculation.Median:
+            threshold = np.median(distances)
+        else:
+            threshold = np.mean(distances)
 
         task1_dict = {}
-        distances = evaluation[EvaluationType.EuclideanDistance]
-
         for i, target_word in enumerate(targets):
             if distances[i] > threshold:
                 task1_dict[target_word] = 1
