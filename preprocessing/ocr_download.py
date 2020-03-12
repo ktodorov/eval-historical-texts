@@ -26,12 +26,12 @@ def combine_data(ocr_path: str, newseye_path: str, trove_path: str):
     move_data(newseye_2017_path, ocr_path, 'newseye-2017')
     move_data(newseye_2019_path, ocr_path, 'newseye-2019')
 
-    if not os.path.exists(trove_path):
-        os.mkdir(trove_path)
-        download_trove_files(trove_path)
+    # if not os.path.exists(trove_path):
+    #     os.mkdir(trove_path)
+    #     download_trove_files(trove_path)
 
-    move_trove_data(trove_path, ocr_path, 'trove')
-    combine_full_data(ocr_path)
+    # move_trove_data(trove_path, ocr_path, 'trove')
+    # combine_full_data(ocr_path)
 
 
 def move_data(data_path: str, output_path: str, unique_prefix: str):
