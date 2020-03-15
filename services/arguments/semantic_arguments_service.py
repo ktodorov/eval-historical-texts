@@ -21,7 +21,7 @@ class SemanticArgumentsService(PretrainedArgumentsService):
 
         parser.add_argument('--word-distance-threshold', type=float, default=None,
                             help='The threshold which will be used to compare against word distance for the SemEval challenge')
-        parser.add_argument('--corpus', type=int, required=True,
+        parser.add_argument('--corpus', type=int, default=None,
                             help='The corpus to be used')
         parser.add_argument('--plot-distances', action='store_true',
                             help='Plot distances of target words for the different time periods')

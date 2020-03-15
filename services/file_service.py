@@ -82,3 +82,11 @@ class FileService:
             os.mkdir(data_pickles_path)
 
         return data_pickles_path
+
+    def get_experiments_path(self) -> str:
+        experiments_path = 'experiments'
+
+        if not os.path.exists(experiments_path):
+            os.mkdir(experiments_path)
+
+        return experiments_path
