@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
 
-# matplotlib.rcParams['figure.dpi'] = 300
+plt.rcParams["figure.figsize"] = (20,10)
 
 
 class PlotService:
