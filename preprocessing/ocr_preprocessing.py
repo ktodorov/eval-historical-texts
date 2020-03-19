@@ -214,33 +214,33 @@ def parse_metrics_obj(
                          jaccard_similarities, levenshtein_distances, pickles_path)
 
     all_pairs = len(token_pairs)
-    # if jaccard_similarities is None:
-    #     jaccard_similarities = []
-    #     for i, token_pair in enumerate(token_pairs):
-    #         jaccard_similarities.append(
-    #             metrics_service.calculate_jaccard_similarity(token_pair[0], token_pair[1]))
+    if jaccard_similarities is None:
+        jaccard_similarities = []
+        for i, token_pair in enumerate(token_pairs):
+            jaccard_similarities.append(
+                metrics_service.calculate_jaccard_similarity(token_pair[0], token_pair[1]))
 
-    #     save_metrics_obj(token_pairs, decoded_pairs,
-    #                      jaccard_similarities, levenshtein_distances, pickles_path)
+        save_metrics_obj(token_pairs, decoded_pairs,
+                         jaccard_similarities, levenshtein_distances, pickles_path)
 
-    # if levenshtein_distances is None:
-    #     levenshtein_distances = []
+    if levenshtein_distances is None:
+        levenshtein_distances = []
 
-    # if len(levenshtein_distances) < all_pairs:
-    #     for i, decoded_pair in enumerate(decoded_pairs):
-    #         if i < len(levenshtein_distances):
-    #             continue
+    if len(levenshtein_distances) < all_pairs:
+        for i, decoded_pair in enumerate(decoded_pairs):
+            if i < len(levenshtein_distances):
+                continue
 
-    #         print(f'LEVENSHTEIN - {i}/{all_pairs}             \r', end='')
-    #         levenshtein_distances.append(
-    #             metrics_service.calculate_normalized_levenshtein_distance(decoded_pair[0], decoded_pair[1]))
+            print(f'LEVENSHTEIN - {i}/{all_pairs}             \r', end='')
+            levenshtein_distances.append(
+                metrics_service.calculate_normalized_levenshtein_distance(decoded_pair[0], decoded_pair[1]))
 
-    #         if i % 50000 == 0:
-    #             save_metrics_obj(token_pairs, decoded_pairs,
-    #                              jaccard_similarities, levenshtein_distances, pickles_path)
+            if i % 50000 == 0:
+                save_metrics_obj(token_pairs, decoded_pairs,
+                                 jaccard_similarities, levenshtein_distances, pickles_path)
 
-    #     save_metrics_obj(token_pairs, decoded_pairs,
-    #                      jaccard_similarities, levenshtein_distances, pickles_path)
+        save_metrics_obj(token_pairs, decoded_pairs,
+                         jaccard_similarities, levenshtein_distances, pickles_path)
 
     return token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances
 

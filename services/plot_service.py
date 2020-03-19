@@ -28,7 +28,8 @@ class PlotService:
             title: str = None,
             save_path: str = None,
             filename: str = None,
-            ax=None):
+            ax=None,
+            hide_axis: bool = False):
         if ax is None:
             ax = self.create_plot()
 
@@ -51,7 +52,8 @@ class PlotService:
             ax,
             title,
             save_path,
-            filename)
+            filename,
+            hide_axis)
 
         if save_path is None or filename is None:
             plt.show()
@@ -67,7 +69,8 @@ class PlotService:
             filename: str = None,
             color: str = None,
             ax=None,
-            show_plot: bool = True):
+            show_plot: bool = True,
+            hide_axis: bool = False):
         if ax is None:
             ax = self.create_plot()
 
@@ -77,7 +80,8 @@ class PlotService:
             ax,
             title,
             save_path,
-            filename)
+            filename,
+            hide_axis)
 
         if show_plot and (save_path is None or filename is None):
             plt.show()
@@ -96,7 +100,8 @@ class PlotService:
             filename: str = None,
             ax=None,
             show_plot: bool = True,
-            bold_mask: list = None):
+            bold_mask: list = None,
+            hide_axis: bool = False):
         if ax is None:
             ax = self.create_plot()
 
@@ -112,7 +117,8 @@ class PlotService:
             ax,
             title,
             save_path,
-            filename)
+            filename,
+            hide_axis)
 
         if show_plot and (save_path is None or filename is None):
             plt.show()
@@ -131,11 +137,10 @@ class PlotService:
             filename: str = None,
             color: str = None,
             ax=None,
-            show_plot: bool = True):
+            show_plot: bool = True,
+            hide_axis: bool = False):
         if ax is None:
             ax = self.create_plot()
-
-        # ax.arrow(x, y, dx, dy, color=color)
 
         ax.annotate("", xy=(x+dx, y+dy), xytext=(x, y),
                     arrowprops=dict(arrowstyle="-|>", color=color),
@@ -145,7 +150,8 @@ class PlotService:
             ax,
             title,
             save_path,
-            filename)
+            filename,
+            hide_axis)
 
         if show_plot and (save_path is None or filename is None):
             plt.show()
@@ -158,8 +164,11 @@ class PlotService:
             ax: matplotlib.axes.Axes,
             title: str = None,
             save_path: str = None,
-            filename: str = None):
-        ax.axis('off')
+            filename: str = None,
+            hide_axis: bool = False):
+
+        if hide_axis:
+            ax.axis('off')
 
         if title is not None:
             plt.title(title)

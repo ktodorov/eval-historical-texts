@@ -53,57 +53,28 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         return evaluation_results
 
     def save_results(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
-        checkpoint_folder = self._file_service.get_checkpoints_path()
+        checkpoint_folder=self._file_service.get_checkpoints_path()
         if self._arguments_service.plot_distances:
-            if EvaluationType.CosineDistance in evaluation.keys():
-                self._plot_service.plot_histogram(
-                    evaluation[EvaluationType.CosineDistance],
-                    number_of_bins=25,
-                    title='Cosine distance',
-                    save_path=checkpoint_folder,
-                    filename=f'cosine-distance-{str(self._arguments_service.language)}')
+            self._plot_distances(evaluation, checkpoint_folder)
+            return
 
-            if EvaluationType.EuclideanDistance in evaluation.keys():
-                self._plot_service.plot_histogram(
-                    evaluation[EvaluationType.EuclideanDistance],
-                    number_of_bins=25,
-                    title='Euclidean distance',
-                    save_path=checkpoint_folder,
-                    filename=f'euclidean-distance-{str(self._arguments_service.language)}')
-
-        output_file_task1 = os.path.join(
+        output_file_task1=os.path.join(
             checkpoint_folder, 'task1.txt')
-        output_file_task2 = os.path.join(
+        output_file_task2=os.path.join(
             checkpoint_folder, 'task2.txt')
 
+        distances=self._get_word_distances(evaluation)
+        threshold=self._get_distances_threshold(distances)
 
-        if EvaluationType.CosineDistance in evaluation.keys() and EvaluationType.EuclideanDistance in evaluation.keys():
-            euclidean_distances = np.array(
-                evaluation[EvaluationType.EuclideanDistance]) / max(evaluation[EvaluationType.EuclideanDistance])
-            cosine_distances = np.array(
-                evaluation[EvaluationType.CosineDistance]) / max(evaluation[EvaluationType.CosineDistance])
-            distances = 0.5 * euclidean_distances + 0.5 * cosine_distances
-        elif EvaluationType.CosineDistance in evaluation.keys():
-            distances = evaluation[EvaluationType.CosineDistance]
-        elif EvaluationType.EuclideanDistance in evaluation.keys():
-            distances = evaluation[EvaluationType.EuclideanDistance]
-
-        if self._arguments_service.word_distance_threshold is not None:
-            threshold = self._arguments_service.word_distance_threshold
-        elif self._arguments_service.word_distance_threshold_calculation == ThresholdCalculation.Median:
-            threshold = np.median(distances)
-        else:
-            threshold = np.mean(distances)
-
-        task1_dict = {}
+        task1_dict={}
         for i, target_word in enumerate(targets):
             if distances[i] > threshold:
-                task1_dict[target_word] = 1
+                task1_dict[target_word]=1
             else:
-                task1_dict[target_word] = 0
+                task1_dict[target_word]=0
 
-        abs_distances = [abs(distance) for distance in distances]
-        max_args = list(np.argsort(abs_distances))
+        abs_distances=[abs(distance) for distance in distances]
+        max_args=list(np.argsort(abs_distances))
 
         with open(output_file_task1, 'w', encoding='utf-8') as task1_file:
             for word, class_prediction in task1_dict.items():
@@ -114,3 +85,49 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
                 task2_file.write(f'{target}\t{max_args.index(i)}\n')
 
         print('Output saved')
+
+    def _plot_distances(
+            self,
+            evaluation: Dict[EvaluationType, List],
+            checkpoint_folder: str):
+        if EvaluationType.CosineDistance in evaluation.keys():
+            self._plot_service.plot_histogram(
+                evaluation[EvaluationType.CosineDistance],
+                number_of_bins=25,
+                title='Cosine distance',
+                save_path=checkpoint_folder,
+                filename=f'cosine-distance-{str(self._arguments_service.language)}')
+
+        if EvaluationType.EuclideanDistance in evaluation.keys():
+            self._plot_service.plot_histogram(
+                evaluation[EvaluationType.EuclideanDistance],
+                number_of_bins=25,
+                title='Euclidean distance',
+                save_path=checkpoint_folder,
+                filename=f'euclidean-distance-{str(self._arguments_service.language)}')
+
+    def _get_word_distances(
+            self,
+            evaluation: Dict[EvaluationType, List]) -> list:
+        if EvaluationType.CosineDistance in evaluation.keys() and EvaluationType.EuclideanDistance in evaluation.keys():
+            euclidean_distances=np.array(
+                evaluation[EvaluationType.EuclideanDistance]) / max(evaluation[EvaluationType.EuclideanDistance])
+            cosine_distances=np.array(
+                evaluation[EvaluationType.CosineDistance]) / max(evaluation[EvaluationType.CosineDistance])
+            distances=0.5 * euclidean_distances + 0.5 * cosine_distances
+        elif EvaluationType.CosineDistance in evaluation.keys():
+            distances=evaluation[EvaluationType.CosineDistance]
+        elif EvaluationType.EuclideanDistance in evaluation.keys():
+            distances=evaluation[EvaluationType.EuclideanDistance]
+
+        return distances
+
+    def _get_distances_threshold(
+        self,
+        distances: list) -> float:
+        if self._arguments_service.word_distance_threshold is not None:
+            threshold=self._arguments_service.word_distance_threshold
+        elif self._arguments_service.word_distance_threshold_calculation == ThresholdCalculation.Median:
+            threshold=np.median(distances)
+        else:
+            threshold=np.mean(distances)

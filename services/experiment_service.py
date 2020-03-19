@@ -173,7 +173,8 @@ class ExperimentService:
             color='teal',
             title=f'Neighborhood change - \'{target_word.capitalize()}\'',
             save_path=save_path,
-            filename=f'{target_word}-neighborhood-change')
+            filename=f'{target_word}-neighborhood-change',
+            hide_axis=True)
 
     def _calculate_word_embeddings(self, word: str) -> List[np.array]:
         word_tokens, _, _, _ = self._tokenizer_service.encode_sequence(
