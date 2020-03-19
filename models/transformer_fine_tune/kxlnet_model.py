@@ -1,6 +1,6 @@
 from transformers import XLNetLMHeadModel, BertPreTrainedModel
 
-from models.kbert_model import KBertModel
+from models.transformer_fine_tune.kbert_model import KBertModel
 
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService

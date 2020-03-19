@@ -18,8 +18,8 @@ from services.tokenizer_service import TokenizerService
 from services.metrics_service import MetricsService
 from services.log_service import LogService
 
-from models.sequence_encoder import SequenceEncoder
-from models.sequence_decoder import SequenceDecoder
+from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
+from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
 
 
 class MultiFitModel(ModelBase):

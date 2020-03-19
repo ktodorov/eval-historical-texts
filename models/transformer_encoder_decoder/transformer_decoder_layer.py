@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from models.multi_head_attention_layer import MultiHeadAttentionLayer
-from models.positionwise_feedforward_layer import PositionwiseFeedforwardLayer
+from models.transformer_encoder_decoder.multi_head_attention_layer import MultiHeadAttentionLayer
+from models.transformer_encoder_decoder.positionwise_feedforward_layer import PositionwiseFeedforwardLayer
 
 
 class TransformerDecoderLayer(nn.Module):

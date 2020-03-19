@@ -10,8 +10,8 @@ from enums.metric_type import MetricType
 from entities.metric import Metric
 
 from models.model_base import ModelBase
-from models.transformer_encoder import TransformerEncoder
-from models.transformer_decoder import TransformerDecoder
+from models.transformer_encoder_decoder.transformer_encoder import TransformerEncoder
+from models.transformer_encoder_decoder.transformer_decoder import TransformerDecoder
 
 
 from services.arguments.transformer_arguments_service import TransformerArgumentsService

@@ -1,8 +1,8 @@
 from enums.configuration import Configuration
 
 from models.model_base import ModelBase
-from models.kbert_model import KBertModel
-from models.kxlnet_model import KXLNetModel
+from models.transformer_fine_tune.kbert_model import KBertModel
+from models.transformer_fine_tune.kxlnet_model import KXLNetModel
 
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.data_service import DataService

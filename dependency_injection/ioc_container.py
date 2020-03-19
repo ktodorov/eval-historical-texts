@@ -18,13 +18,13 @@ from losses.joint_loss import JointLoss
 from losses.ner_loss import NERLoss
 
 from models.model_base import ModelBase
-from models.kbert_model import KBertModel
-from models.kxlnet_model import KXLNetModel
-from models.multifit_model import MultiFitModel
-from models.sequence_model import SequenceModel
-from models.transformer_model import TransformerModel
+from models.transformer_fine_tune.kbert_model import KBertModel
+from models.transformer_fine_tune.kxlnet_model import KXLNetModel
+from models.multifit.multifit_model import MultiFitModel
+from models.rnn_encoder_decoder.sequence_model import SequenceModel
+from models.transformer_encoder_decoder.transformer_model import TransformerModel
 from models.joint_model import JointModel
-from models.ner_rnn_model import NERRNNModel
+from models.ner_rnn.ner_rnn_model import NERRNNModel
 
 from optimizers.optimizer_base import OptimizerBase
 from optimizers.adam_optimizer import AdamOptimizer

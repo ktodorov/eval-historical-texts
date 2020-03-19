@@ -19,8 +19,8 @@ from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
 
-from models.sequence_encoder import SequenceEncoder
-from models.sequence_decoder import SequenceDecoder
+from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
+from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
 
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
