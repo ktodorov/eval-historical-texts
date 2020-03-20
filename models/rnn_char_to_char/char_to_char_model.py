@@ -54,7 +54,7 @@ class CharToCharModel(ModelBase):
                             multiplication_factor, vocabulary_service.vocabulary_size())
 
     def forward(self, input_batch, debug=False, **kwargs):
-        sequences, targets, lengths, pretrained_representations = input_batch
+        sequences, targets, lengths, pretrained_representations, offset_lists = input_batch
 
         # apply the embedding layer that maps each token to its embedding
         # dim: batch_size x batch_max_len x embedding_dim
@@ -62,8 +62,8 @@ class CharToCharModel(ModelBase):
             embedded = self.dropout(self.embedding(sequences))
 
             if self._include_pretrained:
-                embedded = torch.cat(
-                    (embedded, pretrained_representations), dim=2)
+                embedded = self._add_pretrained_information(
+                    embedded, pretrained_representations, offset_lists)
         else:
             embedded = pretrained_representations
 
@@ -137,7 +137,7 @@ class CharToCharModel(ModelBase):
 
             if output_characters:
                 character_results = []
-                ocr_texts_tensor, _, lengths, _ = batch
+                ocr_texts_tensor, _, lengths, _, _ = batch
                 ocr_texts = ocr_texts_tensor.cpu().detach().tolist()
                 for i in range(len(ocr_texts)):
                     input_string = self._vocabulary_service.ids_to_string(
@@ -154,3 +154,33 @@ class CharToCharModel(ModelBase):
 
         result = best_metric.get_current_loss() > new_metric.get_current_loss()
         return result
+
+    def _add_pretrained_information(self, embedded, pretrained_representations, offset_lists):
+        batch_size = embedded.shape[0]
+        pretrained_embedding_size = pretrained_representations.shape[2]
+
+        new_embedded = torch.zeros(
+            (batch_size, embedded.shape[1], embedded.shape[2] + pretrained_representations.shape[2])).to(self._arguments_service.device)
+        new_embedded[:, :, :embedded.shape[2]] = embedded
+
+        for i in range(batch_size):
+            inserted_count = 0
+            last_item = 0
+            for p_i, offset in enumerate(offset_lists[i]):
+                current_offset = 0
+                if offset[0] == offset[1]:
+                    current_offset = 1
+
+                for k in range(offset[0] + inserted_count, offset[1] + inserted_count + current_offset):
+                    if offset[0] < last_item:
+                        continue
+
+                    last_item = offset[1]
+
+                    new_embedded[i, k, -pretrained_embedding_size:
+                                 ] = pretrained_representations[i, p_i]
+
+                if offset[0] == offset[1]:
+                    inserted_count += 1
+
+        return new_embedded

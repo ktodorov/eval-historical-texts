@@ -323,12 +323,12 @@ def parse_language_data(
         train_pickle_path,
         validation_pickle_path)
 
-    train_language_data = LanguageData([], [], [], [], [])
+    train_language_data = LanguageData([], [], [], [], [], [], [])
     for train_pair in train_pairs:
         train_language_data.add_entry(
             None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenizer_service, vocabulary_service)
 
-    validation_language_data = LanguageData([], [], [], [], [])
+    validation_language_data = LanguageData([], [], [], [], [], [], [])
     for validation_pair in validation_pairs:
         validation_language_data.add_entry(
             None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenizer_service, vocabulary_service)

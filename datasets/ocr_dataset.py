@@ -93,7 +93,9 @@ class OCRDataset(DatasetBase):
                 language_data_items[1],
                 language_data_items[2],
                 language_data_items[3],
-                language_data_items[4])
+                language_data_items[4],
+                language_data_items[5],
+                language_data_items[6])
 
         print(
             f'Loaded {language_data.length} entries out of {total_amount} total for {run_type.to_str()}')

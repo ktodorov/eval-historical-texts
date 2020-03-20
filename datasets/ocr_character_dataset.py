@@ -50,9 +50,9 @@ class OCRCharacterDataset(OCRDataset):
             **kwargs)
 
     def _get_language_data_path(
-        self,
-        file_service: FileService,
-        run_type: RunType):
+            self,
+            file_service: FileService,
+            run_type: RunType):
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
@@ -88,16 +88,17 @@ class OCRCharacterDataset(OCRDataset):
     def __getitem__(self, idx):
         result = self._language_data.get_entry(idx)
 
-        _, ocr_aligned, _, ocr_text, gs_text = result
+        _, ocr_aligned, _, ocr_text, gs_text, ocr_offsets = result
 
-        return ocr_aligned, ocr_text, gs_text
+        return ocr_aligned, ocr_text, gs_text, ocr_offsets
 
     def _pad_and_sort_batch(self, DataLoaderBatch):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, ocr_texts, gs_texts = batch_split
-        pretrained_representations = self._get_pretrained_representations(sequences)
+        sequences, ocr_texts, gs_texts, offset_lists = batch_split
+        pretrained_representations = self._get_pretrained_representations(
+            sequences)
 
         lengths = np.array([[len(ocr_texts[i]), len(gs_texts[i])]
                             for i in range(batch_size)])
@@ -106,7 +107,8 @@ class OCRCharacterDataset(OCRDataset):
 
         padded_sequences = np.zeros(
             (batch_size, max_length[0]), dtype=np.int64)
-        padded_targets = np.zeros((batch_size, max_length[1]), dtype=np.int64) * self._vocabulary_service.pad_token
+        padded_targets = np.zeros(
+            (batch_size, max_length[1]), dtype=np.int64) * self._vocabulary_service.pad_token
 
         for i, (sequence_length, target_length) in enumerate(lengths):
             padded_sequences[i][0:sequence_length] = ocr_texts[i][0:sequence_length]
@@ -116,14 +118,16 @@ class OCRCharacterDataset(OCRDataset):
             torch.from_numpy(padded_sequences).to(self._device),
             torch.from_numpy(padded_targets).to(self._device),
             torch.tensor(lengths, device=self._device),
-            pretrained_representations)
+            pretrained_representations,
+            offset_lists)
 
-    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings):
+    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings, offset_lists):
         seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)
         seq_tensor = batch[perm_idx]
         targets_tensor = targets[perm_idx]
 
         if self._include_pretrained:
             pretrained_embeddings = pretrained_embeddings[perm_idx]
+            offset_lists = [offset_lists[i] for i in perm_idx]
 
-        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings
+        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings, offset_lists
