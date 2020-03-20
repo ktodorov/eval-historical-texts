@@ -48,7 +48,7 @@ class SequenceModel(ModelBase):
 
         self._encoder = SequenceEncoder(
             embedding_size=arguments_service.encoder_embedding_size,
-            input_size=arguments_service.pretrained_vocabulary_size,
+            input_size=tokenizer_service.tokenizer.get_vocab_size(with_added_tokens=True),
             hidden_dimension=arguments_service.hidden_dimension,
             number_of_layers=arguments_service.number_of_layers,
             dropout=arguments_service.dropout,
@@ -121,10 +121,10 @@ class SequenceModel(ModelBase):
                 top1 = output.argmax(1)
                 input = top1
 
-        return outputs, targets, lengths
+        return outputs, targets
 
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, targets, _ = outputs
+        output, targets = outputs
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()
 

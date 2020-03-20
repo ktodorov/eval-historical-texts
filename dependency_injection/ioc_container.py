@@ -25,6 +25,7 @@ from models.rnn_encoder_decoder.sequence_model import SequenceModel
 from models.transformer_encoder_decoder.transformer_model import TransformerModel
 from models.joint_model import JointModel
 from models.ner_rnn.ner_rnn_model import NERRNNModel
+from models.rnn_char_to_char.char_to_char_model import CharToCharModel
 
 from optimizers.optimizer_base import OptimizerBase
 from optimizers.adam_optimizer import AdamOptimizer
@@ -32,6 +33,7 @@ from optimizers.adamw_optimizer import AdamWOptimizer
 from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
 
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
+from services.arguments.postocr_characters_arguments_service import PostOCRCharactersArgumentsService
 from services.arguments.transformer_arguments_service import TransformerArgumentsService
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
@@ -73,8 +75,10 @@ def get_argument_service_type(challenge: Challenge, configuration: Configuration
     if challenge == Challenge.PostOCRCorrection or challenge == Challenge.PostOCRErrorDetection:
         if configuration == Configuration.TransformerSequence:
             argument_service_type = TransformerArgumentsService
-        else:
+        elif configuration == Configuration.SequenceToCharacter:
             argument_service_type = PostOCRArgumentsService
+        elif configuration == Configuration.CharacterToCharacter:
+            argument_service_type = PostOCRCharactersArgumentsService
     elif challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         argument_service_type = NERArgumentsService
     elif challenge == Challenge.SemanticChange:
@@ -96,6 +100,8 @@ def register_optimizer(
     if evaluate or run_experiments:
         return None
 
+    optimizer = None
+
     if not joint_model:
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
             optimizer = providers.Singleton(
@@ -103,7 +109,10 @@ def register_optimizer(
                 arguments_service=arguments_service,
                 model=model
             )
-        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
+        elif (configuration == Configuration.MultiFit or
+              configuration == Configuration.SequenceToCharacter or
+              configuration == Configuration.TransformerSequence or
+              configuration == Configuration.CharacterToCharacter):
             optimizer = providers.Singleton(
                 AdamOptimizer,
                 arguments_service=arguments_service,
@@ -122,11 +131,139 @@ def register_optimizer(
                 arguments_service=arguments_service,
                 model=model
             )
-        else:
-            raise Exception(
-                'No optimizer and loss defined for current configuration')
 
     return optimizer
+
+
+def register_loss(
+        joint_model: bool,
+        configuration: Configuration,
+        arguments_service: ArgumentsServiceBase):
+    loss_function = None
+
+    if not joint_model:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+            loss_function = providers.Singleton(KBertLoss)
+        elif (configuration == Configuration.MultiFit or
+              configuration == Configuration.SequenceToCharacter or
+              configuration == Configuration.CharacterToCharacter):
+            loss_function = providers.Singleton(SequenceLoss)
+        elif configuration == Configuration.TransformerSequence:
+            loss_function = providers.Singleton(TransformerSequenceLoss)
+        elif configuration == Configuration.RNNSimple:
+            loss_function = providers.Singleton(NERLoss)
+    elif configuration == Configuration.KBert or configuration == Configuration.XLNet:
+        loss_function = providers.Singleton(JointLoss)
+
+    return loss_function
+
+
+def register_evaluation_service(
+        arguments_service: ArgumentsServiceBase,
+        file_service: FileService,
+        plot_service: PlotService,
+        metrics_service: MetricsService,
+        joint_model: bool,
+        configuration: Configuration):
+    evaluation_service = None
+
+    if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
+        evaluation_service = providers.Factory(
+            SemanticChangeEvaluationService,
+            arguments_service=arguments_service,
+            file_service=file_service,
+            plot_service=plot_service,
+            metrics_service=metrics_service
+        )
+    elif (configuration == Configuration.MultiFit or
+          configuration == Configuration.SequenceToCharacter or
+          configuration == Configuration.TransformerSequence or
+          configuration == Configuration.CharacterToCharacter or
+          configuration == Configuration.RNNSimple):
+        evaluation_service = providers.Factory(BaseEvaluationService)
+
+    return evaluation_service
+
+
+def register_model(
+        arguments_service: ArgumentsServiceBase,
+        file_service: FileService,
+        plot_service: PlotService,
+        metrics_service: MetricsService,
+        data_service: DataService,
+        tokenizer_service: TokenizerService,
+        log_service: LogService,
+        vocabulary_service: VocabularyService,
+        model_service: ModelService,
+        joint_model: bool,
+        configuration: Configuration):
+
+    if not joint_model:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+            model = providers.Singleton(
+                KBertModel if configuration == Configuration.KBert else KXLNetModel,
+                arguments_service=arguments_service,
+                data_service=data_service
+            )
+        elif (configuration == Configuration.MultiFit or
+              configuration == Configuration.SequenceToCharacter or
+              configuration == Configuration.TransformerSequence or
+              configuration == Configuration.CharacterToCharacter):
+
+            if configuration == Configuration.MultiFit:
+                model = providers.Singleton(
+                    MultiFitModel,
+                    arguments_service=arguments_service,
+                    data_service=data_service,
+                    tokenizer_service=tokenizer_service,
+                    metrics_service=metrics_service,
+                    log_service=log_service
+                )
+            elif configuration == Configuration.SequenceToCharacter:
+                model = providers.Singleton(
+                    SequenceModel,
+                    arguments_service=arguments_service,
+                    data_service=data_service,
+                    tokenizer_service=tokenizer_service,
+                    metrics_service=metrics_service,
+                    log_service=log_service,
+                    vocabulary_service=vocabulary_service
+                )
+            elif configuration == Configuration.TransformerSequence:
+                model = providers.Singleton(
+                    TransformerModel,
+                    arguments_service=arguments_service,
+                    data_service=data_service,
+                    vocabulary_service=vocabulary_service,
+                    metrics_service=metrics_service,
+                    log_service=log_service,
+                    tokenizer_service=tokenizer_service
+                )
+            elif configuration == Configuration.CharacterToCharacter:
+                model = providers.Singleton(
+                    CharToCharModel,
+                    arguments_service=arguments_service,
+                    vocabulary_service=vocabulary_service,
+                    data_service=data_service,
+                    metrics_service=metrics_service
+                )
+        elif configuration == Configuration.RNNSimple:
+            model = providers.Singleton(
+                NERRNNModel,
+                arguments_service=arguments_service,
+                data_service=data_service,
+                metrics_service=metrics_service
+            )
+
+    elif joint_model:
+        model = providers.Singleton(
+            JointModel,
+            arguments_service=arguments_service,
+            data_service=data_service,
+            model_service=model_service
+        )
+
+    return model
 
 
 class IocContainer(containers.DeclarativeContainer):
@@ -209,7 +346,8 @@ class IocContainer(containers.DeclarativeContainer):
         log_service=log_service,
         pretrained_representations_service=pretrained_representations_service,
         vocabulary_service=vocabulary_service,
-        metrics_service=metrics_service
+        metrics_service=metrics_service,
+        data_service=data_service
     )
 
     dataloader_service = providers.Factory(
@@ -224,101 +362,23 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service
     )
 
-    if not joint_model:
-        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
-            loss_function = providers.Singleton(
-                KBertLoss
-            )
+    model = register_model(
+        arguments_service=arguments_service,
+        file_service=file_service,
+        plot_service=plot_service,
+        metrics_service=metrics_service,
+        data_service=data_service,
+        tokenizer_service=tokenizer_service,
+        log_service=log_service,
+        vocabulary_service=vocabulary_service,
+        model_service=model_service,
+        joint_model=joint_model,
+        configuration=configuration)
 
-            model = providers.Singleton(
-                KBertModel if configuration == Configuration.KBert else KXLNetModel,
-                arguments_service=arguments_service,
-                data_service=data_service
-            )
-
-            evaluation_service = providers.Factory(
-                SemanticChangeEvaluationService,
-                arguments_service=arguments_service,
-                file_service=file_service,
-                plot_service=plot_service,
-                metrics_service=metrics_service
-            )
-        elif configuration == Configuration.MultiFit or configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
-
-            if configuration == Configuration.MultiFit:
-                loss_function = providers.Singleton(SequenceLoss)
-                model = providers.Singleton(
-                    MultiFitModel,
-                    arguments_service=arguments_service,
-                    data_service=data_service,
-                    tokenizer_service=tokenizer_service,
-                    metrics_service=metrics_service,
-                    log_service=log_service
-                )
-            elif configuration == Configuration.SequenceToCharacter:
-                loss_function = providers.Singleton(SequenceLoss)
-                model = providers.Singleton(
-                    SequenceModel,
-                    arguments_service=arguments_service,
-                    data_service=data_service,
-                    tokenizer_service=tokenizer_service,
-                    metrics_service=metrics_service,
-                    log_service=log_service,
-                    vocabulary_service=vocabulary_service
-                )
-            elif configuration == Configuration.TransformerSequence:
-                loss_function = providers.Singleton(TransformerSequenceLoss)
-                model = providers.Singleton(
-                    TransformerModel,
-                    arguments_service=arguments_service,
-                    data_service=data_service,
-                    vocabulary_service=vocabulary_service,
-                    metrics_service=metrics_service,
-                    log_service=log_service,
-                    tokenizer_service=tokenizer_service
-                )
-
-            evaluation_service = providers.Factory(
-                BaseEvaluationService
-            )
-        elif configuration == Configuration.RNNSimple:
-            loss_function = providers.Singleton(NERLoss)
-            model = providers.Singleton(
-                NERRNNModel,
-                arguments_service=arguments_service,
-                data_service=data_service,
-                metrics_service=metrics_service
-            )
-
-            evaluation_service = providers.Factory(
-                BaseEvaluationService
-            )
-    elif joint_model:
-
-        model = providers.Singleton(
-            JointModel,
-            arguments_service=arguments_service,
-            data_service=data_service,
-            model_service=model_service
-        )
-
-        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
-            loss_function = providers.Singleton(
-                JointLoss
-            )
-
-            evaluation_service = providers.Factory(
-                SemanticChangeEvaluationService,
-                arguments_service=arguments_service,
-                file_service=file_service,
-                plot_service=plot_service,
-                metrics_service=metrics_service
-            )
-        else:
-            raise Exception(
-                'No optimizer and loss defined for current configuration')
-    else:
-        raise Exception('Unsupported configuration')
+    loss_function = register_loss(
+        joint_model=joint_model,
+        configuration=configuration,
+        arguments_service=arguments_service)
 
     optimizer = register_optimizer(
         joint_model,
@@ -329,6 +389,14 @@ class IocContainer(containers.DeclarativeContainer):
         model,
         arguments_service
     )
+
+    evaluation_service = register_evaluation_service(
+        arguments_service=arguments_service,
+        file_service=file_service,
+        plot_service=plot_service,
+        metrics_service=metrics_service,
+        joint_model=joint_model,
+        configuration=configuration)
 
     experiment_service = providers.Factory(
         ExperimentService,

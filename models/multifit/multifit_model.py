@@ -110,10 +110,10 @@ class MultiFitModel(ModelBase):
                 top1 = output.argmax(1)
                 input = top1
 
-        return outputs, targets, lengths
+        return outputs, targets
 
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, targets, _ = outputs
+        output, targets = outputs
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()
 

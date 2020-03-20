@@ -7,6 +7,7 @@ from datasets.joint_dataset import JointDataset
 from datasets.newseye_dataset import NewsEyeDataset
 from datasets.ocr_dataset import OCRDataset
 from datasets.ocr_sequence_dataset import OCRSequenceDataset
+from datasets.ocr_character_dataset import OCRCharacterDataset
 from datasets.semeval_test_dataset import SemEvalTestDataset
 from datasets.ner_dataset import NERDataset
 
@@ -18,6 +19,7 @@ from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
+from services.data_service import DataService
 
 
 class DatasetService:
@@ -30,7 +32,8 @@ class DatasetService:
         log_service: LogService,
         metrics_service: MetricsService,
         pretrained_representations_service: PretrainedRepresentationsService,
-        vocabulary_service: VocabularyService):
+        vocabulary_service: VocabularyService,
+        data_service: DataService):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
@@ -40,6 +43,7 @@ class DatasetService:
         self._pretrained_representations_service = pretrained_representations_service
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
+        self._data_service = data_service
 
     def get_dataset(self, run_type: RunType, language: str) -> DatasetBase:
         """Loads and returns the dataset based on run type ``(Train, Validation, Test)`` and the language
@@ -81,6 +85,7 @@ class DatasetService:
                     self._metrics_service,
                     self._log_service,
                     self._pretrained_representations_service,
+                    self._data_service,
                     run_type)
             elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
                 result = OCRSequenceDataset(
@@ -91,6 +96,18 @@ class DatasetService:
                     self._metrics_service,
                     self._log_service,
                     self._pretrained_representations_service,
+                    self._data_service,
+                    run_type)
+            elif configuration == Configuration.CharacterToCharacter:
+                result = OCRCharacterDataset(
+                    self._arguments_service,
+                    self._file_service,
+                    self._tokenizer_service,
+                    self._vocabulary_service,
+                    self._metrics_service,
+                    self._log_service,
+                    self._pretrained_representations_service,
+                    self._data_service,
                     run_type)
             elif configuration == Configuration.RNNSimple:
                 result = NERDataset(

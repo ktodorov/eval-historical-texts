@@ -44,7 +44,7 @@ class DataService:
             print("Failed saving {}, continue anyway".format(name))
             return False
 
-    def load_python_obj(self, path: str, name: str) -> object:
+    def load_python_obj(self, path: str, name: str, extension_included: bool = False) -> object:
         """Loads python object from disk if is pickled already
 
         :param path: path to the folder where the object pickle is located
@@ -56,7 +56,8 @@ class DataService:
         """
         obj = None
         try:
-            filepath = os.path.join(path, f'{name}.pickle')
+            extension = '' if extension_included else '.pickle'
+            filepath = os.path.join(path, f'{name}{extension}')
             with (open(filepath, "rb")) as openfile:
                 obj = pickle.load(openfile)
 

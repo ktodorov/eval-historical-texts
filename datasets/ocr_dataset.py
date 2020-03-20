@@ -16,6 +16,7 @@ from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
+from services.data_service import DataService
 
 from preprocessing.ocr_preprocessing import preprocess_data
 
@@ -32,12 +33,14 @@ class OCRDataset(DatasetBase):
             metrics_service: MetricsService,
             log_service: LogService,
             pretrained_representations_service: PretrainedRepresentationsService,
+            data_service: DataService,
             run_type: RunType):
         super(OCRDataset, self).__init__()
 
         self._tokenizer_service = tokenizer_service
         self._metrics_service = metrics_service
         self._vocabulary_service = vocabulary_service
+        self._data_service = data_service
 
         self._device = arguments_service.device
         self._pretrained_representations_service = pretrained_representations_service
@@ -53,8 +56,7 @@ class OCRDataset(DatasetBase):
             log_service,
             language_data_path,
             run_type,
-            arguments_service.train_dataset_limit_size if run_type == RunType.Train else arguments_service.validation_dataset_limit_size,
-            arguments_service.max_articles_length)
+            arguments_service.train_dataset_limit_size if run_type == RunType.Train else arguments_service.validation_dataset_limit_size)
 
     def _get_language_data_path(
             self,
@@ -77,8 +79,7 @@ class OCRDataset(DatasetBase):
             log_service: LogService,
             language_data_path: str,
             run_type: RunType,
-            reduction: float,
-            max_articles_length: int):
+            reduction: float):
 
         language_data = LanguageData()
         language_data.load_data(language_data_path)

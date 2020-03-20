@@ -130,10 +130,10 @@ class TransformerModel(ModelBase):
         # output = [batch size, trg len, output dim]
         # attention = [batch size, n heads, trg len, src len]
 
-        return output, targets, lengths
+        return output, targets
 
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, targets, _ = outputs
+        output, targets = outputs
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()
 
