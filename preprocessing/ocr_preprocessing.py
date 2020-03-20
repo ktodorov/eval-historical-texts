@@ -17,12 +17,14 @@ from utils import path_utils
 from services.vocabulary_service import VocabularyService
 from services.tokenizer_service import TokenizerService
 from services.metrics_service import MetricsService
+from services.data_service import DataService
 
 
 def preprocess_data(
         tokenizer_service: TokenizerService,
         metrics_service: MetricsService,
         vocabulary_service: VocabularyService,
+        data_service: DataService,
         pickles_path: str,
         full_data_path: str,
         data_output_path: str):
@@ -31,6 +33,7 @@ def preprocess_data(
         tokenizer_service,
         metrics_service,
         vocabulary_service,
+        data_service,
         pickles_path,
         full_data_path)
 
@@ -46,44 +49,26 @@ def preprocess_data(
         pickle.dump(validation_language_data, validation_handle, protocol=-1)
 
 
-def cut_string(text: str, chunk_length: int):
-    result = [text[i:i+chunk_length]
-              for i in range(0, len(text), chunk_length)]
-    return result
-
-
-def read_ocr_file(file_path: str, start_position: int) -> List[Tuple[str, str]]:
-    with open(file_path, 'r', encoding='utf-8') as language_file:
-        text_data: List[str] = language_file.read().split('\n')
-
-        string_length = 50
-        ocr_strings = cut_string(text_data[1][start_position:], string_length)
-        gs_strings = cut_string(text_data[2][start_position:], string_length)
-
-        if len(ocr_strings) != len(gs_strings):
-            return None
-
-        return [(ocr_strings[i], gs_strings[i]) for i in range(len(ocr_strings))]
-
-
-def save_data_files(full_data_path: str, full_ocr_path: str, full_gs_path: str):
+def save_data_files(
+    data_service: DataService,
+    full_data_path: str,
+    full_ocr_path: str,
+    full_gs_path: str):
     ocr_aligned_lengths = []
     gs_aligned_lengths = []
     file_paths = []
+    file_names = os.listdir(full_data_path)
+    number_of_files = len(file_names)
 
-    for i, file_name in enumerate(os.listdir(full_data_path)):
-        file_paths.append(os.path.join(full_data_path, file_name))
+    ocr_file_data = []
+    gs_file_data = []
 
-    number_of_files = len(file_paths)
-    file_data = []
-    for i, file_path in enumerate(file_paths):
+    for i, file_name in enumerate(file_names):
         print(f'{i}/{number_of_files}             \r', end='')
-        result = read_ocr_file(file_path, start_position=14)
-        if result is not None:
-            file_data.extend(result)
+        result = data_service.load_python_obj(full_data_path, file_name, extension_included=True)
 
-    ocr_file_data = [x[0] for x in file_data]
-    gs_file_data = [x[1] for x in file_data]
+        ocr_file_data.extend(result[0])
+        gs_file_data.extend(result[1])
 
     with open(full_ocr_path, 'wb') as ocr_handle:
         pickle.dump(ocr_file_data, ocr_handle, protocol=-1)
@@ -95,15 +80,17 @@ def save_data_files(full_data_path: str, full_ocr_path: str, full_gs_path: str):
 
 
 def read_data(
+        tokenizer_service: TokenizerService,
+        data_service: DataService,
         full_data_path: str,
         full_ocr_path: str,
         full_gs_path: str,
         full_ocr_tokens_path: str,
-        full_gs_tokens_path: str,
-        tokenizer_service: TokenizerService):
+        full_gs_tokens_path: str):
 
     if not os.path.exists(full_ocr_path) or not os.path.exists(full_gs_path):
         ocr_file_data, gs_file_data = save_data_files(
+            data_service,
             full_data_path,
             full_ocr_path,
             full_gs_path)
@@ -235,7 +222,7 @@ def parse_metrics_obj(
             levenshtein_distances.append(
                 metrics_service.calculate_normalized_levenshtein_distance(decoded_pair[0], decoded_pair[1]))
 
-            if i % 50000 == 0:
+            if i % 150000 == 0:
                 save_metrics_obj(token_pairs, decoded_pairs,
                                  jaccard_similarities, levenshtein_distances, pickles_path)
 
@@ -248,6 +235,7 @@ def parse_metrics_obj(
 def load_split_data(
         tokenizer_service: TokenizerService,
         metrics_service: MetricsService,
+        data_service: DataService,
         full_data_path: str,
         full_ocr_path: str,
         full_gs_path: str,
@@ -259,12 +247,13 @@ def load_split_data(
 
     if not os.path.exists(train_pickle_path) or not os.path.exists(validation_pickle_path):
         ocr_file_data, gs_file_data, ocr_tokens, gs_tokens = read_data(
+            tokenizer_service,
+            data_service,
             full_data_path,
             full_ocr_path,
             full_gs_path,
             full_ocr_tokens_path,
-            full_gs_tokens_path,
-            tokenizer_service)
+            full_gs_tokens_path)
 
         token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = parse_metrics_obj(
             tokenizer_service,
@@ -286,11 +275,6 @@ def load_split_data(
             eval_indices_dict[i] = True
 
         train_pairs = [ [token_pairs[i], decoded_pairs[i]] for i in range(len(token_pairs)) if not eval_indices_dict[i]]
-        # for i in range(len(token_pairs)):
-        #     if i in eval_indices:
-        #         eval_pairs.append([token_pairs[i], decoded_pairs[i]])
-        #     else:
-        #         train_pairs.append([token_pairs[i], decoded_pairs[i]])
 
         with open(train_pickle_path, 'wb') as train_handle:
             pickle.dump(train_pairs, train_handle, protocol=-1)
@@ -311,6 +295,7 @@ def parse_language_data(
         tokenizer_service: TokenizerService,
         metrics_service: MetricsService,
         vocabulary_service: VocabularyService,
+        data_service: DataService,
         pickles_path: str,
         full_data_path: str) -> LanguageData:
 
@@ -328,6 +313,7 @@ def parse_language_data(
     train_pairs, validation_pairs = load_split_data(
         tokenizer_service,
         metrics_service,
+        data_service,
         full_data_path,
         full_ocr_path,
         full_gs_path,

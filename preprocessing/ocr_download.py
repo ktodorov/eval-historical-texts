@@ -14,28 +14,56 @@ from transformers import PreTrainedTokenizer
 from entities.language_data import LanguageData
 from utils import path_utils
 
+from services.data_service import DataService
+
 ocr_prefix = '[OCR_toInput] '
 ocr_aligned_prefix = '[OCR_aligned] '
 gs_prefix = '[ GS_aligned] '
 
 
-def combine_data(ocr_path: str, newseye_path: str, trove_path: str):
+def combine_data(
+        data_service: DataService,
+        output_path: str,
+        newseye_path: str,
+        trove_path: str):
     newseye_2017_path = os.path.join(newseye_path, '2017')
     newseye_2019_path = os.path.join(newseye_path, '2019')
 
-    move_data(newseye_2017_path, ocr_path, 'newseye-2017')
-    move_data(newseye_2019_path, ocr_path, 'newseye-2019')
+    process_newseye_files(newseye_2017_path, output_path,
+                          'newseye-2017', data_service)
+    process_newseye_files(newseye_2019_path, output_path,
+                          'newseye-2019', data_service)
 
-    # if not os.path.exists(trove_path):
-    #     os.mkdir(trove_path)
-    #     download_trove_files(trove_path)
+    if not os.path.exists(trove_path):
+        os.mkdir(trove_path)
+        download_trove_files(trove_path)
 
-    # move_trove_data(trove_path, ocr_path, 'trove')
-    # combine_full_data(ocr_path)
+    process_trove_files(trove_path, output_path, 'trove', data_service)
+    # combine_full_data(output_path)
 
 
-def move_data(data_path: str, output_path: str, unique_prefix: str):
+def cut_string(text: str, chunk_length: int):
+    string_chunks = [
+        text[i:i+chunk_length].replace('#', '').replace('@', '')
+        for i in range(0, len(text), chunk_length)]
+
+    return string_chunks
+
+
+def process_newseye_files(
+        data_path: str,
+        output_path: str,
+        unique_prefix: str,
+        data_service: DataService,
+        start_position: int = 14,
+        max_string_length: int = 50):
+    ocr_sequences = []
+    gs_sequences = []
+
     for subdir_name in os.listdir(data_path):
+        if subdir_name != 'full':
+            continue
+
         subdir_path = os.path.join(data_path, subdir_name)
         if not os.path.isdir(subdir_path):
             continue
@@ -48,35 +76,69 @@ def move_data(data_path: str, output_path: str, unique_prefix: str):
             for data_file_name in os.listdir(language_path):
                 data_file_path = os.path.join(language_path, data_file_name)
                 with open(data_file_path, 'r', encoding='utf-8') as data_file:
-                    data_file_text = data_file.read()
-                    # data_file_text = data_file_text.replace('#', '')
-                    # data_file_text = data_file_text.replace('@', '')
-                    output_file_path = os.path.join(
-                        output_path, subdir_name, f'{unique_prefix}_{data_file_name}')
-                    with open(output_file_path, 'w', encoding='utf-8') as output_file:
-                        output_file.write(data_file_text)
+                    data_file_text = data_file.read().split('\n')
+                    ocr_strings = cut_string(
+                        data_file_text[1][start_position:], max_string_length)
+                    gs_strings = cut_string(
+                        data_file_text[2][start_position:], max_string_length)
+
+                    ocr_sequences.extend(ocr_strings)
+                    gs_sequences.extend(gs_strings)
+
+    max_length = 100
+    empty_sequences_indices = [True if (ocr_sequences[i] == '' or gs_sequences[i] == '' or len(
+        ocr_sequences[i]) > max_length or len(gs_sequences[i]) > max_length) else False for i in range(len(ocr_sequences))]
+    ocr_sequences = [ocr_sequences[i] for i in range(
+        len(ocr_sequences)) if not empty_sequences_indices[i]]
+    gs_sequences = [gs_sequences[i] for i in range(
+        len(gs_sequences)) if not empty_sequences_indices[i]]
+
+    data_service.save_python_obj(
+        (ocr_sequences, gs_sequences),
+        output_path,
+        unique_prefix)
 
 
-def move_trove_data(data_path: str, output_path: str, unique_prefix: str):
-    output_full_path = os.path.join(output_path, 'full')
-    output_train_path = os.path.join(output_path, 'train')
-    output_eval_path = os.path.join(output_path, 'eval')
-    process_trove_files(data_path, output_full_path, unique_prefix)
+def process_trove_files(
+        data_path: str,
+        output_full_path: str,
+        unique_prefix: str,
+        data_service: DataService):
+    title_prefix = '*$*OVERPROOF*$*'
+    separator = '||@@||'
 
-    trove_file_names = list(filter(lambda x: x.startswith(
-        'trove'), os.listdir(output_full_path)))
+    ocr_sequences = []
+    gs_sequences = []
 
-    eval_indices = random.sample(
-        range(len(trove_file_names)), int(0.3 * len(trove_file_names)))
+    for data_file_name in os.listdir(data_path):
 
-    for i, trove_file_name in enumerate(trove_file_names):
-        trove_file_path = os.path.join(output_full_path, trove_file_name)
-        if i in eval_indices:
-            eval_file_path = os.path.join(output_eval_path, trove_file_name)
-            copyfile(trove_file_path, eval_file_path)
-        else:
-            train_file_path = os.path.join(output_train_path, trove_file_name)
-            copyfile(trove_file_path, train_file_path)
+        data_file_path = os.path.join(data_path, data_file_name)
+        with open(data_file_path, 'r', encoding='utf-8') as data_file:
+            file_content_lines = data_file.readlines()
+            for file_line in file_content_lines:
+                if file_line.startswith(title_prefix) or file_line == separator:
+                    continue
+
+                text_strings = file_line.split(separator)
+                text_strings = [text_string.replace(
+                    '#', '') for text_string in text_strings]
+                text_strings = [text_string.replace(
+                    '@', '') for text_string in text_strings]
+                text_strings = [text_string.replace(
+                    '\n', '') for text_string in text_strings]
+
+                ocr_sequences.append(text_strings[0])
+                gs_sequences.append(text_strings[1])
+
+    empty_sequences_indices = [True if ocr_sequences[i] ==
+                               '' or gs_sequences[i] == '' else False for i in range(len(ocr_sequences))]
+    ocr_sequences = [ocr_sequences[i] for i in range(
+        len(ocr_sequences)) if not empty_sequences_indices[i]]
+    gs_sequences = [gs_sequences[i] for i in range(
+        len(gs_sequences)) if not empty_sequences_indices[i]]
+
+    data_service.save_python_obj(
+        (ocr_sequences, gs_sequences), output_full_path, 'trove-data', print_success=True)
 
 
 def download_trove_files(output_path: str):
@@ -99,57 +161,6 @@ def download_trove_files(output_path: str):
     dataset3_file_url = 'http://overproof.projectcomputing.com/datasets/dataset3/rawTextAndHumanCorrectionAndOverproofCorrectionTriples/allArticles.txt'
     urllib.request.urlretrieve(
         dataset3_file_url, os.path.join(output_path, f'd3.txt'))
-
-
-def process_trove_files(data_path: str, output_full_path: str, unique_prefix: str):
-    title_prefix = '*$*OVERPROOF*$*'
-    separator = '||@@||'
-
-    counter = 0
-
-    for data_file_name in os.listdir(data_path):
-        articles_ocr = []
-        articles_gs = []
-
-        data_file_path = os.path.join(data_path, data_file_name)
-        with open(data_file_path, 'r', encoding='utf-8') as data_file:
-            file_content_lines = data_file.readlines()
-            current_article_ocr = []
-            current_article_gs = []
-            for file_line in file_content_lines:
-
-                if file_line.startswith(title_prefix):
-                    if len(current_article_gs) > 0:
-                        gs_text = ' '.join(current_article_gs)
-                        articles_gs.append(gs_text)
-                        ocr_text = ' '.join(current_article_ocr)
-                        articles_ocr.append(ocr_text)
-
-                        current_article_gs = []
-                        current_article_ocr = []
-                    continue
-
-                if file_line == separator:
-                    continue
-
-                text_strings = file_line.split(separator)
-                # text_strings = [text_string.replace(
-                #     '#', '') for text_string in text_strings]
-                # text_strings = [text_string.replace(
-                #     '@', '') for text_string in text_strings]
-                text_strings = [text_string.replace(
-                    '\n', '') for text_string in text_strings]
-
-                current_article_ocr.append(text_strings[0])
-                current_article_gs.append(text_strings[1])
-
-        for i in range(len(articles_gs)):
-            with open(os.path.join(output_full_path, f'{unique_prefix}-{counter}.txt'), 'w', encoding='utf-8') as article_file:
-                article_file.write(f'{ocr_prefix}\n')
-                article_file.write(f'{ocr_aligned_prefix}{articles_ocr[i]}\n')
-                article_file.write(f'{gs_prefix}{articles_gs[i]}\n')
-
-            counter += 1
 
 
 def combine_full_data(output_path: str):
