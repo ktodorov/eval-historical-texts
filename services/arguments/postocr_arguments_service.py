@@ -10,7 +10,7 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
         super().__init__()
 
     def get_configuration_name(self) -> str:
-        result = self.configuration
+        result = str(self.configuration)
         if self.configuration == Configuration.SequenceToCharacter:
             result = 'seq-to-char'
         elif self.configuration == Configuration.TransformerSequence:

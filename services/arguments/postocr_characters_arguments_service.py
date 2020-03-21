@@ -10,7 +10,7 @@ class PostOCRCharactersArgumentsService(PretrainedArgumentsService):
         super().__init__()
 
     def get_configuration_name(self) -> str:
-        result = self.configuration
+        result = str(self.configuration)
 
         if self.include_pretrained_model:
             result += '-pretr'
