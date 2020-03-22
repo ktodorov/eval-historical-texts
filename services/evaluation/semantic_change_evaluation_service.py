@@ -131,3 +131,5 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
             threshold=np.median(distances)
         else:
             threshold=np.mean(distances)
+
+        return threshold
