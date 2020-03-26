@@ -39,6 +39,9 @@ from services.arguments.ner_arguments_service import NERArgumentsService
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 
+from services.process.process_service_base import ProcessServiceBase
+from services.process.ner_process_service import NERProcessService
+
 from services.data_service import DataService
 from services.dataloader_service import DataLoaderService
 from services.dataset_service import DatasetService
@@ -195,6 +198,7 @@ def register_model(
         log_service: LogService,
         vocabulary_service: VocabularyService,
         model_service: ModelService,
+        process_service: ProcessServiceBase,
         joint_model: bool,
         configuration: Configuration):
 
@@ -252,7 +256,8 @@ def register_model(
                 NERRNNModel,
                 arguments_service=arguments_service,
                 data_service=data_service,
-                metrics_service=metrics_service
+                metrics_service=metrics_service,
+                process_service=process_service
             )
 
     elif joint_model:
@@ -264,6 +269,22 @@ def register_model(
         )
 
     return model
+
+
+def register_process_service(
+    challenge: Challenge,
+    arguments_service: ArgumentsServiceBase,
+    file_service: FileService,
+    tokenizer_service: TokenizerService):
+    process_service = None
+    if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
+        process_service = providers.Singleton(
+            NERProcessService,
+            arguments_service=arguments_service,
+            file_service=file_service,
+            tokenizer_service=tokenizer_service)
+
+    return process_service
 
 
 class IocContainer(containers.DeclarativeContainer):
@@ -337,6 +358,12 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service
     )
 
+    process_service = register_process_service(
+        challenge,
+        arguments_service,
+        file_service,
+        tokenizer_service)
+
     dataset_service = providers.Factory(
         DatasetService,
         arguments_service=arguments_service,
@@ -347,7 +374,8 @@ class IocContainer(containers.DeclarativeContainer):
         pretrained_representations_service=pretrained_representations_service,
         vocabulary_service=vocabulary_service,
         metrics_service=metrics_service,
-        data_service=data_service
+        data_service=data_service,
+        process_service=process_service
     )
 
     dataloader_service = providers.Factory(
@@ -372,6 +400,7 @@ class IocContainer(containers.DeclarativeContainer):
         log_service=log_service,
         vocabulary_service=vocabulary_service,
         model_service=model_service,
+        process_service=process_service,
         joint_model=joint_model,
         configuration=configuration)
 

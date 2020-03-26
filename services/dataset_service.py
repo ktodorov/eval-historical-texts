@@ -20,6 +20,7 @@ from services.pretrained_representations_service import PretrainedRepresentation
 from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
+from services.process.process_service_base import ProcessServiceBase
 
 
 class DatasetService:
@@ -33,7 +34,8 @@ class DatasetService:
         metrics_service: MetricsService,
         pretrained_representations_service: PretrainedRepresentationsService,
         vocabulary_service: VocabularyService,
-        data_service: DataService):
+        data_service: DataService,
+        process_service: ProcessServiceBase):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
@@ -44,6 +46,7 @@ class DatasetService:
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
         self._data_service = data_service
+        self._process_service = process_service
 
     def get_dataset(self, run_type: RunType, language: str) -> DatasetBase:
         """Loads and returns the dataset based on run type ``(Train, Validation, Test)`` and the language
@@ -112,9 +115,8 @@ class DatasetService:
             elif configuration == Configuration.RNNSimple:
                 result = NERDataset(
                     self._arguments_service,
-                    self._file_service,
-                    self._tokenizer_service,
                     self._pretrained_representations_service,
+                    self._process_service,
                     run_type)
 
         elif joint_model:

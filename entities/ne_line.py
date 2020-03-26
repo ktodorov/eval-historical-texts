@@ -37,10 +37,6 @@ class NELine:
             csv_row, 'NEL-METO', self.nel_meto, use_none_if_empty=True)
 
     def tokenize_text(self, tokenizer_service: TokenizerService):
-
-        if (self.tokens[0] == '«'):
-            a = 0
-
         text = self.get_text()
         offsets = self.get_token_offsets()
 

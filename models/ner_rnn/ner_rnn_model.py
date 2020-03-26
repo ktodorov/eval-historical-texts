@@ -16,6 +16,7 @@ from models.model_base import ModelBase
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
+from services.process.ner_process_service import NERProcessService
 
 
 class NERRNNModel(ModelBase):
@@ -23,7 +24,8 @@ class NERRNNModel(ModelBase):
             self,
             arguments_service: NERArgumentsService,
             data_service: DataService,
-            metrics_service: MetricsService):
+            metrics_service: MetricsService,
+            process_service: NERProcessService):
         super().__init__(data_service)
 
         self._include_pretrained = arguments_service.include_pretrained_model
@@ -32,7 +34,7 @@ class NERRNNModel(ModelBase):
 
         self._metrics_service = metrics_service
         self._metric_types = arguments_service.metric_types
-        number_of_tags = 11 if arguments_service.label_type == NERType.Coarse else 38
+        number_of_tags = process_service.get_labels_amount()
 
         # maps each token to an embedding_dim vector
         lstm_input_size = additional_size

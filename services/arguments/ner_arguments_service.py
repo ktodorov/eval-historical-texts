@@ -11,6 +11,8 @@ class NERArgumentsService(PretrainedArgumentsService):
 
     def get_configuration_name(self) -> str:
         result = f'ner-{str(self.language)}'
+        result += f'-{str(self.label_type)}'
+
         if self.include_pretrained_model:
             result += '-pretr'
 
