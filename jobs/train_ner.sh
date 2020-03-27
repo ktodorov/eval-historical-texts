@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=mult-emb
+#SBATCH --job-name=ner-pre
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=3
 #SBATCH --ntasks-per-node=1
@@ -24,7 +24,10 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-srun python3 -u run.py --device cuda --seed 13 --configuration multi-fit --learning-rate 1e-3 --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 4 --hidden-dimension 256 --embedding-size 64 --dropout 0 --number-of-layers 1 --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4320 --learn-new-embeddings --validation-dataset-limit-size 1000 > output/multifit-13.txt
+LABELTYPE='coarse'
+LANGUAGE='french'
+
+srun python3 -u run.py --device cuda --eval-freq 100 --seed 13 --configuration rnn-simple --learning-rate 1e-4 --metric-types f1-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights bert-base-multilingual-cased --hidden-dimension 256 --embeddings-size 64 --label-type $LABELTYPE --reset-training-on-early-stop --training-reset-epoch-limit 5 --include-pretrained-model --pretrained-model-size 768 --pretrained-max-length 512 --learn-new-embeddings --checkpoint-name $LANGUAGE-$LABELTYPE-pretr > output/ner-bert-$LANGUAGE-$LABELTYPE-13.txt
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/

@@ -24,7 +24,7 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-srun python3 -u run.py --device cuda --seed 13 --configuration sequence-to-char --learning-rate 1e-3 --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 32 --hidden-dimension 256 --pretrained-vocabulary-size 30522 --encoder-embedding-size 128 --decoder-embedding-size 16 --dropout 0 --number-of-layers 1 --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4320 --include-pretrained-model --pretrained-model-size 768 --pretrained-max-length 512 --validation-dataset-limit-size 1000 > output/seq-bert-13.txt
+srun python3 -u run.py --device cuda --seed 13 --configuration sequence-to-char --learning-rate 1e-3 --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 32 --hidden-dimension 256 --encoder-embedding-size 128 --decoder-embedding-size 16 --dropout 0 --number-of-layers 1 --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4320 --include-pretrained-model --pretrained-model-size 768 --pretrained-max-length 512 --validation-dataset-limit-size 1000 > output/seq-bert-13.txt
 
-cp "$TMPDIR"/eval-historical-texts/wandb $HOME/eval-historical-texts/wandb
-cp "$TMPDIR"/eval-historical-texts/results $HOME/eval-historical-texts/results/from-scratch/seq-to-char-no-embeddings
+cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
+cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/
