@@ -10,7 +10,7 @@ class KXLNetModel(KBertModel):
         self,
         arguments_service: ArgumentsServiceBase,
         data_service: DataService):
-        super(KXLNetModel, self).__init__(arguments_service, data_service)
+        super(KXLNetModel, self).__init__(data_service, arguments_service)
 
 
     def forward(self, input_batch, **kwargs):

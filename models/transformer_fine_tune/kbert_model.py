@@ -17,7 +17,7 @@ class KBertModel(ModelBase):
             arguments_service: SemanticArgumentsService,
             data_service: DataService,
             output_hidden_states: bool = False):
-        super(KBertModel, self).__init__(data_service)
+        super(KBertModel, self).__init__(data_service, arguments_service)
 
         self._output_hidden_states = output_hidden_states
 

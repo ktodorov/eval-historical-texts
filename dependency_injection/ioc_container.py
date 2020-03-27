@@ -42,11 +42,13 @@ from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.process.process_service_base import ProcessServiceBase
 from services.process.ner_process_service import NERProcessService
 
+from services.evaluation.base_evaluation_service import BaseEvaluationService
+from services.evaluation.semantic_change_evaluation_service import SemanticChangeEvaluationService
+from services.evaluation.ner_evaluation_service import NEREvaluationService
+
 from services.data_service import DataService
 from services.dataloader_service import DataLoaderService
 from services.dataset_service import DatasetService
-from services.evaluation.base_evaluation_service import BaseEvaluationService
-from services.evaluation.semantic_change_evaluation_service import SemanticChangeEvaluationService
 from services.file_service import FileService
 from services.log_service import LogService
 from services.mask_service import MaskService
@@ -166,6 +168,7 @@ def register_evaluation_service(
         file_service: FileService,
         plot_service: PlotService,
         metrics_service: MetricsService,
+        process_service: ProcessServiceBase,
         joint_model: bool,
         configuration: Configuration):
     evaluation_service = None
@@ -178,11 +181,19 @@ def register_evaluation_service(
             plot_service=plot_service,
             metrics_service=metrics_service
         )
+    elif configuration == Configuration.RNNSimple:
+        evaluation_service = providers.Factory(
+            NEREvaluationService,
+            arguments_service=arguments_service,
+            file_service=file_service,
+            plot_service=plot_service,
+            metrics_service=metrics_service,
+            process_service=process_service
+        )
     elif (configuration == Configuration.MultiFit or
           configuration == Configuration.SequenceToCharacter or
           configuration == Configuration.TransformerSequence or
-          configuration == Configuration.CharacterToCharacter or
-          configuration == Configuration.RNNSimple):
+          configuration == Configuration.CharacterToCharacter):
         evaluation_service = providers.Factory(BaseEvaluationService)
 
     return evaluation_service
@@ -257,7 +268,8 @@ def register_model(
                 arguments_service=arguments_service,
                 data_service=data_service,
                 metrics_service=metrics_service,
-                process_service=process_service
+                process_service=process_service,
+                tokenizer_service=tokenizer_service
             )
 
     elif joint_model:
@@ -424,6 +436,7 @@ class IocContainer(containers.DeclarativeContainer):
         file_service=file_service,
         plot_service=plot_service,
         metrics_service=metrics_service,
+        process_service=process_service,
         joint_model=joint_model,
         configuration=configuration)
 

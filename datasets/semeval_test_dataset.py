@@ -32,6 +32,7 @@ class SemEvalTestDataset(DatasetBase):
 
         with open(targets_path, 'r', encoding='utf-8') as targets_file:
             self._target_words = targets_file.read().splitlines()
+            self._target_words.sort(key=lambda v: v.upper())
 
         # English words end with POS tags (e.g. 'test_nn')
         if language == Language.English:

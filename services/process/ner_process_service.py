@@ -30,7 +30,7 @@ class NERProcessService(ProcessServiceBase):
         self._label_type = arguments_service.label_type
 
         data_path = file_service.get_data_path()
-        language_suffix = self._get_language_suffix(arguments_service.language)
+        language_suffix = self.get_language_suffix(arguments_service.language)
 
         self._train_ne_collection = self.preprocess_data(
             os.path.join(
@@ -79,7 +79,7 @@ class NERProcessService(ProcessServiceBase):
         else:
             return self._validation_ne_collection
 
-    def _get_language_suffix(self, language: Language):
+    def get_language_suffix(self, language: Language):
         if language == Language.English:
             return 'en'
         elif language == Language.French:
@@ -115,8 +115,30 @@ class NERProcessService(ProcessServiceBase):
         else:
             raise Exception('Unsupported NER type for labels')
 
+    def get_entity_by_label(self, label: int) -> str:
+        if self._label_type == NERType.Coarse:
+            for entity, entity_label in self._coarse_entity_mapping.items():
+                if label == entity_label:
+                    if entity is None:
+                        return 'O'
+
+                    return entity
+        elif self._label_type == NERType.Fine:
+            for entity, entity_label in self._fine_entity_mapping.items():
+                if label == entity_label:
+                    if entity is None:
+                        return 'O'
+
+                    return entity
+
+        raise Exception('Entity not found for this label')
+
     def get_labels_amount(self) -> int:
         if self._label_type == NERType.Coarse:
             return len(self._coarse_entity_mapping)
         elif self._label_type == NERType.Fine:
             return len(self._fine_entity_mapping)
+
+    def get_position_changes(self, idx: int) -> list:
+        result = self._validation_ne_collection.lines[idx].position_changes
+        return result

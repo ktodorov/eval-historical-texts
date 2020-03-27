@@ -18,7 +18,7 @@ class JointModel(ModelBase):
             arguments_service: SemanticArgumentsService,
             data_service: DataService,
             model_service: ModelService):
-        super(JointModel, self).__init__(data_service)
+        super(JointModel, self).__init__(data_service, arguments_service)
 
         self._number_of_models: int = arguments_service.joint_model_amount
 

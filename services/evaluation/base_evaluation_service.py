@@ -8,7 +8,11 @@ from enums.evaluation_type import EvaluationType
 
 class BaseEvaluationService:
 
-    def evaluate_batch(self, output: torch.Tensor, evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
+    def evaluate_batch(
+            self,
+            output: torch.Tensor,
+            evaluation_types: List[EvaluationType],
+            batch_index: int) -> Dict[EvaluationType, List]:
         """Evaluates the generated output based on the chosen evaluation types
 
         :param output: the generated output from the model

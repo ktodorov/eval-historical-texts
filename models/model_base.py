@@ -18,10 +18,12 @@ from services.arguments.arguments_service_base import ArgumentsServiceBase
 class ModelBase(nn.Module):
     def __init__(
             self,
-            data_service: DataService):
+            data_service: DataService,
+            arguments_service: ArgumentsServiceBase):
         super(ModelBase, self).__init__()
 
         self._data_service = data_service
+        self._arguments_service = arguments_service
 
     def forward(self):
         return None
@@ -81,6 +83,8 @@ class ModelBase(nn.Module):
 
     def _get_model_name(self, name_prefix: str = None) -> str:
         result = 'checkpoint'
+        if self._arguments_service.checkpoint_name is not None:
+            result = self._arguments_service.checkpoint_name
 
         if name_prefix:
             result = f'{name_prefix}_{result}'

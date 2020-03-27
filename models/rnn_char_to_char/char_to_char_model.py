@@ -25,7 +25,7 @@ class CharToCharModel(ModelBase):
             vocabulary_service: VocabularyService,
             data_service: DataService,
             metrics_service: MetricsService):
-        super().__init__(data_service)
+        super().__init__(data_service, arguments_service)
 
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service

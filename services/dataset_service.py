@@ -62,12 +62,19 @@ class DatasetService:
         joint_model: bool = self._arguments_service.joint_model
         configuration: Configuration = self._arguments_service.configuration
 
-        if run_type == RunType.Test and (configuration == Configuration.KBert or configuration == Configuration.XLNet):
-            return SemEvalTestDataset(
-                language,
-                self._arguments_service,
-                self._tokenizer_service,
-                self._file_service)
+        if run_type == RunType.Test:
+            if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+                return SemEvalTestDataset(
+                    language,
+                    self._arguments_service,
+                    self._tokenizer_service,
+                    self._file_service)
+            elif configuration == Configuration.RNNSimple:
+                return NERDataset(
+                    self._arguments_service,
+                    self._pretrained_representations_service,
+                    self._process_service,
+                    RunType.Validation)
 
         if not joint_model:
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):

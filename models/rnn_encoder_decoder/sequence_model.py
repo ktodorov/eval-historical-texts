@@ -34,7 +34,7 @@ class SequenceModel(ModelBase):
             metrics_service: MetricsService,
             log_service: LogService,
             vocabulary_service: VocabularyService):
-        super(SequenceModel, self).__init__(data_service)
+        super(SequenceModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
         self._log_service = log_service

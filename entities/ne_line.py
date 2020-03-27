@@ -14,6 +14,7 @@ class NELine:
         self.ne_nested = []
         self.nel_lit = []
         self.nel_meto = []
+        self.position_changes = None
 
     def add_data(self, csv_row: dict):
         self._add_entity_if_available(csv_row, 'TOKEN', self.tokens)
@@ -40,7 +41,6 @@ class NELine:
         text = self.get_text()
         offsets = self.get_token_offsets()
 
-
         token_ids, encoded_tokens, encoded_offsets, _ = tokenizer_service.encode_sequence(
             text)
 
@@ -58,9 +58,12 @@ class NELine:
             new_nel_lit = self.nel_lit
             new_nel_meto = self.nel_meto
 
+            position_changes = {}
             corresponding_counter = 0
 
             for i, token in enumerate(self.tokens):
+                position_changes[i] = [corresponding_counter]
+
                 while corresponding_counter < len(encoded_tokens) and encoded_offsets[corresponding_counter][1] < offsets[i][1]:
 
                     # we copy the value of the original token
@@ -82,6 +85,7 @@ class NELine:
                         corresponding_counter, self.nel_meto[i])
 
                     corresponding_counter += 1
+                    position_changes[i].append(corresponding_counter)
 
                 corresponding_counter += 1
 
@@ -95,6 +99,7 @@ class NELine:
             self.ne_nested = new_ne_nested
             self.nel_lit = new_nel_lit
             self.nel_meto = new_nel_meto
+            self.position_changes = position_changes
 
         assert len(token_ids) == len(encoded_tokens)
         assert len(token_ids) == len(self.ne_coarse_lit)

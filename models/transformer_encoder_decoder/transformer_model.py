@@ -31,7 +31,7 @@ class TransformerModel(ModelBase):
             metrics_service: MetricsService,
             log_service: LogService,
             tokenizer_service: TokenizerService):
-        super().__init__(data_service)
+        super().__init__(data_service, arguments_service)
 
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
@@ -42,7 +42,7 @@ class TransformerModel(ModelBase):
         self._metric_types = arguments_service.metric_types
 
         self.encoder = TransformerEncoder(
-            input_dim=arguments_service.pretrained_vocabulary_size,
+            input_dim=tokenizer_service.vocabulary_size,
             hid_dim=arguments_service.hidden_dimension,
             n_layers=arguments_service.number_of_layers,
             n_heads=arguments_service.number_of_heads,

@@ -30,7 +30,7 @@ class MultiFitModel(ModelBase):
             tokenizer_service: TokenizerService,
             metrics_service: MetricsService,
             log_service: LogService):
-        super(MultiFitModel, self).__init__(data_service)
+        super(MultiFitModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
         self._log_service = log_service
@@ -39,13 +39,13 @@ class MultiFitModel(ModelBase):
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
 
-        self._output_dimension = arguments_service.pretrained_vocabulary_size
+        self._output_dimension = tokenizer_service.vocabulary_size
 
         self._teacher_forcing_ratio = arguments_service.teacher_forcing_ratio
 
         self._encoder = SequenceEncoder(
             embedding_size=arguments_service.encoder_embedding_size,
-            input_size=arguments_service.pretrained_vocabulary_size,
+            input_size=tokenizer_service.vocabulary_size,
             hidden_dimension=arguments_service.hidden_dimension,
             number_of_layers=arguments_service.number_of_layers,
             dropout=arguments_service.dropout,

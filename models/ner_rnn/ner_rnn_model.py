@@ -16,6 +16,7 @@ from models.model_base import ModelBase
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
+from services.tokenizer_service import TokenizerService
 from services.process.ner_process_service import NERProcessService
 
 
@@ -25,8 +26,9 @@ class NERRNNModel(ModelBase):
             arguments_service: NERArgumentsService,
             data_service: DataService,
             metrics_service: MetricsService,
-            process_service: NERProcessService):
-        super().__init__(data_service)
+            process_service: NERProcessService,
+            tokenizer_service: TokenizerService):
+        super().__init__(data_service, arguments_service)
 
         self._include_pretrained = arguments_service.include_pretrained_model
         additional_size = arguments_service.pretrained_model_size if self._include_pretrained else 0
@@ -39,7 +41,7 @@ class NERRNNModel(ModelBase):
         # maps each token to an embedding_dim vector
         lstm_input_size = additional_size
         if self._learn_embeddings:
-            self.embedding = nn.Embedding(arguments_service.pretrained_vocabulary_size, arguments_service.embeddings_size)
+            self.embedding = nn.Embedding(tokenizer_service.vocabulary_size, arguments_service.embeddings_size)
             self.dropout = nn.Dropout(arguments_service.dropout)
             lstm_input_size += arguments_service.embeddings_size
 
@@ -104,4 +106,4 @@ class NERRNNModel(ModelBase):
         if best_metric.is_new:
             return True
 
-        return best_metric.get_accuracy_metric(MetricType.F1Score) <= new_metric.get_accuracy_metric(MetricType.F1Score)
+        return best_metric.get_current_loss() >= new_metric.get_current_loss()
