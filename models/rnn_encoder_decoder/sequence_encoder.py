@@ -19,7 +19,9 @@ class SequenceEncoder(nn.Module):
             include_pretrained: bool = False,
             pretrained_hidden_size: int = None,
             learn_embeddings: bool = True,
-            bidirectional: bool = False):
+            bidirectional: bool = False,
+            use_own_embeddings: bool = True,
+            shared_embeddings = None):
         super().__init__()
 
         assert learn_embeddings or include_pretrained
@@ -29,10 +31,17 @@ class SequenceEncoder(nn.Module):
         additional_size = pretrained_hidden_size if self._include_pretrained else 0
         self._learn_embeddings = learn_embeddings
         self._bidirectional = bidirectional
+        self._use_own_embeddings = use_own_embeddings
+        if not self._use_own_embeddings:
+            if shared_embeddings is None:
+                raise Exception('Shared embeddings not supplied')
+            self._shared_embeddings = shared_embeddings
 
         lstm_input_size = additional_size
         if learn_embeddings:
-            self.embedding = nn.Embedding(input_size, embedding_size)
+            if self._use_own_embeddings:
+                self.embedding = nn.Embedding(input_size, embedding_size)
+
             lstm_input_size += embedding_size
 
         self.rnn = nn.GRU(lstm_input_size, hidden_dimension,
@@ -41,7 +50,12 @@ class SequenceEncoder(nn.Module):
 
     def forward(self, input_batch, lengths, pretrained_representations, offset_lists, debug: bool = False, **kwargs):
         if self._learn_embeddings:
-            embedded = self.dropout(self.embedding(input_batch))
+            if self._use_own_embeddings:
+                embedded = self.embedding(input_batch)
+            else:
+                embedded = self._shared_embeddings(input_batch)
+
+            embedded = self.dropout(embedded)
 
             if self._include_pretrained:
                 embedded = self._pretrained_representations_service.add_pretrained_representations_to_character_embeddings(

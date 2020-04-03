@@ -31,6 +31,8 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
                             help='The size used for generating embeddings in the encoder')
         parser.add_argument('--decoder-embedding-size', type=int, default=16,
                             help='The size used for generating embeddings in the decoder')
+        parser.add_argument('--share-embedding-layer', action='store_true',
+                            help='If set to true, the embedding layer of the encoder and decoder will be shared')
         parser.add_argument('--hidden-dimension', type=int, default=256,
                             help='The dimension size used for hidden layers')
         parser.add_argument('--dropout', type=float, default=0.0,
@@ -58,6 +60,10 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
     @property
     def decoder_embedding_size(self) -> int:
         return self._get_argument('decoder_embedding_size')
+
+    @property
+    def share_embedding_layer(self) -> bool:
+        return self._get_argument('share_embedding_layer')
 
     @property
     def hidden_dimension(self) -> int:

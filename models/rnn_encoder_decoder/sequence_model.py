@@ -46,6 +46,12 @@ class SequenceModel(ModelBase):
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
 
+        self._shared_embeddings = None
+        if self._arguments_service.share_embedding_layer:
+            self._shared_embeddings = nn.Embedding(
+                vocabulary_service.vocabulary_size(),
+                self._arguments_service.encoder_embedding_size)
+
         self._encoder = SequenceEncoder(
             pretrained_representations_service=pretrained_representations_service,
             embedding_size=arguments_service.encoder_embedding_size,
@@ -56,7 +62,9 @@ class SequenceModel(ModelBase):
             include_pretrained=arguments_service.include_pretrained_model,
             pretrained_hidden_size=arguments_service.pretrained_model_size,
             learn_embeddings=arguments_service.learn_new_embeddings,
-            bidirectional=True
+            bidirectional=True,
+            use_own_embeddings=(not self._arguments_service.share_embedding_layer),
+            shared_embeddings=(lambda x: self._shared_embeddings(x))
         )
 
         self._decoder = SequenceDecoder(
@@ -64,7 +72,9 @@ class SequenceModel(ModelBase):
             output_dimension=vocabulary_service.vocabulary_size(),
             hidden_dimension=arguments_service.hidden_dimension * 2,
             number_of_layers=arguments_service.number_of_layers,
-            dropout=arguments_service.dropout
+            dropout=arguments_service.dropout,
+            use_own_embeddings=(not self._arguments_service.share_embedding_layer),
+            shared_embeddings=(lambda x: self._shared_embeddings(x))
         )
 
         self._teacher_forcing_ratio = 0.5
