@@ -3,6 +3,7 @@ import csv
 import codecs
 
 from typing import List, Dict, Tuple
+from collections import defaultdict
 
 
 from enums.language import Language
@@ -26,23 +27,29 @@ class NERProcessService(ProcessServiceBase):
             tokenizer_service: TokenizerService):
         super().__init__()
 
+        self._arguments_service = arguments_service
         self._tokenizer_service = tokenizer_service
+        self._file_service = file_service
         self._label_type = arguments_service.label_type
 
         data_path = file_service.get_data_path()
         language_suffix = self.get_language_suffix(arguments_service.language)
 
-        self._train_ne_collection = self.preprocess_data(
-            os.path.join(
-                data_path, f'HIPE-data-v1.0-train-{language_suffix}.tsv'),
-            limit=arguments_service.train_dataset_limit_size)
+        self._train_ne_collection = None
+        if not arguments_service.evaluate:
+            self._train_ne_collection = self.preprocess_data(
+                os.path.join(
+                    data_path, f'HIPE-data-v1.0-train-{language_suffix}.tsv'),
+                limit=arguments_service.train_dataset_limit_size)
 
         self._validation_ne_collection = self.preprocess_data(
             os.path.join(
                 data_path, f'HIPE-data-v1.0-dev-{language_suffix}.tsv'),
             limit=arguments_service.validation_dataset_limit_size)
 
-        self._coarse_entity_mapping, self._fine_entity_mapping = self._create_entity_mappings()
+        self._coarse_entity_mapping, self._fine_entity_mapping = self._create_entity_mappings(
+            self._train_ne_collection,
+            self._validation_ne_collection)
 
     def preprocess_data(
             self,
@@ -89,18 +96,35 @@ class NERProcessService(ProcessServiceBase):
         else:
             raise Exception('Unsupported language')
 
-    def _create_entity_mappings(self) -> Tuple[Dict[str, int], Dict[str, int]]:
-        coarse_typed_entities = self._train_ne_collection.get_unique_coarse_entities()
+    def _create_entity_mappings(
+        self,
+        train_ne_collection: NECollection,
+        validation_ne_collection: NECollection) -> Tuple[Dict[str, int], Dict[str, int]]:
+        if self._arguments_service.language == Language.English:
+            data_path = self._file_service.get_data_path(Language.French)
+            train_ne_collection = self.preprocess_data(
+                os.path.join(
+                    data_path, f'HIPE-data-v1.0-train-fr.tsv'))
+
+            validation_ne_collection = self.preprocess_data(
+                os.path.join(
+                    data_path, f'HIPE-data-v1.0-dev-fr.tsv'))
+
+        coarse_typed_entities = []
+        if train_ne_collection is not None:
+            coarse_typed_entities = train_ne_collection.get_unique_coarse_entities()
         coarse_typed_entities.extend(
-            self._validation_ne_collection.get_unique_coarse_entities())
+            validation_ne_collection.get_unique_coarse_entities())
         coarse_typed_entities = list(set(coarse_typed_entities))
         coarse_typed_entities.sort(key=lambda x: '' if x is None else x)
         coarse_entity_mapping = {x: i for i,
                                  x in enumerate(coarse_typed_entities)}
 
-        fine_typed_entities = self._train_ne_collection.get_unique_fine_entities()
+        fine_typed_entities = []
+        if train_ne_collection is not None:
+            fine_typed_entities = train_ne_collection.get_unique_fine_entities()
         fine_typed_entities.extend(
-            self._validation_ne_collection.get_unique_fine_entities())
+            validation_ne_collection.get_unique_fine_entities())
         fine_typed_entities = list(set(fine_typed_entities))
         fine_typed_entities.sort(key=lambda x: '' if x is None else x)
         fine_entity_mapping = {x: i for i, x in enumerate(fine_typed_entities)}

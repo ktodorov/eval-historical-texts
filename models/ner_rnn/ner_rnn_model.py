@@ -106,4 +106,4 @@ class NERRNNModel(ModelBase):
         if best_metric.is_new:
             return True
 
-        return best_metric.get_current_loss() >= new_metric.get_current_loss()
+        return best_metric.get_accuracy_metric(MetricType.F1Score) <= new_metric.get_accuracy_metric(MetricType.F1Score)

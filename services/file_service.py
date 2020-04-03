@@ -1,4 +1,7 @@
 import os
+
+from enums.language import Language
+
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 
@@ -9,7 +12,9 @@ class FileService:
 
         self._arguments_service = arguments_service
 
-    def get_data_path(self) -> str:
+    def get_data_path(
+        self,
+        language: Language = None) -> str:
         data_path = self.get_challenge_path()
 
         data_model_path = os.path.join(
@@ -19,9 +24,12 @@ class FileService:
         if not os.path.exists(data_model_path):
             os.mkdir(data_model_path)
 
+        if language is None:
+            language = self._arguments_service.language
+
         data_language_path = os.path.join(
             data_model_path,
-            str(self._arguments_service.language))
+            str(language))
 
         if not os.path.exists(data_language_path):
             os.mkdir(data_language_path)
