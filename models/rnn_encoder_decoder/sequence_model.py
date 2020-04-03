@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import random
 import numpy as np
 
 from typing import List, Dict
@@ -19,6 +18,7 @@ from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
 from services.pretrained_representations_service import PretrainedRepresentationsService
+from services.decoding_service import DecodingService
 
 from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
 from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
@@ -31,17 +31,15 @@ class SequenceModel(ModelBase):
             self,
             arguments_service: PostOCRArgumentsService,
             data_service: DataService,
-            tokenizer_service: TokenizerService,
             metrics_service: MetricsService,
-            log_service: LogService,
             vocabulary_service: VocabularyService,
-            pretrained_representations_service: PretrainedRepresentationsService):
+            pretrained_representations_service: PretrainedRepresentationsService,
+            decoding_service: DecodingService):
         super(SequenceModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
-        self._log_service = log_service
-        self._tokenizer_service = tokenizer_service
         self._vocabulary_service = vocabulary_service
+        self._decoding_service = decoding_service
 
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
@@ -63,7 +61,8 @@ class SequenceModel(ModelBase):
             pretrained_hidden_size=arguments_service.pretrained_model_size,
             learn_embeddings=arguments_service.learn_new_embeddings,
             bidirectional=True,
-            use_own_embeddings=(not self._arguments_service.share_embedding_layer),
+            use_own_embeddings=(
+                not self._arguments_service.share_embedding_layer),
             shared_embeddings=(lambda x: self._shared_embeddings(x))
         )
 
@@ -73,11 +72,10 @@ class SequenceModel(ModelBase):
             hidden_dimension=arguments_service.hidden_dimension * 2,
             number_of_layers=arguments_service.number_of_layers,
             dropout=arguments_service.dropout,
-            use_own_embeddings=(not self._arguments_service.share_embedding_layer),
+            use_own_embeddings=(
+                not self._arguments_service.share_embedding_layer),
             shared_embeddings=(lambda x: self._shared_embeddings(x))
         )
-
-        self._teacher_forcing_ratio = 0.5
 
         self.apply(self.init_weights)
 
@@ -94,43 +92,34 @@ class SequenceModel(ModelBase):
     def forward(self, input_batch, debug=False, **kwargs):
         source, targets, lengths, pretrained_representations, offset_lists = input_batch
 
-        (batch_size, trg_len) = targets.shape
-
-        trg_vocab_size = self._vocabulary_service.vocabulary_size()
-
-        # tensor to store decoder outputs
-        outputs = torch.zeros(batch_size, trg_len,
-                              trg_vocab_size, device=self._device)
-
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        context = self._encoder.forward(
+        encoder_context = self._encoder.forward(
             source, lengths, pretrained_representations, offset_lists, debug=debug)
 
-        hidden = context
-        context = context.permute(1, 0, 2)
+        hidden = encoder_context
+        encoder_context = encoder_context.permute(1, 0, 2)
 
-        # first input to the decoder is the <sos> tokens
-        input = targets[:, 0]
+        if self._arguments_service.use_beam_search:
+            outputs, targets = self._decoding_service.beam_decode(
+                targets,
+                encoder_context,
+                (lambda x, y, z: self._decoder.forward(x, y, z)))
+        else:
+            outputs, targets = self._decoding_service.greedy_decode(
+                targets,
+                encoder_context,
+                (lambda x, y, z: self._decoder.forward(x, y, z)))
 
-        for t in range(0, trg_len):
-
-            # insert input token embedding, previous hidden and previous cell states
-            # receive output tensor (predictions) and new hidden and cell states
-            output, hidden = self._decoder.forward(input, hidden, context)
-
-            outputs[:, t] = output
-
-            # decide if we are going to use teacher forcing or not
-            teacher_force = random.random() < self._teacher_forcing_ratio
-
-            # if teacher forcing, use actual next token as next input
-            # if not, use predicted token
-            if teacher_force:
-                input = targets[:, t]
-            else:
-                # get the highest predicted token from our predictions
-                top1 = output.argmax(1)
-                input = top1
+        if outputs.shape[1] < targets.shape[1]:
+            padded_output = torch.zeros((outputs.shape[0], targets.shape[1], outputs.shape[2])).to(
+                self._arguments_service.device)
+            padded_output[:, :output.shape[1], :] = outputs
+            outputs = padded_output
+        elif outputs.shape[1] > targets.shape[1]:
+            padded_targets = torch.zeros((targets.shape[0], outputs.shape[1]), dtype=torch.int64).to(
+                self._arguments_service.device)
+            padded_targets[:, :targets.shape[1]] = targets
+            targets = padded_targets
 
         return outputs, targets
 

@@ -45,6 +45,11 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
         parser.add_argument('--teacher-forcing-ratio', type=float, default=0.5,
                             help='Ratio for teacher forcing during decoding of translation. Default is 0.5')
 
+        parser.add_argument('--use-beam-search', action='store_true',
+                            help='If set to true, beam search will be used for decoding instead of greedy decoding')
+        parser.add_argument('--beam-width', type=int, default=10,
+                            help='Width of the beam when using beam search. Defaults to 10')
+
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         super()._validate_arguments(parser)
 
@@ -84,3 +89,11 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
     @property
     def max_articles_length(self) -> int:
         return self._get_argument('max_articles_length')
+
+    @property
+    def use_beam_search(self) -> bool:
+        return self._get_argument('use_beam_search')
+
+    @property
+    def beam_width(self) -> int:
+        return self._get_argument('beam_width')

@@ -61,6 +61,7 @@ from services.train_service import TrainService
 from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
 from services.experiment_service import ExperimentService
+from services.decoding_service import DecodingService
 
 import logging
 
@@ -214,6 +215,7 @@ def register_model(
         model_service: ModelService,
         process_service: ProcessServiceBase,
         pretrained_representations_service: PretrainedRepresentationsService,
+        decoding_service: DecodingService,
         joint_model: bool,
         configuration: Configuration):
 
@@ -244,11 +246,10 @@ def register_model(
                     SequenceModel,
                     arguments_service=arguments_service,
                     data_service=data_service,
-                    tokenizer_service=tokenizer_service,
                     metrics_service=metrics_service,
-                    log_service=log_service,
                     vocabulary_service=vocabulary_service,
-                    pretrained_representations_service=pretrained_representations_service)
+                    pretrained_representations_service=pretrained_representations_service,
+                    decoding_service=decoding_service)
             elif configuration == Configuration.TransformerSequence:
                 model = providers.Singleton(
                     TransformerModel,
@@ -407,6 +408,11 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service
     )
 
+    decoding_service = providers.Factory(
+        DecodingService,
+        arguments_service=arguments_service,
+        vocabulary_service=vocabulary_service)
+
     model = register_model(
         arguments_service=arguments_service,
         file_service=file_service,
@@ -419,6 +425,7 @@ class IocContainer(containers.DeclarativeContainer):
         model_service=model_service,
         process_service=process_service,
         pretrained_representations_service=pretrained_representations_service,
+        decoding_service=decoding_service,
         joint_model=joint_model,
         configuration=configuration)
 
