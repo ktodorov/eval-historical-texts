@@ -18,6 +18,7 @@ from services.tokenizer_service import TokenizerService
 from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
+from services.pretrained_representations_service import PretrainedRepresentationsService
 
 from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
 from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
@@ -33,7 +34,8 @@ class SequenceModel(ModelBase):
             tokenizer_service: TokenizerService,
             metrics_service: MetricsService,
             log_service: LogService,
-            vocabulary_service: VocabularyService):
+            vocabulary_service: VocabularyService,
+            pretrained_representations_service: PretrainedRepresentationsService):
         super(SequenceModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
@@ -44,11 +46,10 @@ class SequenceModel(ModelBase):
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
 
-        self._output_dimension = self._vocabulary_service.vocabulary_size()
-
         self._encoder = SequenceEncoder(
+            pretrained_representations_service=pretrained_representations_service,
             embedding_size=arguments_service.encoder_embedding_size,
-            input_size=tokenizer_service.tokenizer.get_vocab_size(with_added_tokens=True),
+            input_size=vocabulary_service.vocabulary_size(),
             hidden_dimension=arguments_service.hidden_dimension,
             number_of_layers=arguments_service.number_of_layers,
             dropout=arguments_service.dropout,
@@ -60,7 +61,7 @@ class SequenceModel(ModelBase):
 
         self._decoder = SequenceDecoder(
             embedding_size=arguments_service.decoder_embedding_size,
-            output_dimension=self._output_dimension,
+            output_dimension=vocabulary_service.vocabulary_size(),
             hidden_dimension=arguments_service.hidden_dimension * 2,
             number_of_layers=arguments_service.number_of_layers,
             dropout=arguments_service.dropout
@@ -81,7 +82,7 @@ class SequenceModel(ModelBase):
             nn.init.uniform_(param.data, -0.08, 0.08)
 
     def forward(self, input_batch, debug=False, **kwargs):
-        source, targets, lengths, pretrained_representations, _ = input_batch
+        source, targets, lengths, pretrained_representations, offset_lists = input_batch
 
         (batch_size, trg_len) = targets.shape
 
@@ -93,7 +94,7 @@ class SequenceModel(ModelBase):
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
         context = self._encoder.forward(
-            source, lengths, pretrained_representations, debug=debug)
+            source, lengths, pretrained_representations, offset_lists, debug=debug)
 
         hidden = context
         context = context.permute(1, 0, 2)
@@ -164,7 +165,7 @@ class SequenceModel(ModelBase):
 
             if output_characters:
                 character_results = []
-                _, _, lengths, _, ocr_texts_tensor = batch
+                ocr_texts_tensor, _, lengths, _, _ = batch
                 ocr_texts = ocr_texts_tensor.cpu().detach().tolist()
                 for i in range(len(ocr_texts)):
                     input_string = self._vocabulary_service.ids_to_string(

@@ -4,10 +4,13 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from transformers import BertModel
 
+from services.pretrained_representations_service import PretrainedRepresentationsService
+
 
 class SequenceEncoder(nn.Module):
     def __init__(
             self,
+            pretrained_representations_service: PretrainedRepresentationsService,
             embedding_size: int,
             input_size: int,
             hidden_dimension: int,
@@ -21,6 +24,7 @@ class SequenceEncoder(nn.Module):
 
         assert learn_embeddings or include_pretrained
 
+        self._pretrained_representations_service = pretrained_representations_service
         self._include_pretrained = include_pretrained
         additional_size = pretrained_hidden_size if self._include_pretrained else 0
         self._learn_embeddings = learn_embeddings
@@ -35,12 +39,13 @@ class SequenceEncoder(nn.Module):
                           number_of_layers, batch_first=True, bidirectional=bidirectional)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, input_batch, lengths, pretrained_representations, debug: bool = False, **kwargs):
+    def forward(self, input_batch, lengths, pretrained_representations, offset_lists, debug: bool = False, **kwargs):
         if self._learn_embeddings:
             embedded = self.dropout(self.embedding(input_batch))
 
             if self._include_pretrained:
-                embedded = torch.cat((embedded, pretrained_representations), dim=2)
+                embedded = self._pretrained_representations_service.add_pretrained_representations_to_character_embeddings(
+                    embedded, pretrained_representations, offset_lists)
         else:
             embedded = pretrained_representations
 
@@ -49,6 +54,7 @@ class SequenceEncoder(nn.Module):
         _, hidden = self.rnn.forward(x_packed)
 
         if self._bidirectional:
-            hidden = torch.cat((hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
+            hidden = torch.cat(
+                (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
 
         return hidden

@@ -25,17 +25,17 @@ from services.process.process_service_base import ProcessServiceBase
 
 class DatasetService:
     def __init__(
-        self,
-        arguments_service: ArgumentsServiceBase,
-        mask_service: MaskService,
-        tokenizer_service: TokenizerService,
-        file_service: FileService,
-        log_service: LogService,
-        metrics_service: MetricsService,
-        pretrained_representations_service: PretrainedRepresentationsService,
-        vocabulary_service: VocabularyService,
-        data_service: DataService,
-        process_service: ProcessServiceBase):
+            self,
+            arguments_service: ArgumentsServiceBase,
+            mask_service: MaskService,
+            tokenizer_service: TokenizerService,
+            file_service: FileService,
+            log_service: LogService,
+            metrics_service: MetricsService,
+            pretrained_representations_service: PretrainedRepresentationsService,
+            vocabulary_service: VocabularyService,
+            data_service: DataService,
+            process_service: ProcessServiceBase):
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
@@ -108,7 +108,7 @@ class DatasetService:
                     self._pretrained_representations_service,
                     self._data_service,
                     run_type)
-            elif configuration == Configuration.CharacterToCharacter:
+            elif configuration == Configuration.CharacterToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder:
                 result = OCRCharacterDataset(
                     self._arguments_service,
                     self._file_service,

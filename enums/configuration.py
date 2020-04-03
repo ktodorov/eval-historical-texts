@@ -8,3 +8,4 @@ class Configuration(ArgumentEnum):
     TransformerSequence = 'transformer-sequence'
     RNNSimple = 'rnn-simple'
     CharacterToCharacter = 'char-to-char'
+    CharacterToCharacterEncoderDecoder = 'char-to-char-encoder-decoder'

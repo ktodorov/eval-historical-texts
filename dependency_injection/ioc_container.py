@@ -80,7 +80,7 @@ def get_argument_service_type(challenge: Challenge, configuration: Configuration
     if challenge == Challenge.PostOCRCorrection or challenge == Challenge.PostOCRErrorDetection:
         if configuration == Configuration.TransformerSequence:
             argument_service_type = TransformerArgumentsService
-        elif configuration == Configuration.SequenceToCharacter:
+        elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder:
             argument_service_type = PostOCRArgumentsService
         elif configuration == Configuration.CharacterToCharacter:
             argument_service_type = PostOCRCharactersArgumentsService
@@ -117,7 +117,8 @@ def register_optimizer(
         elif (configuration == Configuration.MultiFit or
               configuration == Configuration.SequenceToCharacter or
               configuration == Configuration.TransformerSequence or
-              configuration == Configuration.CharacterToCharacter):
+              configuration == Configuration.CharacterToCharacter or
+              configuration == Configuration.CharacterToCharacterEncoderDecoder):
             optimizer = providers.Singleton(
                 AdamOptimizer,
                 arguments_service=arguments_service,
@@ -151,7 +152,8 @@ def register_loss(
             loss_function = providers.Singleton(KBertLoss)
         elif (configuration == Configuration.MultiFit or
               configuration == Configuration.SequenceToCharacter or
-              configuration == Configuration.CharacterToCharacter):
+              configuration == Configuration.CharacterToCharacter or
+              configuration == Configuration.CharacterToCharacterEncoderDecoder):
             loss_function = providers.Singleton(SequenceLoss)
         elif configuration == Configuration.TransformerSequence:
             loss_function = providers.Singleton(TransformerSequenceLoss)
@@ -193,7 +195,8 @@ def register_evaluation_service(
     elif (configuration == Configuration.MultiFit or
           configuration == Configuration.SequenceToCharacter or
           configuration == Configuration.TransformerSequence or
-          configuration == Configuration.CharacterToCharacter):
+          configuration == Configuration.CharacterToCharacter or
+          configuration == Configuration.CharacterToCharacterEncoderDecoder):
         evaluation_service = providers.Factory(BaseEvaluationService)
 
     return evaluation_service
@@ -210,6 +213,7 @@ def register_model(
         vocabulary_service: VocabularyService,
         model_service: ModelService,
         process_service: ProcessServiceBase,
+        pretrained_representations_service: PretrainedRepresentationsService,
         joint_model: bool,
         configuration: Configuration):
 
@@ -223,7 +227,8 @@ def register_model(
         elif (configuration == Configuration.MultiFit or
               configuration == Configuration.SequenceToCharacter or
               configuration == Configuration.TransformerSequence or
-              configuration == Configuration.CharacterToCharacter):
+              configuration == Configuration.CharacterToCharacter or
+              configuration == Configuration.CharacterToCharacterEncoderDecoder):
 
             if configuration == Configuration.MultiFit:
                 model = providers.Singleton(
@@ -234,7 +239,7 @@ def register_model(
                     metrics_service=metrics_service,
                     log_service=log_service
                 )
-            elif configuration == Configuration.SequenceToCharacter:
+            elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder:
                 model = providers.Singleton(
                     SequenceModel,
                     arguments_service=arguments_service,
@@ -242,8 +247,8 @@ def register_model(
                     tokenizer_service=tokenizer_service,
                     metrics_service=metrics_service,
                     log_service=log_service,
-                    vocabulary_service=vocabulary_service
-                )
+                    vocabulary_service=vocabulary_service,
+                    pretrained_representations_service=pretrained_representations_service)
             elif configuration == Configuration.TransformerSequence:
                 model = providers.Singleton(
                     TransformerModel,
@@ -260,8 +265,8 @@ def register_model(
                     arguments_service=arguments_service,
                     vocabulary_service=vocabulary_service,
                     data_service=data_service,
-                    metrics_service=metrics_service
-                )
+                    metrics_service=metrics_service,
+                    pretrained_representations_service=pretrained_representations_service)
         elif configuration == Configuration.RNNSimple:
             model = providers.Singleton(
                 NERRNNModel,
@@ -284,10 +289,10 @@ def register_model(
 
 
 def register_process_service(
-    challenge: Challenge,
-    arguments_service: ArgumentsServiceBase,
-    file_service: FileService,
-    tokenizer_service: TokenizerService):
+        challenge: Challenge,
+        arguments_service: ArgumentsServiceBase,
+        file_service: FileService,
+        tokenizer_service: TokenizerService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
@@ -413,6 +418,7 @@ class IocContainer(containers.DeclarativeContainer):
         vocabulary_service=vocabulary_service,
         model_service=model_service,
         process_service=process_service,
+        pretrained_representations_service=pretrained_representations_service,
         joint_model=joint_model,
         configuration=configuration)
 

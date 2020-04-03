@@ -16,7 +16,7 @@ from services.arguments.postocr_characters_arguments_service import PostOCRChara
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 from services.vocabulary_service import VocabularyService
-
+from services.pretrained_representations_service import PretrainedRepresentationsService
 
 class CharToCharModel(ModelBase):
     def __init__(
@@ -24,12 +24,14 @@ class CharToCharModel(ModelBase):
             arguments_service: PostOCRCharactersArgumentsService,
             vocabulary_service: VocabularyService,
             data_service: DataService,
-            metrics_service: MetricsService):
+            metrics_service: MetricsService,
+            pretrained_representations_service: PretrainedRepresentationsService):
         super().__init__(data_service, arguments_service)
 
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
         self._arguments_service = arguments_service
+        self._pretrained_representations_service = pretrained_representations_service
 
         self._include_pretrained = arguments_service.include_pretrained_model
         self._learn_embeddings = arguments_service.learn_new_embeddings
@@ -62,7 +64,7 @@ class CharToCharModel(ModelBase):
             embedded = self.dropout(self.embedding(sequences))
 
             if self._include_pretrained:
-                embedded = self._add_pretrained_information(
+                embedded = self._pretrained_representations_service.add_pretrained_representations_to_character_embeddings(
                     embedded, pretrained_representations, offset_lists)
         else:
             embedded = pretrained_representations
@@ -154,33 +156,3 @@ class CharToCharModel(ModelBase):
 
         result = best_metric.get_current_loss() > new_metric.get_current_loss()
         return result
-
-    def _add_pretrained_information(self, embedded, pretrained_representations, offset_lists):
-        batch_size = embedded.shape[0]
-        pretrained_embedding_size = pretrained_representations.shape[2]
-
-        new_embedded = torch.zeros(
-            (batch_size, embedded.shape[1], embedded.shape[2] + pretrained_representations.shape[2])).to(self._arguments_service.device)
-        new_embedded[:, :, :embedded.shape[2]] = embedded
-
-        for i in range(batch_size):
-            inserted_count = 0
-            last_item = 0
-            for p_i, offset in enumerate(offset_lists[i]):
-                current_offset = 0
-                if offset[0] == offset[1]:
-                    current_offset = 1
-
-                for k in range(offset[0] + inserted_count, offset[1] + inserted_count + current_offset):
-                    if offset[0] < last_item:
-                        continue
-
-                    last_item = offset[1]
-
-                    new_embedded[i, k, -pretrained_embedding_size:
-                                 ] = pretrained_representations[i, p_i]
-
-                if offset[0] == offset[1]:
-                    inserted_count += 1
-
-        return new_embedded
