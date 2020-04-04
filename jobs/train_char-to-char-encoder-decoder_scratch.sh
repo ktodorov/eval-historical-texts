@@ -24,7 +24,7 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --configuration char-to-char-encoder-decoder --learning-rate 1e-3 --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 128 --hidden-dimension 512 --encoder-embedding-size 128 --decoder-embedding-size 128 --share-embedding-layer --dropout 0.2 --number-of-layers 1 --bidirectional --enable-external-logging --max-training-minutes 4300 --learn-new-embeddings --use-beam-search --checkpoint-name scratch --validation-dataset-limit-size 1024 > output/char-to-char-enc-dec-scratch-13.txt
+srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --configuration char-to-char-encoder-decoder --learning-rate 1e-3 --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 128 --hidden-dimension 512 --encoder-embedding-size 32 --decoder-embedding-size 32 --share-embedding-layer --dropout 0.2 --number-of-layers 1 --bidirectional --enable-external-logging --max-training-minutes 4300 --learn-new-embeddings --use-beam-search --checkpoint-name scratch --validation-dataset-limit-size 1024 > output/char-to-char-enc-dec-scratch-13.txt
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/

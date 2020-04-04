@@ -49,8 +49,8 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
 
         parser.add_argument('--use-beam-search', action='store_true',
                             help='If set to true, beam search will be used for decoding instead of greedy decoding')
-        parser.add_argument('--beam-width', type=int, default=10,
-                            help='Width of the beam when using beam search. Defaults to 10')
+        parser.add_argument('--beam-width', type=int, default=3,
+                            help='Width of the beam when using beam search. Defaults to 3')
 
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         super()._validate_arguments(parser)
