@@ -41,6 +41,8 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
                             help='Number of layers used for RNN or Transformer models')
         parser.add_argument('--max-articles-length', type=int, default=1000,
                             help='This is the maximum length of articles that will be used in models. Articles longer than this length will be cut.')
+        parser.add_argument('--bidirectional', action='store_true',
+                            help='Whether the RNN used will be bidirectional')
 
         parser.add_argument('--teacher-forcing-ratio', type=float, default=0.5,
                             help='Ratio for teacher forcing during decoding of translation. Default is 0.5')
@@ -89,6 +91,10 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
     @property
     def max_articles_length(self) -> int:
         return self._get_argument('max_articles_length')
+
+    @property
+    def bidirectional(self) -> bool:
+        return self._get_argument('bidirectional')
 
     @property
     def use_beam_search(self) -> bool:

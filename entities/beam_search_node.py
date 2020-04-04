@@ -19,3 +19,15 @@ class BeamSearchNode(object):
         # Add here a function for shaping a reward
 
         return self.logp / float(self.leng - 1 + 1e-6) + alpha * reward
+
+    def __lt__(self, other):
+        if other is None:
+            return False
+
+        return self.eval() < other.eval()
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+
+        return self.eval() == other.eval()

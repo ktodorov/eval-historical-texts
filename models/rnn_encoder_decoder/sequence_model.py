@@ -60,7 +60,7 @@ class SequenceModel(ModelBase):
             include_pretrained=arguments_service.include_pretrained_model,
             pretrained_hidden_size=arguments_service.pretrained_model_size,
             learn_embeddings=arguments_service.learn_new_embeddings,
-            bidirectional=True,
+            bidirectional=arguments_service.bidirectional,
             use_own_embeddings=(
                 not self._arguments_service.share_embedding_layer),
             shared_embeddings=(lambda x: self._shared_embeddings(x))
@@ -96,7 +96,6 @@ class SequenceModel(ModelBase):
         encoder_context = self._encoder.forward(
             source, lengths, pretrained_representations, offset_lists, debug=debug)
 
-        hidden = encoder_context
         encoder_context = encoder_context.permute(1, 0, 2)
 
         if self._arguments_service.use_beam_search:
@@ -113,7 +112,7 @@ class SequenceModel(ModelBase):
         if outputs.shape[1] < targets.shape[1]:
             padded_output = torch.zeros((outputs.shape[0], targets.shape[1], outputs.shape[2])).to(
                 self._arguments_service.device)
-            padded_output[:, :output.shape[1], :] = outputs
+            padded_output[:, :outputs.shape[1], :] = outputs
             outputs = padded_output
         elif outputs.shape[1] > targets.shape[1]:
             padded_targets = torch.zeros((targets.shape[0], outputs.shape[1]), dtype=torch.int64).to(
