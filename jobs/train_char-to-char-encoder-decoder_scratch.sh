@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=ner
+#SBATCH --job-name=char-ed-scr
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=3
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=72:00:00
+#SBATCH --time=72:05:00
 #SBATCH --mem=60000M
 #SBATCH -p gpu_shared
 #SBATCH --gres=gpu:1
@@ -24,10 +24,7 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-LABELTYPE='coarse'
-LANGUAGE='french'
-
-srun python3 -u run.py --device cuda --eval-freq 100 --seed 13 --configuration rnn-simple --learning-rate 1e-3 --metric-types f1-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights bert-base-multilingual-cased --hidden-dimension 128 --embeddings-size 16 --dropout 0.5 --label-type $LABELTYPE --reset-training-on-early-stop --training-reset-epoch-limit 5 --learn-new-embeddings --checkpoint-name $LANGUAGE-$LABELTYPE-scratch > output/ner-scratch-$LANGUAGE-$LABELTYPE-13.txt
+srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --configuration char-to-char-encoder-decoder --learning-rate 1e-3 --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 128 --hidden-dimension 512 --encoder-embedding-size 128 --decoder-embedding-size 128 --share-embedding-layer --dropout 0.2 --number-of-layers 1 --bidirectional --enable-external-logging --max-training-minutes 4300 --learn-new-embeddings --use-beam-search --checkpoint-name scratch --validation-dataset-limit-size 1024 > output/char-to-char-enc-dec-scratch-13.txt
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/
