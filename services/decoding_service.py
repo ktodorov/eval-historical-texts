@@ -136,7 +136,7 @@ class DecodingService():
         trg_vocab_size = self._vocabulary_service.vocabulary_size()
         batch_size, trg_len = targets.shape
         teacher_forcing_ratio = self._arguments_service.teacher_forcing_ratio
-        hidden = encoder_context
+        hidden = encoder_context.permute(1, 0, 2)
 
         # tensor to store decoder outputs
         outputs = torch.zeros(batch_size, trg_len,
