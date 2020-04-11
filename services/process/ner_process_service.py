@@ -35,12 +35,11 @@ class NERProcessService(ProcessServiceBase):
         data_path = file_service.get_data_path()
         language_suffix = self.get_language_suffix(arguments_service.language)
 
-        self._train_ne_collection = None
-        if not arguments_service.evaluate:
-            self._train_ne_collection = self.preprocess_data(
-                os.path.join(
-                    data_path, f'HIPE-data-v1.0-train-{language_suffix}.tsv'),
-                limit=arguments_service.train_dataset_limit_size)
+        # self._train_ne_collection = None
+        self._train_ne_collection = self.preprocess_data(
+            os.path.join(
+                data_path, f'HIPE-data-v1.0-train-{language_suffix}.tsv'),
+            limit=arguments_service.train_dataset_limit_size)
 
         self._validation_ne_collection = self.preprocess_data(
             os.path.join(
@@ -133,9 +132,15 @@ class NERProcessService(ProcessServiceBase):
 
     def get_entity_labels(self, ne_line: NELine) -> List[int]:
         if self._label_type == NERType.Coarse:
-            return [self._coarse_entity_mapping[entity] for entity in ne_line.ne_coarse_lit]
+            return (
+                [self._coarse_entity_mapping[entity] for entity in ne_line.ne_coarse_lit],
+                [self._coarse_entity_mapping[entity] for entity in ne_line.ne_coarse_meto]
+            )
         elif self._label_type == NERType.Fine:
-            return [self._fine_entity_mapping[entity] for entity in ne_line.ne_fine_lit]
+            return (
+                [self._fine_entity_mapping[entity] for entity in ne_line.ne_fine_lit],
+                [self._fine_entity_mapping[entity] for entity in ne_line.ne_fine_meto]
+            )
         else:
             raise Exception('Unsupported NER type for labels')
 

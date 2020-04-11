@@ -35,22 +35,26 @@ class NEREvaluationService(BaseEvaluationService):
             output: torch.Tensor,
             evaluation_types: List[EvaluationType],
             batch_index: int) -> Dict[EvaluationType, List]:
-        predictions = output[0].max(dim=1)[1].detach().tolist()
-        position_changes = self._process_service.get_position_changes(
-            batch_index)
+        literal_predictions = output[0].max(dim=1)[1].detach().tolist()
+        metonymic_predictions = output[1].max(dim=1)[1].detach().tolist()
+
+        position_changes = self._process_service.get_position_changes(batch_index)
 
         result = []
-        for prediction in predictions:
-            predicted_entity = self._process_service.get_entity_by_label(
-                prediction)
-            result.append(predicted_entity)
+        for literal_prediction, metonymic_prediction in zip(literal_predictions, metonymic_predictions):
+            literal_predicted_entity = self._process_service.get_entity_by_label(
+                literal_prediction)
+
+            metonymic_predicted_entity = self._process_service.get_entity_by_label(
+                metonymic_prediction)
+            result.append((literal_predicted_entity, metonymic_predicted_entity))
 
         if position_changes is not None:
             new_predictions = []
             for original_position, changes in position_changes.items():
                 merged_prediction = None
                 for change_position in changes:
-                    if result[change_position] is not None:
+                    if result[change_position][0] is not None or result[change_position][1] is not None:
                         merged_prediction = result[change_position]
                         break
 
@@ -80,7 +84,8 @@ class NEREvaluationService(BaseEvaluationService):
         dev_word_amount = len([x for x in tokens if not x.startswith('#')])
         assert len(predictions) == dev_word_amount
 
-        output_column = 'NE-COARSE-LIT' if self._arguments_service.label_type == NERType.Coarse else 'NE-FINE-LIT'
+        output_column_1 = 'NE-COARSE-LIT' if self._arguments_service.label_type == NERType.Coarse else 'NE-FINE-LIT'
+        output_column_2 = 'NE-COARSE-METO' if self._arguments_service.label_type == NERType.Coarse else 'NE-FINE-METO'
 
         checkpoints_path = self._file_service.get_checkpoints_path()
         file_path = os.path.join(
@@ -96,6 +101,6 @@ class NEREvaluationService(BaseEvaluationService):
                     writer.writerow({'TOKEN': token})
                 else:
                     writer.writerow(
-                        {'TOKEN': token, output_column: predictions[counter]})
+                        {'TOKEN': token, output_column_1: predictions[counter][0], output_column_2: predictions[counter][1]})
 
                     counter += 1

@@ -41,18 +41,25 @@ class NERRNNModel(ModelBase):
         # maps each token to an embedding_dim vector
         lstm_input_size = additional_size
         if self._learn_embeddings:
-            self.embedding = nn.Embedding(tokenizer_service.vocabulary_size, arguments_service.embeddings_size)
+            self.embedding = nn.Embedding(
+                tokenizer_service.vocabulary_size, arguments_service.embeddings_size)
             self.dropout = nn.Dropout(arguments_service.dropout)
             lstm_input_size += arguments_service.embeddings_size
 
-        # the LSTM takens embedded sentence
-        self.lstm = nn.LSTM(lstm_input_size, arguments_service.hidden_dimension, batch_first=True, bidirectional=True)
+        # the LSTM takes embedded sentence
+        self.literal_lstm = nn.LSTM(
+            lstm_input_size, arguments_service.hidden_dimension, batch_first=True, bidirectional=True)
+        self.metonymic_lstm = nn.LSTM(
+            lstm_input_size, arguments_service.hidden_dimension, batch_first=True, bidirectional=True)
 
         # fc layer transforms the output to give the final output layer
-        self.fc = nn.Linear(arguments_service.hidden_dimension * 2, number_of_tags)
+        self.literal_output_layer = nn.Linear(
+            arguments_service.hidden_dimension * 2, number_of_tags)
+        self.metonymic_output_layer = nn.Linear(
+            arguments_service.hidden_dimension * 2, number_of_tags)
 
     def forward(self, input_batch, debug=False, **kwargs):
-        sequences, targets, lengths, pretrained_representations = input_batch
+        sequences, literal_targets, metonymic_targets, lengths, pretrained_representations = input_batch
 
         # apply the embedding layer that maps each token to its embedding
         # dim: batch_size x batch_max_len x embedding_dim
@@ -60,7 +67,8 @@ class NERRNNModel(ModelBase):
             embedded = self.dropout(self.embedding(sequences))
 
             if self._include_pretrained:
-                embedded = torch.cat((embedded, pretrained_representations), dim=2)
+                embedded = torch.cat(
+                    (embedded, pretrained_representations), dim=2)
         else:
             embedded = pretrained_representations
 
@@ -68,39 +76,57 @@ class NERRNNModel(ModelBase):
 
         # run the LSTM along the sentences of length batch_max_len
         # dim: batch_size x batch_max_len x lstm_hidden_dim
-        packed_output, _ = self.lstm(x_packed)
+        literal_packed_output, _ = self.literal_lstm(x_packed)
+        literal_rnn_output, _ = pad_packed_sequence(
+            literal_packed_output, batch_first=True)
+        literal_rnn_output = literal_rnn_output.reshape(
+            -1, literal_rnn_output.shape[2])
+        literal_output = self.literal_output_layer(literal_rnn_output)
 
-        rnn_output, _ = pad_packed_sequence(packed_output, batch_first=True)
+        metonymic_packed_output, _ = self.metonymic_lstm(x_packed)
+        metonymic_rnn_output, _ = pad_packed_sequence(
+            metonymic_packed_output, batch_first=True)
+        metonymic_rnn_output = metonymic_rnn_output.reshape(
+            -1, metonymic_rnn_output.shape[2])
+        metonymic_output = self.metonymic_output_layer(metonymic_rnn_output)
 
-        # reshape the Variable so that each row contains one token
-        # dim: batch_size*batch_max_len x lstm_hidden_dim
-        rnn_output = rnn_output.reshape(-1, rnn_output.shape[2])
-
-        # apply the fully connected layer and obtain the output for each token
-        # dim: batch_size*batch_max_len x num_tags
-        output = self.fc(rnn_output)
-
-        # dim: batch_size*batch_max_len x num_tags
-        return F.log_softmax(output, dim=1), targets
+        return (
+            F.log_softmax(literal_output, dim=1),
+            F.log_softmax(metonymic_output, dim=1),
+            literal_targets,
+            metonymic_targets
+        )
 
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, targets = outputs
-        predictions = output.max(dim=1)[1].cpu().detach().numpy()
+        literal_output, metonymic_output, literal_targets, metonymic_targets = outputs
 
+        metrics = {}
+        if MetricType.F1Score in self._metric_types:
+            literal_f1_score = self._calculate_f1_score(
+                literal_output,
+                literal_targets)
+
+            metonymic_f1_score = self._calculate_f1_score(
+                metonymic_output,
+                metonymic_targets)
+
+            f1_score = (literal_f1_score + metonymic_f1_score) / 2
+            metrics[MetricType.F1Score] = f1_score
+
+        return metrics, None
+
+    def _calculate_f1_score(self, output, targets):
+        predictions = output.max(dim=1)[1].cpu().detach().numpy()
         targets = targets.reshape(-1).cpu().detach().numpy()
 
         mask = np.array((targets != -1), dtype=bool)
         predicted_labels = predictions[mask]
         target_labels = targets[mask]
 
-        metrics = {}
+        f1_score = self._metrics_service.calculate_f1_score(
+            predicted_labels, target_labels)
 
-        if MetricType.F1Score in self._metric_types:
-            f1_score = self._metrics_service.calculate_f1_score(
-                predicted_labels, target_labels)
-            metrics[MetricType.F1Score] = f1_score
-
-        return metrics, None
+        return f1_score
 
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
         if best_metric.is_new:

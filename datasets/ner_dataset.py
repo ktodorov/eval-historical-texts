@@ -44,10 +44,11 @@ class NERDataset(DatasetBase):
 
     def __getitem__(self, idx):
         item: NELine = self.ne_collection[idx]
-        coarse_entity_labels = self._ner_process_service.get_entity_labels(item)
+
+        literal_entity_labels, metonymic_entity_labels = self._ner_process_service.get_entity_labels(item)
         pretrained_result = self._get_pretrained_representation(item.token_ids)
 
-        return item.token_ids, coarse_entity_labels, pretrained_result
+        return item.token_ids, literal_entity_labels, metonymic_entity_labels, pretrained_result
 
     def _get_pretrained_representation(self, token_ids: List[int]):
         if not self._include_pretrained:
@@ -86,7 +87,7 @@ class NERDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, pretrained_representations = batch_split
+        sequences, literal_targets, metonymic_targets, pretrained_representations = batch_split
 
         lengths = [len(sequence) for sequence in sequences]
 
@@ -94,7 +95,9 @@ class NERDataset(DatasetBase):
 
         padded_sequences = np.zeros(
             (batch_size, max_length), dtype=np.int64) * -1
-        padded_targets = np.zeros(
+        padded_literal_targets = np.zeros(
+            (batch_size, max_length), dtype=np.int64) * -1
+        padded_metonymic_targets = np.zeros(
             (batch_size, max_length), dtype=np.int64) * -1
 
         padded_pretrained_representations = []
@@ -104,7 +107,8 @@ class NERDataset(DatasetBase):
 
         for i, sequence_length in enumerate(lengths):
             padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
-            padded_targets[i][0:sequence_length] = targets[i][0:sequence_length]
+            padded_literal_targets[i][0:sequence_length] = literal_targets[i][0:sequence_length]
+            padded_metonymic_targets[i][0:sequence_length] = metonymic_targets[i][0:sequence_length]
 
             if self._include_pretrained:
                 padded_pretrained_representations[i][0:
@@ -112,16 +116,18 @@ class NERDataset(DatasetBase):
 
         return self._sort_batch(
             torch.from_numpy(padded_sequences).to(self._device),
-            torch.from_numpy(padded_targets).to(self._device),
+            torch.from_numpy(padded_literal_targets).to(self._device),
+            torch.from_numpy(padded_metonymic_targets).to(self._device),
             torch.tensor(lengths, device=self._device),
             padded_pretrained_representations)
 
-    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings):
+    def _sort_batch(self, batch, literal_targets, metonymic_targets, lengths, pretrained_embeddings):
         seq_lengths, perm_idx = lengths.sort(descending=True)
         seq_tensor = batch[perm_idx]
-        targets_tensor = targets[perm_idx]
+        literal_targets_tensor = literal_targets[perm_idx]
+        metonymic_targets_tensor = metonymic_targets[perm_idx]
 
         if self._include_pretrained:
             pretrained_embeddings = pretrained_embeddings[perm_idx]
 
-        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings
+        return seq_tensor, literal_targets_tensor, metonymic_targets_tensor, seq_lengths, pretrained_embeddings
