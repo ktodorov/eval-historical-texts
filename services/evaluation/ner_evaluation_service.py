@@ -66,7 +66,7 @@ class NEREvaluationService(BaseEvaluationService):
         language_suffix = self._process_service.get_language_suffix(
             self._arguments_service.language)
         dev_filepath = os.path.join(
-            data_path, f'HIPE-data-v1.0-dev-{language_suffix}.tsv')
+            data_path, f'HIPE-data-v1.1-dev-{language_suffix}.tsv')
 
         predictions = evaluation[EvaluationType.NamedEntityRecognitionMatch]
 

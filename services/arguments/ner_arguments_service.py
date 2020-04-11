@@ -34,6 +34,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help='Number of layers used for the RNN')
         parser.add_argument('--label-type', type=NERType, choices=list(NERType), default=NERType.Coarse,
                             help='Label type that will be used for classification. Default is Coarse')
+        parser.add_argument("--no-attention", action='store_true',
+                            help="whether to skip the attention layer")
 
     @property
     def embeddings_size(self) -> int:
@@ -54,3 +56,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def label_type(self) -> NERType:
         return self._get_argument('label_type')
+
+    @property
+    def use_attention(self) -> bool:
+        return not self._get_argument('no_attention')

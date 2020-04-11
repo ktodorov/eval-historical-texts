@@ -12,6 +12,7 @@ from enums.metric_type import MetricType
 from enums.ner_type import NERType
 
 from models.model_base import ModelBase
+from models.ner_rnn.rnn_attention import RNNAttention
 
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
@@ -30,6 +31,8 @@ class NERRNNModel(ModelBase):
             tokenizer_service: TokenizerService):
         super().__init__(data_service, arguments_service)
 
+        self._arguments_service = arguments_service
+
         self._include_pretrained = arguments_service.include_pretrained_model
         additional_size = arguments_service.pretrained_model_size if self._include_pretrained else 0
         self._learn_embeddings = arguments_service.learn_new_embeddings
@@ -41,15 +44,23 @@ class NERRNNModel(ModelBase):
         # maps each token to an embedding_dim vector
         lstm_input_size = additional_size
         if self._learn_embeddings:
-            self.embedding = nn.Embedding(tokenizer_service.vocabulary_size, arguments_service.embeddings_size)
+            self.embedding = nn.Embedding(
+                tokenizer_service.vocabulary_size, arguments_service.embeddings_size)
             self.dropout = nn.Dropout(arguments_service.dropout)
             lstm_input_size += arguments_service.embeddings_size
 
         # the LSTM takens embedded sentence
-        self.lstm = nn.LSTM(lstm_input_size, arguments_service.hidden_dimension, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(
+            lstm_input_size, arguments_service.hidden_dimension, batch_first=True, bidirectional=True)
+
+        if self._arguments_service.use_attention:
+            attention_dimension = arguments_service.hidden_dimension * 2
+            self.attention = RNNAttention(
+                attention_dimension, attention_dimension, attention_dimension)
 
         # fc layer transforms the output to give the final output layer
-        self.fc = nn.Linear(arguments_service.hidden_dimension * 2, number_of_tags)
+        self.fc = nn.Linear(
+            arguments_service.hidden_dimension * 2, number_of_tags)
 
     def forward(self, input_batch, debug=False, **kwargs):
         sequences, targets, lengths, pretrained_representations = input_batch
@@ -60,7 +71,8 @@ class NERRNNModel(ModelBase):
             embedded = self.dropout(self.embedding(sequences))
 
             if self._include_pretrained:
-                embedded = torch.cat((embedded, pretrained_representations), dim=2)
+                embedded = torch.cat(
+                    (embedded, pretrained_representations), dim=2)
         else:
             embedded = pretrained_representations
 
@@ -68,12 +80,25 @@ class NERRNNModel(ModelBase):
 
         # run the LSTM along the sentences of length batch_max_len
         # dim: batch_size x batch_max_len x lstm_hidden_dim
-        packed_output, _ = self.lstm(x_packed)
+        packed_output, hidden = self.lstm(x_packed)
+        if isinstance(hidden, tuple):  # LSTM
+            hidden = hidden[1]  # take the cell state
+
+        # TODO: add bidirectional as argument
+        if True:  # need to concat the last 2 hidden layers
+            hidden = torch.cat([hidden[-1], hidden[-2]], dim=1)
+        else:
+            hidden = hidden[-1]
 
         rnn_output, _ = pad_packed_sequence(packed_output, batch_first=True)
 
-        # reshape the Variable so that each row contains one token
-        # dim: batch_size*batch_max_len x lstm_hidden_dim
+        if self._arguments_service.use_attention:
+            energy, linear_combination = self.attention.forward(
+                hidden, rnn_output, rnn_output)
+            linear_combination = linear_combination.expand_as(rnn_output)
+
+            rnn_output = linear_combination * rnn_output
+
         rnn_output = rnn_output.reshape(-1, rnn_output.shape[2])
 
         # apply the fully connected layer and obtain the output for each token
