@@ -22,6 +22,7 @@ from services.decoding_service import DecodingService
 
 from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
 from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
+from models.rnn_encoder_decoder.sequence_attention import SequenceAttention
 
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
@@ -66,11 +67,16 @@ class SequenceModel(ModelBase):
             shared_embeddings=(lambda x: self._shared_embeddings(x))
         )
 
+        self._attention = SequenceAttention(
+            encoder_hidden_dimension=arguments_service.hidden_dimension,
+            decoder_hidden_dimension=arguments_service.hidden_dimension)
+
         self._decoder = SequenceDecoder(
             embedding_size=arguments_service.decoder_embedding_size,
             output_dimension=vocabulary_service.vocabulary_size(),
             hidden_dimension=arguments_service.hidden_dimension * 2,
             number_of_layers=arguments_service.number_of_layers,
+            attention=self._attention,
             dropout=arguments_service.dropout,
             use_own_embeddings=(
                 not self._arguments_service.share_embedding_layer),
