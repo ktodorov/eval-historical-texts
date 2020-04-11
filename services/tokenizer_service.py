@@ -25,7 +25,7 @@ class TokenizerService:
         self._tokenizer_loaded = True
         self._tokenizer: Tokenizer = None
 
-        vocabulary_path = os.path.join('data', 'vocabularies', f'{pretrained_weights}-vocab.txt')
+        vocabulary_path = os.path.join(arguments_service.data_folder, 'vocabularies', f'{pretrained_weights}-vocab.txt')
         if not os.path.exists(vocabulary_path):
             raise Exception(f'Vocabulary not found in {vocabulary_path}')
 
