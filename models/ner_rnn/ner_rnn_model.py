@@ -32,6 +32,7 @@ class NERRNNModel(ModelBase):
         super().__init__(data_service, arguments_service)
 
         self._arguments_service = arguments_service
+        self.process_service = process_service
 
         self._include_pretrained = arguments_service.include_pretrained_model
         additional_size = arguments_service.pretrained_model_size if self._include_pretrained else 0
@@ -61,6 +62,26 @@ class NERRNNModel(ModelBase):
         # fc layer transforms the output to give the final output layer
         self.fc = nn.Linear(
             arguments_service.hidden_dimension * 2, number_of_tags)
+
+
+        self.hidden_dim = arguments_service.hidden_dimension
+        self.tagset_size = number_of_tags
+
+        # Matrix of transition parameters.  Entry i,j is the score of
+        # transitioning *to* i *from* j.
+        self.transitions = nn.Parameter(
+            torch.randn(self.tagset_size, self.tagset_size))
+
+        # These two statements enforce the constraint that we never transfer
+        # to the start tag and we never transfer from the stop tag
+        self.transitions.data[self.process_service.START_TAG, :] = -10000
+        self.transitions.data[:, self.process_service.STOP_TAG] = -10000
+
+        self.hidden = self.init_hidden()
+
+    def init_hidden(self):
+        return (torch.randn(2, 1, self.hidden_dim // 2),
+                torch.randn(2, 1, self.hidden_dim // 2))
 
     def forward(self, input_batch, debug=False, **kwargs):
         sequences, targets, lengths, pretrained_representations = input_batch
@@ -106,10 +127,69 @@ class NERRNNModel(ModelBase):
         output = self.fc(rnn_output)
 
         # dim: batch_size*batch_max_len x num_tags
-        return F.log_softmax(output, dim=1), targets
+        # return F.log_softmax(output, dim=1), targets
+
+
+        forward_score = self._forward_alg(output)
+        gold_score = self._score_sentence(output, targets.reshape(-1))
+        return forward_score - gold_score, output, targets
+
+    def _forward_alg(self, feats):
+        # Do the forward algorithm to compute the partition function
+        init_alphas = torch.full((1, self.tagset_size), -10000.).to(self._arguments_service.device)
+        # START_TAG has all of the score.
+        init_alphas[0][self.process_service.START_TAG] = 0.
+
+        # Wrap in a variable so that we will get automatic backprop
+        forward_var = init_alphas
+
+        # Iterate through the sentence
+        for feat in feats:
+            alphas_t = torch.zeros((1, self.tagset_size)).to(self._arguments_service.device)  # The forward tensors at this timestep
+            for next_tag in range(self.tagset_size):
+                # broadcast the emission score: it is the same regardless of
+                # the previous tag
+                emit_score = feat[next_tag].view(
+                    1, -1).expand(1, self.tagset_size)
+                # the ith entry of trans_score is the score of transitioning to
+                # next_tag from i
+                trans_score = self.transitions[next_tag].view(1, -1)
+                # The ith entry of next_tag_var is the value for the
+                # edge (i -> next_tag) before we do log-sum-exp
+                next_tag_var = forward_var + trans_score + emit_score
+                # The forward variable for this tag is log-sum-exp of all the
+                # scores.
+                alphas_t[:, next_tag] = self.log_sum_exp(next_tag_var).view(1)
+            forward_var = alphas_t
+        terminal_var = forward_var + self.transitions[self.process_service.STOP_TAG]
+        alpha = self.log_sum_exp(terminal_var)
+        return alpha
+
+    def argmax(self, vec):
+        # return the argmax as a python int
+        _, idx = torch.max(vec, 1)
+        return idx.item()
+
+    # Compute log sum exp in a numerically stable way for the forward algorithm
+    def log_sum_exp(self, vec):
+        max_score = vec[0, self.argmax(vec)]
+        max_score_broadcast = max_score.view(1, -1).expand(1, vec.size()[1])
+        return max_score + \
+            torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
+
+    def _score_sentence(self, feats, tags):
+        # Gives the score of a provided tag sequence
+        score = torch.zeros(1).to(self._arguments_service.device)
+        start_tag = torch.tensor([self.process_service.START_TAG], dtype=torch.long, device=self._arguments_service.device)
+        tags = torch.cat([start_tag, tags])
+        for i, feat in enumerate(feats):
+            score = score + \
+                self.transitions[tags[i + 1], tags[i]] + feat[tags[i + 1]]
+        score = score + self.transitions[self.process_service.STOP_TAG, tags[-1]]
+        return score
 
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, targets = outputs
+        _, output, targets = outputs
         predictions = output.max(dim=1)[1].cpu().detach().numpy()
 
         targets = targets.reshape(-1).cpu().detach().numpy()

@@ -51,6 +51,9 @@ class NERProcessService(ProcessServiceBase):
             self._train_ne_collection,
             self._validation_ne_collection)
 
+        self.START_TAG = -1
+        self.STOP_TAG = -2
+
     def preprocess_data(
             self,
             file_path: str,

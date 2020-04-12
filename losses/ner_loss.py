@@ -21,21 +21,24 @@ class NERLoss(LossBase):
         return loss.item()
 
     def _calculate_inner_loss(self, model_output):
-        outputs, targets = model_output
-        #reshape labels to give a flat vector of length batch_size*seq_len
-        targets = targets.view(-1)  
+        loss, _, _ = model_output
+        return loss
 
-        #mask out 'PAD' tokens
-        mask = (targets >= 0).float()
+        # outputs, targets = model_output
+        # #reshape labels to give a flat vector of length batch_size*seq_len
+        # targets = targets.view(-1)  
 
-        #the number of tokens is the sum of elements in mask
-        num_tokens = int(torch.sum(mask).item())
+        # #mask out 'PAD' tokens
+        # mask = (targets >= 0).float()
 
-        #pick the values corresponding to targets and multiply by mask
-        outputs = outputs[range(outputs.shape[0]), targets]*mask
+        # #the number of tokens is the sum of elements in mask
+        # num_tokens = int(torch.sum(mask).item())
 
-        #cross entropy loss for all non 'PAD' tokens
-        return -torch.sum(outputs)/num_tokens
+        # #pick the values corresponding to targets and multiply by mask
+        # outputs = outputs[range(outputs.shape[0]), targets]*mask
+
+        # #cross entropy loss for all non 'PAD' tokens
+        # return -torch.sum(outputs)/num_tokens
 
     # @property
     # def criterion(self) -> nn.Module:
