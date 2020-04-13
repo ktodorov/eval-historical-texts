@@ -3,11 +3,14 @@ import torch
 from torch import nn
 from torch.functional import F
 
+from overrides import overrides
+
 class RNNAttention(nn.Module):
   def __init__(self, query_dim, key_dim, value_dim):
     super().__init__()
     self.scale = 1. / math.sqrt(query_dim)
 
+  @overrides
   def forward(self, query, keys, values):
     # Query = [BxQ]
     # Keys = [TxBxK]

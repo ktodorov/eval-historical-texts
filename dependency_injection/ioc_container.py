@@ -24,7 +24,7 @@ from models.multifit.multifit_model import MultiFitModel
 from models.rnn_encoder_decoder.sequence_model import SequenceModel
 from models.transformer_encoder_decoder.transformer_model import TransformerModel
 from models.joint_model import JointModel
-from models.ner_rnn.ner_rnn_model import NERRNNModel
+from models.ner_rnn.ner_predictor import NERPredictor
 from models.rnn_char_to_char.char_to_char_model import CharToCharModel
 
 from optimizers.optimizer_base import OptimizerBase
@@ -270,7 +270,7 @@ def register_model(
                     pretrained_representations_service=pretrained_representations_service)
         elif configuration == Configuration.RNNSimple:
             model = providers.Singleton(
-                NERRNNModel,
+                NERPredictor,
                 arguments_service=arguments_service,
                 data_service=data_service,
                 metrics_service=metrics_service,

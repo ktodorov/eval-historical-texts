@@ -1,3 +1,5 @@
+from overrides import overrides
+
 import argparse
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
@@ -9,6 +11,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     def __init__(self):
         super().__init__()
 
+    @overrides
     def get_configuration_name(self) -> str:
         result = f'ner-{str(self.language)}'
         result += f'-{str(self.label_type)}'
@@ -21,6 +24,7 @@ class NERArgumentsService(PretrainedArgumentsService):
 
         return result
 
+    @overrides
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)
 
@@ -36,6 +40,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help='Label type that will be used for classification. Default is Coarse')
         parser.add_argument("--no-attention", action='store_true',
                             help="whether to skip the attention layer")
+        parser.add_argument("--bidirectional-rnn", action='store_true',
+                            help="whether to use a bidirectional version of the RNN")
 
     @property
     def embeddings_size(self) -> int:
@@ -60,3 +66,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def use_attention(self) -> bool:
         return not self._get_argument('no_attention')
+
+    @property
+    def bidirectional_rnn(self) -> bool:
+        return not self._get_argument('bidirectional_rnn')

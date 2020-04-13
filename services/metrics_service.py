@@ -1,5 +1,5 @@
 import jellyfish
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 import scipy.spatial.distance as scipy_distances
 
 
@@ -18,7 +18,15 @@ class MetricsService:
         return result
 
     def calculate_f1_score(self, predictions, targets):
-        result = f1_score(targets, predictions, average='micro')
+        result = f1_score(targets, predictions, average='macro')
+        return result
+
+    def calculate_precision_score(self, predictions, targets):
+        result = precision_score(targets, predictions, average='macro')
+        return result
+
+    def calculate_recall_score(self, predictions, targets):
+        result = recall_score(targets, predictions, average='macro')
         return result
 
     def calculate_cosine_distance(self, list1: list, list2: list):
