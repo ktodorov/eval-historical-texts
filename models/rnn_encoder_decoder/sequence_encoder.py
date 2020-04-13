@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from overrides import overrides
 
 from transformers import BertModel
 
@@ -48,6 +49,7 @@ class SequenceEncoder(nn.Module):
                           number_of_layers, batch_first=True, bidirectional=bidirectional)
         self.dropout = nn.Dropout(dropout)
 
+    @overrides
     def forward(self, input_batch, lengths, pretrained_representations, offset_lists, debug: bool = False, **kwargs):
         if self._learn_embeddings:
             if self._use_own_embeddings:

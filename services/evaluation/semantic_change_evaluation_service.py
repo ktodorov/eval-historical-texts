@@ -1,5 +1,6 @@
 import os
 from typing import List, Dict
+from overrides import overrides
 
 import numpy as np
 import torch
@@ -28,6 +29,7 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         self._plot_service = plot_service
         self._metrics_service = metrics_service
 
+    @overrides
     def evaluate_batch(self, output: List[torch.Tensor], evaluation_types: List[EvaluationType]) -> Dict[EvaluationType, List]:
         output_numpy = [x.mean(dim=1).cpu().detach().numpy() for x in output]
 
@@ -52,6 +54,7 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
 
         return evaluation_results
 
+    @overrides
     def save_results(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
         checkpoint_folder=self._file_service.get_checkpoints_path()
         if self._arguments_service.plot_distances:

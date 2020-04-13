@@ -2,6 +2,7 @@ import pickle
 import os
 import numpy as np
 import torch
+from overrides import overrides
 
 from typing import List
 
@@ -43,8 +44,10 @@ class SemEvalTestDataset(DatasetBase):
         encodings = tokenizer_service.encode_sequences(target_words)
         self._target_word_ids = [x[0] for x in encodings]
 
+    @overrides
     def __len__(self):
         return len(self._target_word_ids)
 
+    @overrides
     def __getitem__(self, idx):
         return (torch.tensor(self._target_word_ids[idx]).to(self._arguments_service.device), self._target_words[idx])

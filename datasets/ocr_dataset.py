@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 import pickle
+from overrides import overrides
 
 from typing import List
 from transformers import BertModel
@@ -104,9 +105,11 @@ class OCRDataset(DatasetBase):
 
         return language_data
 
+    @overrides
     def __len__(self):
         return self._language_data.length
 
+    @overrides
     def __getitem__(self, idx):
         result = self._language_data.get_entry(idx)
 
@@ -138,9 +141,11 @@ class OCRDataset(DatasetBase):
                   for i in range(0, len(list_to_split), chunk_size-overlap_size)]
         return result
 
+    @overrides
     def use_collate_function(self) -> bool:
         return True
 
+    @overrides
     def collate_function(self, sequences):
         return self._pad_and_sort_batch(sequences)
 

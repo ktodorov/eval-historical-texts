@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 import pickle
+from overrides import overrides
 
 from typing import List
 from transformers import BertModel
@@ -49,6 +50,7 @@ class OCRCharacterDataset(OCRDataset):
             run_type,
             **kwargs)
 
+    @overrides
     def _get_language_data_path(
             self,
             file_service: FileService,
@@ -85,6 +87,7 @@ class OCRCharacterDataset(OCRDataset):
 
         return language_data_path
 
+    @overrides
     def __getitem__(self, idx):
         result = self._language_data.get_entry(idx)
 
@@ -92,6 +95,7 @@ class OCRCharacterDataset(OCRDataset):
 
         return ocr_aligned, ocr_text, gs_text, ocr_offsets
 
+    @overrides
     def _pad_and_sort_batch(self, DataLoaderBatch):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
@@ -121,6 +125,7 @@ class OCRCharacterDataset(OCRDataset):
             pretrained_representations,
             offset_lists)
 
+    @overrides
     def _sort_batch(self, batch, targets, lengths, pretrained_embeddings, offset_lists):
         seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)
         seq_tensor = batch[perm_idx]

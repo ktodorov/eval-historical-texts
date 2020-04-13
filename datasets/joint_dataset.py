@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import torch
 from typing import List
+from overrides import overrides
 
 from datasets.dataset_base import DatasetBase
 
@@ -20,9 +21,11 @@ class JointDataset(DatasetBase):
 
         self._datasets = sub_datasets
 
+    @overrides
     def __len__(self):
         return max([len(dataset) for dataset in self._datasets])
 
+    @overrides
     def __getitem__(self, idx):
         ids = [dataset[self.correct_id(idx, len(dataset))]
                for dataset in self._datasets]
@@ -38,9 +41,11 @@ class JointDataset(DatasetBase):
 
         return result
 
+    @overrides
     def use_collate_function(self) -> bool:
         return True
 
+    @overrides
     def collate_function(self, sequences):
         if not sequences:
             return []

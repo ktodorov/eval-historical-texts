@@ -1,3 +1,4 @@
+from overrides import overrides
 import argparse
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
@@ -9,6 +10,7 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
     def __init__(self):
         super().__init__()
 
+    @overrides
     def get_configuration_name(self) -> str:
         result = str(self.configuration)
         if self.configuration == Configuration.SequenceToCharacter:
@@ -24,6 +26,7 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
 
         return result
 
+    @overrides
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)
 
@@ -52,6 +55,7 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
         parser.add_argument('--beam-width', type=int, default=3,
                             help='Width of the beam when using beam search. Defaults to 3')
 
+    @overrides
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         super()._validate_arguments(parser)
 

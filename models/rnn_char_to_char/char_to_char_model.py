@@ -6,6 +6,8 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from typing import Dict
 
+from overrides import overrides
+
 from enums.metric_type import MetricType
 
 from entities.metric import Metric
@@ -55,6 +57,7 @@ class CharToCharModel(ModelBase):
         self.fc = nn.Linear(arguments_service.hidden_dimension *
                             multiplication_factor, vocabulary_service.vocabulary_size())
 
+    @overrides
     def forward(self, input_batch, debug=False, **kwargs):
         sequences, targets, lengths, pretrained_representations, offset_lists = input_batch
 
@@ -98,6 +101,7 @@ class CharToCharModel(ModelBase):
 
         return output, targets
 
+    @overrides
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
         output, targets = outputs
         output_dim = output.shape[-1]
@@ -150,6 +154,7 @@ class CharToCharModel(ModelBase):
 
         return metrics, character_results
 
+    @overrides
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
         if best_metric.is_new:
             return True

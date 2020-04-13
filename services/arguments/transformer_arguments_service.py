@@ -1,3 +1,4 @@
+from overrides import overrides
 import argparse
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
@@ -8,6 +9,7 @@ class TransformerArgumentsService(PretrainedArgumentsService):
     def __init__(self):
         super().__init__()
 
+    @overrides
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)
 
@@ -25,6 +27,7 @@ class TransformerArgumentsService(PretrainedArgumentsService):
         parser.add_argument('--teacher-forcing-ratio', type=float, default=0.5,
                             help='Ratio for teacher forcing during decoding of translation. Default is 0.5')
 
+    @overrides
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         super()._validate_arguments(parser)
 

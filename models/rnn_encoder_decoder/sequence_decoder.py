@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from torch.functional import F
 
+from overrides import overrides
+
 
 class SequenceDecoder(nn.Module):
     def __init__(
@@ -34,13 +36,14 @@ class SequenceDecoder(nn.Module):
             embedding_size + hidden_dimension * 2, output_dimension)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, input, hidden, encoder_context):
-        input = input.unsqueeze(1)
+    @overrides
+    def forward(self, input_sequence, hidden, encoder_context):
+        input_sequence = input_sequence.unsqueeze(1)
 
         if self._use_own_embeddings:
-            embedded = self.embedding(input)
+            embedded = self.embedding(input_sequence)
         else:
-            embedded = self._shared_embeddings(input)
+            embedded = self._shared_embeddings(input_sequence)
 
         embedded = self.dropout(embedded)
 

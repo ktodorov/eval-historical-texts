@@ -1,5 +1,6 @@
 from torch import optim
 from torch.optim.optimizer import Optimizer
+from overrides import overrides
 
 from models.model_base import ModelBase
 
@@ -21,8 +22,10 @@ class AdamOptimizer(OptimizerBase):
 
         return optimizer
 
+    @overrides
     def step(self):
         self._optimizer.step()
 
+    @overrides
     def zero_grad(self):
         self._optimizer.zero_grad()

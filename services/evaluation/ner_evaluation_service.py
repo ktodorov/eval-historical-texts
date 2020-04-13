@@ -2,6 +2,7 @@ import csv
 import os
 
 from typing import List, Dict
+from overrides import overrides
 
 import torch
 
@@ -30,6 +31,7 @@ class NEREvaluationService(BaseEvaluationService):
         self._process_service = process_service
         self._file_service = file_service
 
+    @overrides
     def evaluate_batch(
             self,
             output: torch.Tensor,
@@ -61,6 +63,7 @@ class NEREvaluationService(BaseEvaluationService):
         evaluation = {EvaluationType.NamedEntityRecognitionMatch: result}
         return evaluation
 
+    @overrides
     def save_results(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
         data_path = self._file_service.get_data_path()
         language_suffix = self._process_service.get_language_suffix(

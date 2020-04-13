@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from typing import List
+from overrides import overrides
 
 from entities.ne_line import NELine
 from entities.ne_collection import NECollection
@@ -39,9 +40,11 @@ class NERDataset(DatasetBase):
 
         print(f'Loaded {len(self.ne_collection)} items for \'{run_type}\' set')
 
+    @overrides
     def __len__(self):
         return len(self.ne_collection)
 
+    @overrides
     def __getitem__(self, idx):
         item: NELine = self.ne_collection[idx]
         coarse_entity_labels = self._ner_process_service.get_entity_labels(item)
@@ -76,9 +79,11 @@ class NERDataset(DatasetBase):
 
         return pretrained_result
 
+    @overrides
     def use_collate_function(self) -> bool:
         return True
 
+    @overrides
     def collate_function(self, sequences):
         return self._pad_and_sort_batch(sequences)
 

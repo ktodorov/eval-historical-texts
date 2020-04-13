@@ -1,6 +1,8 @@
 import os
 from typing import Callable
 
+from overrides import overrides
+
 from transformers import BertForMaskedLM, BertPreTrainedModel, BertConfig
 
 from entities.model_checkpoint import ModelCheckpoint
@@ -32,6 +34,7 @@ class KBertModel(ModelBase):
 
         self._arguments_service = arguments_service
 
+    @overrides
     def forward(self, input_batch, **kwargs):
         if isinstance(input_batch, tuple):
             (inputs, labels) = input_batch
@@ -41,18 +44,22 @@ class KBertModel(ModelBase):
             outputs = self._bert_model.forward(input_batch)
             return outputs[1][-1]
 
+    @overrides
     def named_parameters(self):
         return self._bert_model.named_parameters()
 
+    @overrides
     def parameters(self):
         return self._bert_model.parameters()
 
+    @overrides
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
         if best_metric.is_new or best_metric.get_current_loss() > new_metrics.get_current_loss():
             return True
 
         return False
 
+    @overrides
     def save(
             self,
             path: str,
@@ -80,6 +87,7 @@ class KBertModel(ModelBase):
 
         return saved
 
+    @overrides
     def load(
             self,
             path: str,

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 import pickle
+from overrides import overrides
 
 from datasets.dataset_base import DatasetBase
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
@@ -63,16 +64,20 @@ class SemanticChangeDataset(DatasetBase):
             print(f'Loaded {len(self._ids)} entries')
             log_service.log_summary(key='Entries amount', value=len(self._ids))
 
+    @overrides
     def __len__(self):
         return len(self._ids)
 
+    @overrides
     def __getitem__(self, idx):
         token_ids, mask = self._ids[idx]
         return token_ids, mask
 
+    @overrides
     def use_collate_function(self) -> bool:
         return True
 
+    @overrides
     def collate_function(self, sequences):
         return self._pad_and_sort_batch(sequences)
 

@@ -4,6 +4,7 @@ import random
 import numpy as np
 
 from typing import List, Dict
+from overrides import overrides
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
@@ -70,6 +71,7 @@ class MultiFitModel(ModelBase):
         for name, param in self.named_parameters():
             nn.init.uniform_(param.data, -0.08, 0.08)
 
+    @overrides
     def forward(self, input_batch, debug=False, **kwargs):
         source, targets, lengths, pretrained_representations = input_batch
 
@@ -112,6 +114,7 @@ class MultiFitModel(ModelBase):
 
         return outputs, targets
 
+    @overrides
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
         output, targets = outputs
         output_dim = output.shape[-1]
@@ -164,6 +167,7 @@ class MultiFitModel(ModelBase):
 
         return metrics, character_results
 
+    @overrides
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
         if best_metric.is_new:
             return True

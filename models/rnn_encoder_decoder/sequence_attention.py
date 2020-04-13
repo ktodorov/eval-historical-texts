@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.functional import F
+from overrides import overrides
 
 class SequenceAttention(nn.Module):
     def __init__(
@@ -18,6 +19,7 @@ class SequenceAttention(nn.Module):
             1,
             bias=False)
 
+    @overrides
     def forward(self, hidden, encoder_context):
 
         batch_size = encoder_context.shape[0]

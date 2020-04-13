@@ -1,3 +1,4 @@
+from overrides import overrides
 import argparse
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
@@ -9,6 +10,7 @@ class PostOCRCharactersArgumentsService(PretrainedArgumentsService):
     def __init__(self):
         super().__init__()
 
+    @overrides
     def get_configuration_name(self) -> str:
         result = str(self.configuration)
 
@@ -20,6 +22,7 @@ class PostOCRCharactersArgumentsService(PretrainedArgumentsService):
 
         return result
 
+    @overrides
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)
 
@@ -33,8 +36,6 @@ class PostOCRCharactersArgumentsService(PretrainedArgumentsService):
                             help='Number of layers used for RNN or Transformer models')
         parser.add_argument('--bidirectional', action='store_true',
                             help='Whether the RNN used will be bidirectional')
-        # parser.add_argument('--max-articles-length', type=int, default=1000,
-        #                     help='This is the maximum length of articles that will be used in models. Articles longer than this length will be cut.')
 
     @property
     def embeddings_size(self) -> int:

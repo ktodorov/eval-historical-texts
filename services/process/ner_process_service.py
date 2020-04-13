@@ -5,7 +5,6 @@ import codecs
 from typing import List, Dict, Tuple
 from collections import defaultdict
 
-
 from enums.language import Language
 from enums.run_type import RunType
 from enums.ner_type import NERType

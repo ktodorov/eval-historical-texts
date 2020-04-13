@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 import pickle
+from overrides import overrides
 
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
@@ -54,16 +55,20 @@ class NewsEyeDataset(DatasetBase):
         with open(language_data_path, 'rb') as data_file:
             self._language_data: LanguageData = pickle.load(data_file)
 
+    @overrides
     def __len__(self):
         return self._language_data.length
 
+    @overrides
     def __getitem__(self, idx):
         result = self._language_data.get_entry(idx)
         return result
 
+    @overrides
     def use_collate_function(self) -> bool:
         return True
 
+    @overrides
     def collate_function(self, sequences):
         return self._pad_and_sort_batch(sequences)
 

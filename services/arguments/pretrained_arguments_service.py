@@ -1,3 +1,4 @@
+from overrides import overrides
 import argparse
 
 from services.arguments.arguments_service_base import ArgumentsServiceBase
@@ -10,6 +11,7 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
     def __init__(self):
         super().__init__()
 
+    @overrides
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
         super()._add_specific_arguments(parser)
 
