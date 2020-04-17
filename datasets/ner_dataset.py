@@ -47,12 +47,13 @@ class NERDataset(DatasetBase):
     @overrides
     def __getitem__(self, idx):
         item: NELine = self.ne_collection[idx]
-        coarse_entity_labels = self._ner_process_service.get_entity_labels(item)
+        entity_labels = self._ner_process_service.get_entity_labels(
+            item)
         pretrained_result = self._get_pretrained_representation(item.token_ids)
 
-        return item.token_ids, coarse_entity_labels, pretrained_result
+        return item.token_ids, entity_labels, pretrained_result, item.position_changes
 
-    def _get_pretrained_representation(self, token_ids: List[int]):
+    def _get_pretrained_representation(self, token_ids: List[int]) -> torch.Tensor:
         if not self._include_pretrained:
             return []
 
@@ -91,7 +92,7 @@ class NERDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, pretrained_representations = batch_split
+        sequences, targets, pretrained_representations, position_changes = batch_split
 
         lengths = [len(sequence) for sequence in sequences]
 
@@ -121,14 +122,16 @@ class NERDataset(DatasetBase):
             torch.from_numpy(padded_sequences).to(self._device),
             torch.from_numpy(padded_targets).to(self._device),
             torch.tensor(lengths, device=self._device),
-            padded_pretrained_representations)
+            padded_pretrained_representations,
+            position_changes)
 
-    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings):
+    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings, position_changes):
         seq_lengths, perm_idx = lengths.sort(descending=True)
         seq_tensor = batch[perm_idx]
         targets_tensor = targets[perm_idx]
+        position_changes = [position_changes[i] for i in perm_idx]
 
         if self._include_pretrained:
             pretrained_embeddings = pretrained_embeddings[perm_idx]
 
-        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings
+        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings, position_changes

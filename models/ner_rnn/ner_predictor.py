@@ -40,11 +40,11 @@ class NERPredictor(ModelBase):
         self._process_service = process_service
 
         self.device = arguments_service.device
-        number_of_tags = process_service.get_labels_amount()
+        self.number_of_tags = process_service.get_labels_amount()
         self._metric_types = arguments_service.metric_types
 
         self.rnn_encoder = RNNEncoder(
-            number_of_tags=number_of_tags,
+            number_of_tags=self.number_of_tags,
             use_attention=arguments_service.use_attention,
             include_pretrained_model=arguments_service.include_pretrained_model,
             pretrained_model_size=arguments_service.pretrained_model_size,
@@ -60,7 +60,7 @@ class NERPredictor(ModelBase):
             self._process_service.PAD_TOKEN)
 
         self.crf_layer = LinearCRF(
-            num_of_tags=number_of_tags,
+            num_of_tags=self.number_of_tags,
             device=arguments_service.device,
             start_tag=process_service.get_entity_label(
                 process_service.START_TOKEN),
@@ -74,7 +74,7 @@ class NERPredictor(ModelBase):
 
     @overrides
     def forward(self, input_batch):
-        sequences, targets, lengths, pretrained_representations = input_batch
+        sequences, targets, lengths, pretrained_representations, position_changes = input_batch
 
         mask = self._create_mask(sequences)
 
@@ -83,6 +83,12 @@ class NERPredictor(ModelBase):
             lengths=lengths,
             pretrained_representations=pretrained_representations,
             mask=mask)
+
+        rnn_outputs, targets, mask = self._restore_position_changes(
+            position_changes,
+            rnn_outputs,
+            targets,
+            mask)
 
         loss = self.crf_layer.neg_log_likelihood(
             rnn_outputs,
@@ -93,12 +99,12 @@ class NERPredictor(ModelBase):
             rnn_outputs,
             mask)
 
-        return predictions, loss
+        return predictions, loss, targets
 
     @overrides
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, _ = outputs
-        _, targets, _, _ = batch
+        output, _, targets = outputs
+        # _, targets, _, _, _ = batch
 
         predicted_labels = np.array(output)
         targets = targets.cpu().detach().numpy()
@@ -153,7 +159,6 @@ class NERPredictor(ModelBase):
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
         if best_metric.is_new:
             return True
-
         key = self._create_measure_key(
             MetricType.F1Score, TagMeasureAveraging.Weighted, TagMeasureType.Strict)
         return best_metric.get_accuracy_metric(key) <= new_metric.get_accuracy_metric(key)
@@ -169,3 +174,32 @@ class NERPredictor(ModelBase):
     def _create_mask(self, input_sequences: torch.Tensor):
         mask = input_sequences.ne(self.pad_idx).float()
         return mask
+
+    def _restore_position_changes(
+            self,
+            position_changes,
+            rnn_outputs,
+            targets,
+            mask):
+        if position_changes is None:
+            return rnn_outputs, targets, mask
+
+        batch_size, sequence_length, _ = rnn_outputs.shape
+        new_rnn_outputs = torch.zeros(
+            (batch_size, sequence_length, self.number_of_tags), dtype=rnn_outputs.dtype).to(self.device)
+        new_targets = torch.zeros((batch_size, sequence_length), dtype=targets.dtype).to(self.device)
+        new_mask = torch.zeros((batch_size, sequence_length), dtype=mask.dtype).to(self.device)
+
+        for i, current_position_changes in enumerate(position_changes):
+            if current_position_changes is None:
+                new_rnn_outputs[i] = rnn_outputs[i]
+                new_targets[i] = targets[i]
+                new_mask[i] = mask[i]
+                continue
+
+            for old_position, new_positions in current_position_changes.items():
+                new_rnn_outputs[i,old_position,:] = torch.mean(rnn_outputs[i, new_positions], dim=0)
+                new_targets[i,old_position] = targets[i, new_positions[0]]
+                new_mask[i,old_position] = torch.max(mask[i, new_positions])
+
+        return new_rnn_outputs, new_targets, new_mask
