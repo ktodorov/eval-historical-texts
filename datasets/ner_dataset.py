@@ -97,15 +97,17 @@ class NERDataset(DatasetBase):
 
         max_length = max(lengths)
 
-        padded_sequences = np.zeros(
-            (batch_size, max_length), dtype=np.int64) * -1
-        padded_targets = np.zeros(
-            (batch_size, max_length), dtype=np.int64) * -1
+        padded_sequences = np.zeros((batch_size, max_length), dtype=np.int64) + \
+            self._ner_process_service.get_entity_label(
+                self._ner_process_service.PAD_TOKEN)
+        padded_targets = np.zeros((batch_size, max_length), dtype=np.int64) + \
+            self._ner_process_service.get_entity_label(
+                self._ner_process_service.PAD_TOKEN)
 
         padded_pretrained_representations = []
         if self._include_pretrained:
             padded_pretrained_representations = torch.zeros(
-                (batch_size, max_length, self._pretrained_model_size)).to(self._device) * -1
+                (batch_size, max_length, self._pretrained_model_size)).to(self._device) + self._ner_process_service.get_entity_label(self._ner_process_service.PAD_TOKEN)
 
         for i, sequence_length in enumerate(lengths):
             padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
