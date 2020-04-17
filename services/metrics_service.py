@@ -1,6 +1,11 @@
 import jellyfish
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score, precision_score, recall_score, precision_recall_fscore_support
 import scipy.spatial.distance as scipy_distances
+
+from typing import Tuple
+
+from enums.tag_measure_type import TagMeasureType
+from enums.tag_measure_averaging import TagMeasureAveraging
 
 
 class MetricsService:
@@ -17,22 +22,60 @@ class MetricsService:
             string1, string2)) / max(len(string1), len(string2))
         return result
 
-    def calculate_f1_score(self, predictions, targets):
-        result = f1_score(targets, predictions, average='macro')
+    def calculate_f1_score(
+            self,
+            predictions,
+            targets,
+            tag_measure_type: TagMeasureType = TagMeasureType.Strict,
+            tag_measure_averaging: TagMeasureAveraging = TagMeasureAveraging.Weighted) -> float:
+        result = f1_score(targets, predictions,
+                          average=tag_measure_averaging.value)
         return result
 
-    def calculate_precision_score(self, predictions, targets):
-        result = precision_score(targets, predictions, average='macro')
+    def calculate_precision_score(
+            self,
+            predictions,
+            targets,
+            tag_measure_type: TagMeasureType = TagMeasureType.Strict,
+            tag_measure_averaging: TagMeasureAveraging = TagMeasureAveraging.Weighted) -> float:
+        result = precision_score(targets, predictions,
+                                 average=tag_measure_averaging.value)
         return result
 
-    def calculate_recall_score(self, predictions, targets):
-        result = recall_score(targets, predictions, average='macro')
+    def calculate_recall_score(
+            self,
+            predictions,
+            targets,
+            tag_measure_type: TagMeasureType = TagMeasureType.Strict,
+            tag_measure_averaging: TagMeasureAveraging = TagMeasureAveraging.Weighted) -> float:
+        result = recall_score(targets, predictions,
+                              average=tag_measure_averaging.value)
         return result
 
-    def calculate_cosine_distance(self, list1: list, list2: list):
+    def calculate_precision_recall_fscore_support(
+            self,
+            predictions,
+            targets,
+            tag_measure_type: TagMeasureType = TagMeasureType.Strict,
+            tag_measure_averaging: TagMeasureAveraging = TagMeasureAveraging.Weighted) -> Tuple[float, float, float, float]:
+        result = precision_recall_fscore_support(
+            targets,
+            predictions,
+            average=tag_measure_averaging.value,
+            warn_for=tuple())
+
+        return result
+
+    def calculate_cosine_distance(self, list1: list, list2: list) -> float:
         cosine_distance = scipy_distances.cosine(list1, list2)
         return cosine_distance
 
-    def calculate_euclidean_distance(self, list1: list, list2: list):
+    def calculate_euclidean_distance(self, list1: list, list2: list) -> float:
         euclidean_distance = scipy_distances.euclidean(list1, list2)
         return euclidean_distance
+
+    def _validate_tags_metrics(self, targets, predictions) -> bool:
+        target_labels = set(targets)
+        predicted_labels = set(predictions)
+        result = len(target_labels) == len(predicted_labels)
+        return result
