@@ -30,7 +30,7 @@ class TokenizerService:
             raise Exception(f'Vocabulary not found in {vocabulary_path}')
 
         self._tokenizer = BertWordPieceTokenizer(
-            vocabulary_path, lowercase=False, add_special_tokens=(configuration != Configuration.RNNSimple))
+            vocabulary_path, lowercase=False, add_special_tokens=(arguments_service.configuration != Configuration.RNNSimple))
 
     def load_tokenizer_model(self):
         data_path = self._file_service.get_data_path()

@@ -29,6 +29,7 @@ from models.rnn_char_to_char.char_to_char_model import CharToCharModel
 
 from optimizers.optimizer_base import OptimizerBase
 from optimizers.adam_optimizer import AdamOptimizer
+from optimizers.sgd_optimizer import SGDOptimizer
 from optimizers.adamw_optimizer import AdamWOptimizer
 from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
 

@@ -1,5 +1,5 @@
 from enum import Enum
 
 class TagMeasureType(Enum):
-    Strict = 0
-    Fuzzy = 1
+    Strict = 'strict'
+    Fuzzy = 'fuzzy'

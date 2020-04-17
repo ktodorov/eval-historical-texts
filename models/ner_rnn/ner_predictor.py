@@ -10,7 +10,11 @@ from typing import Tuple, Dict, List
 from overrides import overrides
 
 from entities.metric import Metric
+from entities.data_output_log import DataOutputLog
+
 from enums.metric_type import MetricType
+from enums.tag_measure_averaging import TagMeasureAveraging
+from enums.tag_measure_type import TagMeasureType
 
 from models.model_base import ModelBase
 
