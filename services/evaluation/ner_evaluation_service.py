@@ -37,7 +37,7 @@ class NEREvaluationService(BaseEvaluationService):
             output: torch.Tensor,
             evaluation_types: List[EvaluationType],
             batch_index: int) -> Dict[EvaluationType, List]:
-        predictions = output[0].max(dim=1)[1].detach().tolist()
+        predictions = output[0][0]
         position_changes = self._process_service.get_position_changes(
             batch_index)
 
