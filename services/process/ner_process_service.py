@@ -33,6 +33,10 @@ class NERProcessService(ProcessServiceBase):
 
         self._data_version = "1.1"
 
+        self.PAD_TOKEN = '[PAD]'
+        self.START_TOKEN = '[CLS]'
+        self.STOP_TOKEN = '[SEP]'
+
         data_path = file_service.get_data_path()
         language_suffix = self.get_language_suffix(arguments_service.language)
 
@@ -46,7 +50,10 @@ class NERProcessService(ProcessServiceBase):
                 data_path, f'HIPE-data-v{self._data_version}-dev-{language_suffix}.tsv'),
             limit=arguments_service.validation_dataset_limit_size)
 
-        self._coarse_entity_mapping, self._fine_entity_mapping = self._create_entity_mappings(
+        self._coarse_entity_mapping: Dict[str, int] = {}
+        self._fine_entity_mapping: Dict[str, int] = {}
+
+        (self._coarse_entity_mapping, self._fine_entity_mapping) = self._create_entity_mappings(
             self._train_ne_collection,
             self._validation_ne_collection)
 
@@ -116,8 +123,12 @@ class NERProcessService(ProcessServiceBase):
             validation_ne_collection.get_unique_coarse_entities())
         coarse_typed_entities = list(set(coarse_typed_entities))
         coarse_typed_entities.sort(key=lambda x: '' if x is None else x)
-        coarse_entity_mapping = {x: i for i,
+        coarse_entity_mapping = {x: i+3 for i,
                                  x in enumerate(coarse_typed_entities)}
+
+        coarse_entity_mapping[self.PAD_TOKEN] = 0
+        coarse_entity_mapping[self.START_TOKEN] = 1
+        coarse_entity_mapping[self.STOP_TOKEN] = 2
 
         fine_typed_entities = []
         if train_ne_collection is not None:
@@ -126,15 +137,29 @@ class NERProcessService(ProcessServiceBase):
             validation_ne_collection.get_unique_fine_entities())
         fine_typed_entities = list(set(fine_typed_entities))
         fine_typed_entities.sort(key=lambda x: '' if x is None else x)
-        fine_entity_mapping = {x: i for i, x in enumerate(fine_typed_entities)}
+
+        fine_entity_mapping = {x: i+3 for i,
+                               x in enumerate(fine_typed_entities)}
+
+        fine_entity_mapping[self.PAD_TOKEN] = 0
+        fine_entity_mapping[self.START_TOKEN] = 1
+        fine_entity_mapping[self.STOP_TOKEN] = 2
 
         return coarse_entity_mapping, fine_entity_mapping
 
     def get_entity_labels(self, ne_line: NELine) -> List[int]:
         if self._label_type == NERType.Coarse:
-            return [self._coarse_entity_mapping[entity] for entity in ne_line.ne_coarse_lit]
+            return [self.get_entity_label(entity) for entity in ne_line.ne_coarse_lit]
         elif self._label_type == NERType.Fine:
-            return [self._fine_entity_mapping[entity] for entity in ne_line.ne_fine_lit]
+            return [self.get_entity_label(entity) for entity in ne_line.ne_fine_lit]
+        else:
+            raise Exception('Unsupported NER type for labels')
+
+    def get_entity_label(self, entity_tag: str) -> int:
+        if self._label_type == NERType.Coarse:
+            return self._coarse_entity_mapping[entity_tag]
+        elif self._label_type == NERType.Fine:
+            return self._fine_entity_mapping[entity_tag]
         else:
             raise Exception('Unsupported NER type for labels')
 

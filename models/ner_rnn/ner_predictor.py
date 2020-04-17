@@ -37,13 +37,14 @@ class NERPredictor(ModelBase):
         super().__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
+        self._process_service = process_service
 
         self.device = arguments_service.device
         number_of_tags = process_service.get_labels_amount()
         self._metric_types = arguments_service.metric_types
 
         self.rnn_encoder = RNNEncoder(
-            number_of_tags=number_of_tags + 2,  # TODO: Check if + 2 is valid
+            number_of_tags=number_of_tags,
             use_attention=arguments_service.use_attention,
             include_pretrained_model=arguments_service.include_pretrained_model,
             pretrained_model_size=arguments_service.pretrained_model_size,
@@ -52,32 +53,43 @@ class NERPredictor(ModelBase):
             embeddings_size=arguments_service.embeddings_size,
             dropout=arguments_service.dropout,
             hidden_dimension=arguments_service.hidden_dimension,
-            bidirectional=arguments_service.bidirectional_rnn)
+            bidirectional=arguments_service.bidirectional_rnn,
+            number_of_layers=arguments_service.number_of_layers)
+
+        self.pad_idx = self._process_service.get_entity_label(
+            self._process_service.PAD_TOKEN)
 
         self.crf_layer = LinearCRF(
             num_of_tags=number_of_tags,
-            device=arguments_service.device)
+            device=arguments_service.device,
+            start_tag=process_service.get_entity_label(
+                process_service.START_TOKEN),
+            stop_tag=process_service.get_entity_label(
+                process_service.STOP_TOKEN),
+            pad_tag=self.pad_idx)
+
+        self.tag_measure_averages = [
+            TagMeasureAveraging.Macro, TagMeasureAveraging.Micro, TagMeasureAveraging.Weighted]
+        self.tag_measure_types = [TagMeasureType.Strict]
 
     @overrides
     def forward(self, input_batch):
         sequences, targets, lengths, pretrained_representations = input_batch
 
+        mask = self._create_mask(sequences)
+
         rnn_outputs = self.rnn_encoder.forward(
             sequences=sequences,
             lengths=lengths,
-            pretrained_representations=pretrained_representations)
+            pretrained_representations=pretrained_representations,
+            mask=mask)
 
-        mask, targets = self._create_mask(
-            inputs=sequences,
-            targets=targets,
-            rnn_outputs=rnn_outputs)
-
-        loss = self.crf_layer.neg_log_likelihood_loss(
+        loss = self.crf_layer.neg_log_likelihood(
             rnn_outputs,
-            mask,
-            targets)
+            targets,
+            mask)
 
-        _, predictions = self.crf_layer.forward(
+        predictions = self.crf_layer.forward(
             rnn_outputs,
             mask)
 
@@ -88,11 +100,12 @@ class NERPredictor(ModelBase):
         output, _ = outputs
         _, targets, _, _ = batch
 
-        predictions = output.cpu().detach().numpy()
+        predicted_labels = np.array(output)
         targets = targets.cpu().detach().numpy()
 
-        mask = np.array((targets != -1), dtype=bool)
-        predicted_labels = predictions[mask]
+        mask = np.array(
+            (targets != self._process_service.get_entity_label(self._process_service.PAD_TOKEN)), dtype=bool)
+        predicted_labels = np.hstack(predicted_labels)
         target_labels = targets[mask]
 
         metrics: Dict[MetricType, float] = {}
@@ -141,12 +154,18 @@ class NERPredictor(ModelBase):
         if best_metric.is_new:
             return True
 
-        return best_metric.get_accuracy_metric(MetricType.F1Score) <= new_metric.get_accuracy_metric(MetricType.F1Score)
+        key = self._create_measure_key(
+            MetricType.F1Score, TagMeasureAveraging.Weighted, TagMeasureType.Strict)
+        return best_metric.get_accuracy_metric(key) <= new_metric.get_accuracy_metric(key)
 
-    def _create_mask(self, inputs, rnn_outputs, targets=None):
-        mask = inputs > -1
-        mask = mask[:, :rnn_outputs.size(1)]
-        if self.training:
-            targets = targets[:, :rnn_outputs.size(1)]
+    def _create_measure_key(
+            self,
+            metric_type: MetricType,
+            tag_measure_averaging: TagMeasureAveraging,
+            tag_measure_type: TagMeasureType):
+        key = f'{metric_type.value}-{tag_measure_averaging.value}-{tag_measure_type.value}'
+        return key
 
-        return mask, targets
+    def _create_mask(self, input_sequences: torch.Tensor):
+        mask = input_sequences.ne(self.pad_idx).float()
+        return mask

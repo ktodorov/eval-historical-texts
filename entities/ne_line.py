@@ -1,5 +1,6 @@
 from services.tokenizer_service import TokenizerService
 
+from typing import Dict, List
 
 class NELine:
     def __init__(self):
@@ -14,7 +15,7 @@ class NELine:
         self.ne_nested = []
         self.nel_lit = []
         self.nel_meto = []
-        self.position_changes = None
+        self.position_changes: Dict[int, List[int]] = None
 
     def add_data(self, csv_row: dict):
         self._add_entity_if_available(csv_row, 'TOKEN', self.tokens)

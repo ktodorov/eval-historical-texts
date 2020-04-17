@@ -27,7 +27,8 @@ class RNNEncoder(nn.Module):
             embeddings_size: int,
             dropout: float,
             hidden_dimension: int,
-            bidirectional: bool):
+            bidirectional: bool,
+            number_of_layers: int):
         super().__init__()
 
         self._include_pretrained = include_pretrained_model
@@ -44,7 +45,11 @@ class RNNEncoder(nn.Module):
 
         # the LSTM takes embedded sentence
         self.rnn = nn.LSTM(
-            rnn_input_size, hidden_dimension, batch_first=True, bidirectional=bidirectional)
+            rnn_input_size,
+            hidden_dimension,
+            num_layers=number_of_layers,
+            batch_first=True,
+            bidirectional=bidirectional)
 
         self.rnn_dropout = nn.Dropout(dropout)
         multiplier = 2 if bidirectional else 1
@@ -66,6 +71,7 @@ class RNNEncoder(nn.Module):
             sequences,
             lengths,
             pretrained_representations,
+            mask,
             debug=False,
             **kwargs):
 
@@ -103,5 +109,6 @@ class RNNEncoder(nn.Module):
             rnn_output = linear_combination * rnn_output
 
         output = self.hidden2tag.forward(rnn_output)
+        output *= mask.unsqueeze(2)
 
         return output
