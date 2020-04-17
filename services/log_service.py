@@ -5,6 +5,7 @@ import torch
 import numpy as np
 
 from entities.metric import Metric
+from entities.data_output_log import DataOutputLog
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 
@@ -131,11 +132,12 @@ class LogService:
 
         wandb.run.summary[key] = value
 
-    def log_batch_results(self, input: str, output: str, expected: str):
-        if not self._external_logging_enabled:
+    def log_batch_results(self, data_output_log: DataOutputLog):
+        if not self._external_logging_enabled or data_output_log is None:
             return
 
-        table_log = wandb.Table(data=[[input, output, expected]])
+        columns, data = data_output_log.get_log_data()
+        table_log = wandb.Table(columns=columns, data=data)
 
         wandb.log({'batch results': table_log}, step=self._get_current_step())
 

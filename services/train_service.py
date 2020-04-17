@@ -16,6 +16,7 @@ from optimizers.optimizer_base import OptimizerBase
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
+from entities.data_output_log import DataOutputLog
 
 from enums.metric_type import MetricType
 
@@ -239,10 +240,10 @@ class TrainService:
         else:
             loss = self._loss_function.calculate_loss(outputs)
 
-        metrics, character_results = self._model.calculate_accuracies(
+        metrics, current_output_log = self._model.calculate_accuracies(
             batch, outputs, output_characters=output_characters)
 
-        return loss, metrics, character_results
+        return loss, metrics, current_output_log
 
     def _load_model(self) -> ModelCheckpoint:
         model_checkpoint = self._model.load(self._model_path, 'BEST')
@@ -254,7 +255,7 @@ class TrainService:
     def _evaluate(self) -> Metric:
         metric = Metric(amount_limit=None)
         data_loader_length = len(self.data_loader_validation)
-        all_character_results = []
+        full_output_log = DataOutputLog()
 
         for i, batch in enumerate(self.data_loader_validation):
             if not batch:
@@ -263,23 +264,20 @@ class TrainService:
             self._log_service.log_progress(
                 i, data_loader_length, evaluation=True)
 
-            loss_batch, metrics_batch, character_results = self._perform_batch_iteration(
-                batch, train_mode=False, output_characters=(len(all_character_results) < 30))
+            loss_batch, metrics_batch, current_output_log = self._perform_batch_iteration(
+                batch, train_mode=False, output_characters=(len(full_output_log) < 100))
 
             if math.isnan(loss_batch):
                 raise Exception(
                     f'loss is NaN during evaluation at iteration {i}')
 
-            if character_results:
-                all_character_results.extend(character_results)
+            if current_output_log is not None:
+                full_output_log.extend(current_output_log)
 
             metric.add_accuracies(metrics_batch)
             metric.add_loss(loss_batch)
 
-        inputs = [x[0] for x in all_character_results]
-        predictions = [x[1] for x in all_character_results]
-        targets = [x[2] for x in all_character_results]
-        self._log_service.log_batch_results(inputs, predictions, targets)
+        self._log_service.log_batch_results(full_output_log)
 
         assert not math.isnan(metric.get_current_loss(
         )), f'combined loss is NaN during evaluation at iteration {i}; losses are - {metric._losses}'

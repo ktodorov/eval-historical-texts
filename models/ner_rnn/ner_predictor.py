@@ -91,24 +91,46 @@ class NERPredictor(ModelBase):
         predicted_labels = predictions[mask]
         target_labels = targets[mask]
 
-        metrics = {}
+        metrics: Dict[MetricType, float] = {}
 
-        if MetricType.F1Score in self._metric_types:
-            f1_score = self._metrics_service.calculate_f1_score(
-                predicted_labels, target_labels)
-            metrics[MetricType.F1Score] = f1_score
+        for tag_measure_averaging in self.tag_measure_averages:
+            for tag_measure_type in self.tag_measure_types:
+                (precision_score, recall_score, f1_score, _) = self._metrics_service.calculate_precision_recall_fscore_support(
+                    predicted_labels,
+                    target_labels,
+                    tag_measure_type,
+                    tag_measure_averaging)
 
-        if MetricType.PrecisionScore in self._metric_types:
-            precision_score = self._metrics_service.calculate_precision_score(
-                predicted_labels, target_labels)
-            metrics[MetricType.PrecisionScore] = precision_score
+                if MetricType.F1Score in self._metric_types:
+                    key = self._create_measure_key(
+                        MetricType.F1Score, tag_measure_averaging, tag_measure_type)
+                    metrics[key] = f1_score
 
-        if MetricType.RecallScore in self._metric_types:
-            recall_score = self._metrics_service.calculate_recall_score(
-                predicted_labels, target_labels)
-            metrics[MetricType.RecallScore] = recall_score
+                if MetricType.PrecisionScore in self._metric_types:
+                    key = self._create_measure_key(
+                        MetricType.PrecisionScore, tag_measure_averaging, tag_measure_type)
+                    metrics[key] = precision_score
 
-        return metrics, None
+                if MetricType.RecallScore in self._metric_types:
+                    key = self._create_measure_key(
+                        MetricType.RecallScore, tag_measure_averaging, tag_measure_type)
+                    metrics[key] = recall_score
+
+        output_log = None
+        if output_characters:
+            output_log = DataOutputLog()
+            batch_size = targets.shape[0]
+            for i in range(batch_size):
+                predicted_string = ','.join(
+                    [str(predicted_label) for predicted_label in output[i]])
+                target_string = ','.join([str(target_label)
+                                          for target_label in targets[i] if target_label != self.pad_idx])
+
+                output_log.add_new_data(
+                    output_data=predicted_string,
+                    true_data=target_string)
+
+        return metrics, output_log
 
     @overrides
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:

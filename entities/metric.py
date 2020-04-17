@@ -3,14 +3,12 @@ from __future__ import annotations # This is so we can use Metric as type hint
 from typing import Dict, List
 import numpy as np
 
-from enums.metric_type import MetricType
-
 class Metric:
     def __init__(
         self,
         amount_limit: int = 5,
         metric: Metric = None):
-        self._accuracies: Dict[MetricType, List[float]] = {}
+        self._accuracies: Dict[str, List[float]] = {}
         self._losses: List[float] = []
         self._amount_limit = amount_limit
 
@@ -19,7 +17,7 @@ class Metric:
             self.initialize(metric)
 
 
-    def add_accuracies(self, accuracies: Dict[MetricType, float]):
+    def add_accuracies(self, accuracies: Dict[str, float]):
         for key, value in accuracies.items():
             if key not in self._accuracies.keys():
                 self._accuracies[key] = []
@@ -28,14 +26,14 @@ class Metric:
             if self._amount_limit:
                 self._accuracies[key] = self._accuracies[key][-self._amount_limit:]
 
-    def get_current_accuracies(self) -> Dict[MetricType, float]:
+    def get_current_accuracies(self) -> Dict[str, float]:
         result = {}
         for key, value in self._accuracies.items():
             result[key] = np.mean(value, axis=0)
 
         return result
 
-    def get_accuracy_metric(self, metric_type: MetricType) -> float:
+    def get_accuracy_metric(self, metric_type: str) -> float:
         if metric_type not in self._accuracies.keys():
             return 0
 
