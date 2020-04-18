@@ -106,19 +106,8 @@ class NERProcessService(ProcessServiceBase):
             self,
             train_ne_collection: NECollection,
             validation_ne_collection: NECollection) -> Tuple[Dict[str, int], Dict[str, int]]:
-        if self._arguments_service.language == Language.English:
-            data_path = self._file_service.get_data_path(Language.French)
-            train_ne_collection = self.preprocess_data(
-                os.path.join(
-                    data_path, f'HIPE-data-v{self._data_version}-train-fr.tsv'))
-
-            validation_ne_collection = self.preprocess_data(
-                os.path.join(
-                    data_path, f'HIPE-data-v{self._data_version}-dev-fr.tsv'))
-
         coarse_typed_entities = []
-        if train_ne_collection is not None:
-            coarse_typed_entities = train_ne_collection.get_unique_coarse_entities()
+        coarse_typed_entities = train_ne_collection.get_unique_coarse_entities()
         coarse_typed_entities.extend(
             validation_ne_collection.get_unique_coarse_entities())
         coarse_typed_entities = list(set(coarse_typed_entities))
@@ -131,8 +120,7 @@ class NERProcessService(ProcessServiceBase):
         coarse_entity_mapping[self.STOP_TOKEN] = 2
 
         fine_typed_entities = []
-        if train_ne_collection is not None:
-            fine_typed_entities = train_ne_collection.get_unique_fine_entities()
+        fine_typed_entities = train_ne_collection.get_unique_fine_entities()
         fine_typed_entities.extend(
             validation_ne_collection.get_unique_fine_entities())
         fine_typed_entities = list(set(fine_typed_entities))
