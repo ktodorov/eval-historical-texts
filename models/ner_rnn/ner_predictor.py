@@ -160,7 +160,7 @@ class NERPredictor(ModelBase):
         if best_metric.is_new:
             return True
         key = self._create_measure_key(
-            MetricType.F1Score, TagMeasureAveraging.Weighted, TagMeasureType.Strict)
+            MetricType.F1Score, TagMeasureAveraging.Macro, TagMeasureType.Strict)
         return best_metric.get_accuracy_metric(key) <= new_metric.get_accuracy_metric(key)
 
     def _create_measure_key(
