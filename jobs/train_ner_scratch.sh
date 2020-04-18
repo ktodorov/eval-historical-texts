@@ -24,10 +24,7 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-LABELTYPE='coarse'
-LANGUAGE='french'
-
-srun python3 -u run.py --device cuda --eval-freq 200 --seed 13 --patience 50 --configuration rnn-simple --learning-rate 1e-2 --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights bert-base-multilingual-cased --hidden-dimension 256 --embeddings-size 32 --dropout 0.1 --label-type $LABELTYPE --reset-training-on-early-stop --training-reset-epoch-limit 5 --learn-new-embeddings --checkpoint-name $LANGUAGE-$LABELTYPE-crf-scratch --no-attention > output/ner-crf-scratch-$LANGUAGE-$LABELTYPE-13.txt
+srun python3 -u run.py --device cuda --eval-freq 300 --seed 13 --patience 150 --configuration rnn-simple --learning-rate 1e-2 --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights bert-base-multilingual-cased --hidden-dimension 512 --embeddings-size 128 --dropout 0 --number-of-layers 2 --label-type $LABELTYPE --reset-training-on-early-stop --training-reset-epoch-limit 5 --learn-new-embeddings --checkpoint-name $LANGUAGE-$LABELTYPE-crf-scratch --no-attention --bidirectional-rnn
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/
