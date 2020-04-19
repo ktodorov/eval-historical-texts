@@ -156,7 +156,7 @@ class NELine:
 
     def _add_entity_if_available(self, csv_row: dict, key: str, obj: list, use_none_if_empty: bool = False):
         if key in csv_row.keys():
-            if csv_row[key] == 'O' and use_none_if_empty:
+            if csv_row[key] == '' and use_none_if_empty:
                 obj.append(None)
             else:
                 obj.append(csv_row[key])
