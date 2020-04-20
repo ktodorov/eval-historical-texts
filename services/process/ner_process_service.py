@@ -32,7 +32,6 @@ class NERProcessService(ProcessServiceBase):
         self._label_type = arguments_service.label_type
 
         self._data_version = "1.1"
-
         self.PAD_TOKEN = '[PAD]'
         self.START_TOKEN = '[CLS]'
         self.STOP_TOKEN = '[SEP]'
@@ -155,16 +154,10 @@ class NERProcessService(ProcessServiceBase):
         if self._label_type == NERType.Coarse:
             for entity, entity_label in self._coarse_entity_mapping.items():
                 if label == entity_label:
-                    if entity is None:
-                        return 'O'
-
                     return entity
         elif self._label_type == NERType.Fine:
             for entity, entity_label in self._fine_entity_mapping.items():
                 if label == entity_label:
-                    if entity is None:
-                        return 'O'
-
                     return entity
 
         raise Exception('Entity not found for this label')

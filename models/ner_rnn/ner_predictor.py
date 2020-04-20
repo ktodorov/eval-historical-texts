@@ -22,6 +22,7 @@ from services.arguments.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 from services.tokenizer_service import TokenizerService
+from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.process.ner_process_service import NERProcessService
 
 
@@ -30,6 +31,7 @@ class NERPredictor(ModelBase):
     def __init__(
             self,
             arguments_service: NERArgumentsService,
+            pretrained_representations_service: PretrainedRepresentationsService,
             data_service: DataService,
             metrics_service: MetricsService,
             process_service: NERProcessService,
@@ -44,10 +46,14 @@ class NERPredictor(ModelBase):
         self._metric_types = arguments_service.metric_types
 
         self.rnn_encoder = RNNEncoder(
+            pretrained_representations_service=pretrained_representations_service,
+            device=self.device,
             number_of_tags=self.number_of_tags,
             use_attention=arguments_service.use_attention,
             include_pretrained_model=arguments_service.include_pretrained_model,
             pretrained_model_size=arguments_service.pretrained_model_size,
+            include_fasttext_model=arguments_service.include_fasttext_model,
+            fasttext_model_size=arguments_service.fasttext_model_size,
             learn_new_embeddings=arguments_service.learn_new_embeddings,
             vocabulary_size=tokenizer_service.vocabulary_size,
             embeddings_size=arguments_service.embeddings_size,
@@ -58,15 +64,18 @@ class NERPredictor(ModelBase):
 
         self.pad_idx = self._process_service.get_entity_label(
             self._process_service.PAD_TOKEN)
+        start_token_id = self._process_service.get_entity_label(
+            self._process_service.PAD_TOKEN)
+        stop_token_id = self._process_service.get_entity_label(
+            self._process_service.PAD_TOKEN)
 
         self.crf_layer = LinearCRF(
             num_of_tags=self.number_of_tags,
             device=arguments_service.device,
-            start_tag=process_service.get_entity_label(
-                process_service.START_TOKEN),
-            stop_tag=process_service.get_entity_label(
-                process_service.STOP_TOKEN),
-            pad_tag=self.pad_idx)
+            context_emb=arguments_service.hidden_dimension,
+            start_token_id=start_token_id,
+            stop_token_id=stop_token_id,
+            pad_token_id=self.pad_idx)
 
         self.tag_measure_averages = [
             TagMeasureAveraging.Macro, TagMeasureAveraging.Micro, TagMeasureAveraging.Weighted]
@@ -74,44 +83,32 @@ class NERPredictor(ModelBase):
 
     @overrides
     def forward(self, input_batch):
-        sequences, targets, lengths, pretrained_representations, position_changes = input_batch
+        sequences, targets, lengths, tokens, position_changes = input_batch
 
-        mask = self._create_mask(sequences)
-
-        rnn_outputs = self.rnn_encoder.forward(
+        rnn_outputs, lengths, targets = self.rnn_encoder.forward(
             sequences=sequences,
+            sequences_strings=tokens,
             lengths=lengths,
-            pretrained_representations=pretrained_representations,
-            mask=mask)
+            position_changes=position_changes,
+            targets=targets)
 
-        rnn_outputs, targets, mask = self._restore_position_changes(
-            position_changes,
-            rnn_outputs,
-            targets,
-            mask)
-
-        loss = self.crf_layer.neg_log_likelihood(
-            rnn_outputs,
-            targets,
-            mask)
-
-        predictions = self.crf_layer.forward(
-            rnn_outputs,
-            mask)
+        mask = self._create_mask(rnn_outputs, lengths)
+        loss = self.crf_layer.forward(rnn_outputs, lengths, targets, mask)
+        _, predictions = self.crf_layer.decode(rnn_outputs, lengths)
 
         return predictions, loss, targets
 
     @overrides
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
         output, _, targets = outputs
-        # _, targets, _, _, _ = batch
+        _, _, lengths, _, _ = batch
 
-        predicted_labels = np.array(output)
+        predictions = output.cpu().detach().numpy()
         targets = targets.cpu().detach().numpy()
 
         mask = np.array(
             (targets != self._process_service.get_entity_label(self._process_service.PAD_TOKEN)), dtype=bool)
-        predicted_labels = np.hstack(predicted_labels)
+        predicted_labels = predictions[mask]
         target_labels = targets[mask]
 
         metrics: Dict[MetricType, float] = {}
@@ -145,9 +142,9 @@ class NERPredictor(ModelBase):
             batch_size = targets.shape[0]
             for i in range(batch_size):
                 predicted_string = ','.join(
-                    [str(predicted_label) for predicted_label in output[i]])
-                target_string = ','.join([str(target_label)
-                                          for target_label in targets[i] if target_label != self.pad_idx])
+                    [self._process_service.get_entity_by_label(predicted_label) for predicted_label in predictions[i][:lengths[i]]])
+                target_string = ','.join([self._process_service.get_entity_by_label(target_label)
+                                          for target_label in targets[i][:lengths[i]]])
 
                 output_log.add_new_data(
                     output_data=predicted_string,
@@ -171,35 +168,9 @@ class NERPredictor(ModelBase):
         key = f'{metric_type.value}-{tag_measure_averaging.value}-{tag_measure_type.value}'
         return key
 
-    def _create_mask(self, input_sequences: torch.Tensor):
-        mask = input_sequences.ne(self.pad_idx).float()
+    def _create_mask(self, rnn_outputs: torch.Tensor, lengths: torch.Tensor):
+        batch_size = rnn_outputs.size(0)
+        sent_len = rnn_outputs.size(1)
+        maskTemp = torch.arange(1, sent_len + 1, dtype=torch.long).view(1, sent_len).expand(batch_size, sent_len).to(self.device)
+        mask = torch.le(maskTemp, lengths.view(batch_size, 1).expand(batch_size, sent_len)).to(self.device)
         return mask
-
-    def _restore_position_changes(
-            self,
-            position_changes,
-            rnn_outputs,
-            targets,
-            mask):
-        if position_changes is None:
-            return rnn_outputs, targets, mask
-
-        batch_size, sequence_length, _ = rnn_outputs.shape
-        new_rnn_outputs = torch.zeros(
-            (batch_size, sequence_length, self.number_of_tags), dtype=rnn_outputs.dtype).to(self.device)
-        new_targets = torch.zeros((batch_size, sequence_length), dtype=targets.dtype).to(self.device)
-        new_mask = torch.zeros((batch_size, sequence_length), dtype=mask.dtype).to(self.device)
-
-        for i, current_position_changes in enumerate(position_changes):
-            if current_position_changes is None:
-                new_rnn_outputs[i] = rnn_outputs[i]
-                new_targets[i] = targets[i]
-                new_mask[i] = mask[i]
-                continue
-
-            for old_position, new_positions in current_position_changes.items():
-                new_rnn_outputs[i,old_position,:] = torch.mean(rnn_outputs[i, new_positions], dim=0)
-                new_targets[i,old_position] = targets[i, new_positions[0]]
-                new_mask[i,old_position] = torch.max(mask[i, new_positions])
-
-        return new_rnn_outputs, new_targets, new_mask

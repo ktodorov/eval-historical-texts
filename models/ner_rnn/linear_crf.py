@@ -6,117 +6,246 @@ import torch.nn.functional as F
 from typing import Tuple
 from overrides import overrides
 
-def log_sum_exp(x):
-    m = torch.max(x, -1)[0]
-    return m + torch.log(torch.sum(torch.exp(x - m.unsqueeze(-1)), -1))
+
+def log_sum_exp_pytorch(vec: torch.Tensor) -> torch.Tensor:
+    """
+    Calculate the log_sum_exp trick for the tensor.
+    :param vec: [batchSize * from_label * to_label].
+    :return: [batchSize * to_label]
+    """
+    maxScores, idx = torch.max(vec, 1)
+    maxScores[maxScores == -float("Inf")] = 0
+    maxScoresExpanded = maxScores.view(vec.shape[0], 1, vec.shape[2]).expand(
+        vec.shape[0], vec.shape[1], vec.shape[2])
+    return maxScores + torch.log(torch.sum(torch.exp(vec - maxScoresExpanded), 1))
+
 
 class LinearCRF(nn.Module):
-
     def __init__(
             self,
             num_of_tags: int,
             device,
-            start_tag: int,
-            stop_tag: int,
-            pad_tag: int):
+            context_emb: int,
+            start_token_id: int,
+            stop_token_id: int,
+            pad_token_id: int):
         super().__init__()
 
+        self.label_size = num_of_tags
         self.device = device
-        self.tagset_size = num_of_tags
+        self.use_char = False
+        self.context_emb = context_emb
 
-        self.start_tag = start_tag
-        self.stop_tag = stop_tag
-        self.pad_tag = pad_tag
+        self.start_idx = start_token_id
+        self.end_idx = stop_token_id
+        self.pad_idx = pad_token_id
 
-        # Matrix of transition parameters.  Entry i,j is the score of
-        # transitioning *to* i *from* j.
-        self.transitions = nn.Parameter(
-            torch.randn(self.tagset_size, self.tagset_size))
+        # initialize the following transition (anything never -> start. end never -> anything. Same thing for the padding label)
+        init_transition = torch.randn(
+            self.label_size, self.label_size).to(self.device)
+        init_transition[:, self.start_idx] = -10000.0
+        init_transition[self.end_idx, :] = -10000.0
+        init_transition[:, self.pad_idx] = -10000.0
+        init_transition[self.pad_idx, :] = -10000.0
 
-        # These two statements enforce the constraint that we never transfer
-        # to the start tag and we never transfer from the stop tag
-        self.transitions.data[self.start_tag, :] = -10000
-        self.transitions.data[:, self.stop_tag] = -10000
-        self.transitions.data[:, self.pad_tag] = -10000
-        self.transitions.data[self.pad_tag, :] = -10000
-        self.transitions.data[self.pad_tag, self.stop_tag] = 0
-        self.transitions.data[self.pad_tag, self.pad_tag] = 0
+        self.transition = nn.Parameter(init_transition)
 
-    def _forward_alg(self, features, mask):
-        # initialize forward variables in log space
-        batch_size = features.shape[0]
-        score = torch.Tensor(batch_size, self.tagset_size).fill_(-10000).to(self.device) # [B, C]
-        score[:, self.start_tag] = 0.
-        transitions = self.transitions.unsqueeze(0) # [1, C, C]
-        for t in range(features.size(1)): # recursion through the sequence
-            mask_t = mask[:, t].unsqueeze(1)
-            emit_t = features[:, t].unsqueeze(2) # [B, C, 1]
-            score_t = score.unsqueeze(1) + emit_t + transitions # [B, 1, C] -> [B, C, C]
-            score_t = log_sum_exp(score_t) # [B, C, C] -> [B, C]
-            score = score_t * mask_t + score * (1 - mask_t)
-        score = log_sum_exp(score + self.transitions[self.stop_tag])
-        return score # partition function
+    @overrides
+    def forward(self, lstm_scores, word_seq_lens, tags, mask):
+        """
+        Calculate the negative log-likelihood
+        :param lstm_scores:
+        :param word_seq_lens:
+        :param tags:
+        :param mask:
+        :return:
+        """
+        all_scores = self.calculate_all_scores(lstm_scores=lstm_scores)
+        unlabed_score = self.forward_unlabeled(all_scores, word_seq_lens)
+        labeled_score = self.forward_labeled(
+            all_scores, word_seq_lens, tags, mask)
+        return (unlabed_score - labeled_score)
 
-    def _score_sentence(self, features, targets, mask):
-        # Gives the score of a provided tag sequence
-        score = torch.zeros(features.shape[0], device=self.device)
+    def forward_unlabeled(self, all_scores: torch.Tensor, word_seq_lens: torch.Tensor) -> torch.Tensor:
+        """
+        Calculate the scores with the forward algorithm. Basically calculating the normalization term
+        :param all_scores: (batch_size x max_seq_len x num_labels x num_labels) from (lstm scores + transition scores).
+        :param word_seq_lens: (batch_size)
+        :return: The score for all the possible structures.
+        """
+        batch_size = all_scores.size(0)
+        seq_len = all_scores.size(1)
+        alpha = torch.zeros(batch_size, seq_len,
+                            self.label_size).to(self.device)
 
-        features = features.unsqueeze(3)
-        transitions = self.transitions.unsqueeze(2)
-        sequence_length = features.size(1) - 1
-        for t in range(sequence_length): # recursion through the sequence
-            # current_tag, next_tag = targets[t], targets[t+1]
-            mask_t = mask[:, t]
-            emit_t = torch.cat([features[t, targets[t + 1]] for features, targets in zip(features, targets)])
-            trans_t = torch.cat([transitions[targets[t + 1], targets[t]] for targets in targets])
-            score += (emit_t + trans_t) * mask_t
+        # the first position of all labels = (the transition from start - > all labels) + current emission.
+        alpha[:, 0, :] = all_scores[:, 0,  self.start_idx, :]
 
-        targets_length = mask.sum(1).long().unsqueeze(1) - 1
-        last_tag = targets.gather(1, targets_length).squeeze(1)
-        score += self.transitions[self.stop_tag, last_tag]
+        for word_idx in range(1, seq_len):
+            ## batch_size, self.label_size, self.label_size
+            before_log_sum_exp = alpha[:, word_idx-1, :].view(batch_size, self.label_size, 1).expand(
+                batch_size, self.label_size, self.label_size) + all_scores[:, word_idx, :, :]
+            alpha[:, word_idx, :] = log_sum_exp_pytorch(before_log_sum_exp)
+
+        # batch_size x label_size
+        last_alpha = torch.gather(alpha, 1, word_seq_lens.view(batch_size, 1, 1).expand(
+            batch_size, 1, self.label_size)-1).view(batch_size, self.label_size)
+        last_alpha += self.transition[:, self.end_idx].view(
+            1, self.label_size).expand(batch_size, self.label_size)
+        last_alpha = log_sum_exp_pytorch(last_alpha.view(
+            batch_size, self.label_size, 1)).view(batch_size)
+
+        # final score for the unlabeled network in this batch, with size: 1
+        return torch.sum(last_alpha)
+
+    def backward(self, lstm_scores: torch.Tensor, word_seq_lens: torch.Tensor) -> torch.Tensor:
+        """
+        Backward algorithm. A benchmark implementation which is ready to use.
+        :param lstm_scores: shape: (batch_size, sent_len, label_size) NOTE: the score from LSTMs, not `all_scores` (which add up the transtiion)
+        :param word_seq_lens: shape: (batch_size,)
+        :return: Backward variable
+        """
+        batch_size = lstm_scores.size(0)
+        seq_len = lstm_scores.size(1)
+        beta = torch.zeros(batch_size, seq_len,
+                           self.label_size).to(self.device)
+
+        # reverse the view of computing the score. we look from behind
+        rev_score = self.transition.transpose(0, 1).view(1, 1, self.label_size, self.label_size).expand(batch_size, seq_len, self.label_size, self.label_size) + \
+            lstm_scores.view(batch_size, seq_len, 1, self.label_size).expand(
+                batch_size, seq_len, self.label_size, self.label_size)
+
+        # The code below, reverse the score from [0 -> length]  to [length -> 0].  (NOTE: we need to avoid reversing the padding)
+        perm_idx = torch.zeros(batch_size, seq_len).to(self.device)
+        for batch_idx in range(batch_size):
+            perm_idx[batch_idx][:word_seq_lens[batch_idx]] = torch.range(
+                word_seq_lens[batch_idx] - 1, 0, -1)
+        perm_idx = perm_idx.long()
+        for i, length in enumerate(word_seq_lens):
+            rev_score[i, :length] = rev_score[i, :length][perm_idx[i, :length]]
+
+        # backward operation
+        beta[:, 0, :] = rev_score[:, 0, self.end_idx, :]
+        for word_idx in range(1, seq_len):
+            before_log_sum_exp = beta[:, word_idx - 1, :].view(batch_size, self.label_size, 1).expand(
+                batch_size, self.label_size, self.label_size) + rev_score[:, word_idx, :, :]
+            beta[:, word_idx, :] = log_sum_exp_pytorch(before_log_sum_exp)
+
+        # Following code is used to check the backward beta implementation
+        last_beta = torch.gather(beta, 1, word_seq_lens.view(batch_size, 1, 1).expand(
+            batch_size, 1, self.label_size) - 1).view(batch_size, self.label_size)
+        last_beta += self.transition.transpose(0, 1)[:, self.start_idx].view(
+            1, self.label_size).expand(batch_size, self.label_size)
+        last_beta = log_sum_exp_pytorch(last_beta.view(
+            batch_size, self.label_size, 1)).view(batch_size)
+
+        # This part if optionally, if you only use `last_beta`.
+        # Otherwise, you need this to reverse back if you also need to use beta
+        for i, length in enumerate(word_seq_lens):
+            beta[i, :length] = beta[i, :length][perm_idx[i, :length]]
+
+        return torch.sum(last_beta)
+
+    def forward_labeled(self, all_scores: torch.Tensor, word_seq_lens: torch.Tensor, tags: torch.Tensor, masks: torch.Tensor) -> torch.Tensor:
+        '''
+        Calculate the scores for the gold instances.
+        :param all_scores: (batch, seq_len, label_size, label_size)
+        :param word_seq_lens: (batch, seq_len)
+        :param tags: (batch, seq_len)
+        :param masks: batch, seq_len
+        :return: sum of score for the gold sequences Shape: (batch_size)
+        '''
+        batchSize = all_scores.shape[0]
+        sentLength = all_scores.shape[1]
+
+        # all the scores to current labels: batch, seq_len, all_from_label?
+        currentTagScores = torch.gather(all_scores, 3, tags.view(batchSize, sentLength, 1, 1).expand(
+            batchSize, sentLength, self.label_size, 1)).view(batchSize, -1, self.label_size)
+        if sentLength != 1:
+            tagTransScoresMiddle = torch.gather(
+                currentTagScores[:, 1:, :], 2, tags[:, : sentLength - 1].view(batchSize, sentLength - 1, 1)).view(batchSize, -1)
+        tagTransScoresBegin = currentTagScores[:, 0, self.start_idx]
+        endTagIds = torch.gather(tags, 1, word_seq_lens.view(batchSize, 1) - 1)
+        tagTransScoresEnd = torch.gather(self.transition[:, self.end_idx].view(
+            1, self.label_size).expand(batchSize, self.label_size), 1,  endTagIds).view(batchSize)
+        score = torch.sum(tagTransScoresBegin) + torch.sum(tagTransScoresEnd)
+        if sentLength != 1:
+            score += torch.sum(
+                tagTransScoresMiddle.masked_select(masks[:, 1:]))
         return score
 
-    def _viterbi_decode(self, features, mask):
-        # initialize backpointers and viterbi variables in log space
-        bptr = torch.LongTensor().to(self.device)
-        batch_size = features.shape[0]
-        score = torch.Tensor(batch_size, self.tagset_size).fill_(-10000).to(self.device)
-        score[:, self.start_tag] = 0.
+    def calculate_all_scores(self, lstm_scores: torch.Tensor) -> torch.Tensor:
+        """
+        Calculate all scores by adding up the transition scores and emissions (from lstm).
+        Basically, compute the scores for each edges between labels at adjacent positions.
+        This score is later be used for forward-backward inference
+        :param lstm_scores: emission scores.
+        :return:
+        """
+        batch_size = lstm_scores.size(0)
+        seq_len = lstm_scores.size(1)
+        scores = self.transition.view(1, 1, self.label_size, self.label_size).expand(batch_size, seq_len, self.label_size, self.label_size) + \
+            lstm_scores.view(batch_size, seq_len, 1, self.label_size).expand(
+                batch_size, seq_len, self.label_size, self.label_size)
+        return scores
 
-        for t in range(features.size(1)): # recursion through the sequence
-            mask_t = mask[:, t].unsqueeze(1)
-            score_t = score.unsqueeze(1) + self.transitions # [B, 1, C] -> [B, C, C]
-            score_t, bptr_t = score_t.max(2) # best previous scores and targets
-            score_t += features[:, t] # plus emission scores
-            bptr = torch.cat((bptr, bptr_t.unsqueeze(1)), 1)
-            score = score_t * mask_t + score * (1 - mask_t)
-        score += self.transitions[self.stop_tag]
-        best_score, best_tag = torch.max(score, 1)
+    def decode(self, features, wordSeqLengths) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Decode the batch input
+        :param batchInput:
+        :return:
+        """
+        all_scores = self.calculate_all_scores(features)
+        bestScores, decodeIdx = self.viterbi_decode(all_scores, wordSeqLengths)
 
-        # back-tracking
-        bptr = bptr.tolist()
-        best_path = [[i] for i in best_tag.tolist()]
-        for b in range(batch_size):
-            i = best_tag[b] # best tag
-            j = int(mask[b].sum().item())
-            for bptr_t in reversed(bptr[b][:j]):
-                i = bptr_t[i]
-                best_path[b].append(i)
-            best_path[b].pop()
-            best_path[b].reverse()
+        return bestScores, decodeIdx
 
-        return best_path
+    def viterbi_decode(self, all_scores: torch.Tensor, word_seq_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Use viterbi to decode the instances given the scores and transition parameters
+        :param all_scores: (batch_size x max_seq_len x num_labels)
+        :param word_seq_lens: (batch_size)
+        :return: the best scores as well as the predicted label ids.
+               (batch_size) and (batch_size x max_seq_len)
+        """
+        batchSize = all_scores.shape[0]
+        sentLength = all_scores.shape[1]
 
-    def neg_log_likelihood(self, rnn_outputs, targets, mask):
-        # features = self._get_lstm_features(sentence)
-        forward_score = self._forward_alg(rnn_outputs, mask)
-        gold_score = self._score_sentence(rnn_outputs, targets, mask)
-        return torch.mean(forward_score - gold_score)
+        scoresRecord = torch.zeros(
+            [batchSize, sentLength, self.label_size]).to(self.device)
+        idxRecord = torch.zeros(
+            [batchSize, sentLength, self.label_size], dtype=torch.int64).to(self.device)
+        mask = torch.ones_like(
+            word_seq_lens, dtype=torch.int64).to(self.device)
+        startIds = torch.full((batchSize, self.label_size),
+                              self.start_idx, dtype=torch.int64).to(self.device)
+        decodeIdx = torch.LongTensor(batchSize, sentLength).to(self.device)
 
-    def forward(self, rnn_outputs, mask):  # dont confuse this with _forward_alg above.
-        # Get the emission scores from the BiLSTM
-        # lstm_feats = self._get_lstm_features(sentence)
+        scores = all_scores
+        # represent the best current score from the start, is the best
+        scoresRecord[:, 0, :] = scores[:, 0, self.start_idx, :]
+        idxRecord[:,  0, :] = startIds
+        for wordIdx in range(1, sentLength):
+            # scoresIdx: batch x from_label x to_label at current index.
+            scoresIdx = scoresRecord[:, wordIdx - 1, :].view(batchSize, self.label_size, 1).expand(batchSize, self.label_size,
+                                                                                                   self.label_size) + scores[:, wordIdx, :, :]
+            # the best previous label idx to crrent labels
+            idxRecord[:, wordIdx, :] = torch.argmax(scoresIdx, 1)
+            scoresRecord[:, wordIdx, :] = torch.gather(scoresIdx, 1, idxRecord[:, wordIdx, :].view(
+                batchSize, 1, self.label_size)).view(batchSize, self.label_size)
 
-        # Find the best path, given the features.
-        tag_seq = self._viterbi_decode(rnn_outputs, mask)
-        return tag_seq
+        lastScores = torch.gather(scoresRecord, 1, word_seq_lens.view(batchSize, 1, 1).expand(
+            batchSize, 1, self.label_size) - 1).view(batchSize, self.label_size)  # select position
+        lastScores += self.transition[:, self.end_idx].view(
+            1, self.label_size).expand(batchSize, self.label_size)
+        decodeIdx[:, 0] = torch.argmax(lastScores, 1)
+        bestScores = torch.gather(
+            lastScores, 1, decodeIdx[:, 0].view(batchSize, 1))
+
+        for distance2Last in range(sentLength - 1):
+            lastNIdxRecord = torch.gather(idxRecord, 1, torch.where(word_seq_lens - distance2Last - 1 > 0, word_seq_lens -
+                                                                    distance2Last - 1, mask).view(batchSize, 1, 1).expand(batchSize, 1, self.label_size)).view(batchSize, self.label_size)
+            decodeIdx[:, distance2Last + 1] = torch.gather(
+                lastNIdxRecord, 1, decodeIdx[:, distance2Last].view(batchSize, 1)).view(batchSize)
+
+        return bestScores, decodeIdx

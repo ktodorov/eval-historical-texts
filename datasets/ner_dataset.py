@@ -49,36 +49,13 @@ class NERDataset(DatasetBase):
         item: NELine = self.ne_collection[idx]
         entity_labels = self._ner_process_service.get_entity_labels(
             item)
-        pretrained_result = self._get_pretrained_representation(item.token_ids)
 
-        return item.token_ids, entity_labels, pretrained_result, item.position_changes
-
-    def _get_pretrained_representation(self, token_ids: List[int]) -> torch.Tensor:
-        if not self._include_pretrained:
-            return []
-
-        token_ids_splits = [token_ids]
-        if len(token_ids) > self._max_length:
-            token_ids_splits = self._split_to_chunks(
-                token_ids, chunk_size=self._max_length, overlap_size=2)
-
-        pretrained_outputs = torch.zeros(
-            (len(token_ids_splits), min(self._max_length, len(token_ids)), self._pretrained_model_size)).to(self._device) * -1
-
-        for i, token_ids_split in enumerate(token_ids_splits):
-            token_ids_tensor = torch.Tensor(
-                token_ids_split).unsqueeze(0).long().to(self._device)
-            pretrained_output = self._pretrained_representations_service.get_pretrained_representation(
-                token_ids_tensor)
-
-            _, output_length, _ = pretrained_output.shape
-
-            pretrained_outputs[i, :output_length, :] = pretrained_output
-
-        pretrained_result = pretrained_outputs.view(
-            -1, self._pretrained_model_size)
-
-        return pretrained_result
+        return (
+            item.token_ids,
+            entity_labels,
+            item.tokens,
+            item.position_changes
+        )
 
     @overrides
     def use_collate_function(self) -> bool:
@@ -92,7 +69,7 @@ class NERDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, pretrained_representations, position_changes = batch_split
+        sequences, targets, tokens, position_changes = batch_split
 
         lengths = [len(sequence) for sequence in sequences]
 
@@ -105,33 +82,13 @@ class NERDataset(DatasetBase):
             self._ner_process_service.get_entity_label(
                 self._ner_process_service.PAD_TOKEN)
 
-        padded_pretrained_representations = []
-        if self._include_pretrained:
-            padded_pretrained_representations = torch.zeros(
-                (batch_size, max_length, self._pretrained_model_size)).to(self._device) + self._ner_process_service.get_entity_label(self._ner_process_service.PAD_TOKEN)
-
         for i, sequence_length in enumerate(lengths):
             padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
             padded_targets[i][0:sequence_length] = targets[i][0:sequence_length]
 
-            if self._include_pretrained:
-                padded_pretrained_representations[i][0:
-                                                     sequence_length] = pretrained_representations[i][0:sequence_length]
-
-        return self._sort_batch(
+        return (
             torch.from_numpy(padded_sequences).to(self._device),
             torch.from_numpy(padded_targets).to(self._device),
             torch.tensor(lengths, device=self._device),
-            padded_pretrained_representations,
+            tokens,
             position_changes)
-
-    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings, position_changes):
-        seq_lengths, perm_idx = lengths.sort(descending=True)
-        seq_tensor = batch[perm_idx]
-        targets_tensor = targets[perm_idx]
-        position_changes = [position_changes[i] for i in perm_idx]
-
-        if self._include_pretrained:
-            pretrained_embeddings = pretrained_embeddings[perm_idx]
-
-        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings, position_changes

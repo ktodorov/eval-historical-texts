@@ -26,6 +26,13 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
         parser.add_argument('--learn-new-embeddings', action='store_true',
                             help='Whether new embeddings should be learned next to the pretrained representation')
 
+        parser.add_argument('--fasttext-model', type=str, default=None,
+                            help='fasttext model to use for loading additional information')
+        parser.add_argument('--include-fasttext-model', action='store_true',
+                            help='Should a fasttext model be used to provide more information')
+        parser.add_argument('--fasttext-model-size', type=int, default=300,
+                            help='The hidden size dimension of the fasttext model. Default is 300')
+
     @property
     def pretrained_weights(self) -> str:
         return self._get_argument('pretrained_weights')
@@ -45,3 +52,15 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
     @property
     def learn_new_embeddings(self) -> bool:
         return self._get_argument('learn_new_embeddings')
+
+    @property
+    def fasttext_model(self) -> str:
+        return self._get_argument('fasttext_model')
+
+    @property
+    def include_fasttext_model(self) -> bool:
+        return self._get_argument('include_fasttext_model')
+
+    @property
+    def fasttext_model_size(self) -> int:
+        return self._get_argument('fasttext_model_size')

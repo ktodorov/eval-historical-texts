@@ -1,6 +1,8 @@
 from services.tokenizer_service import TokenizerService
 
 from typing import Dict, List
+from copy import deepcopy
+
 
 class NELine:
     def __init__(self):
@@ -38,6 +40,13 @@ class NELine:
         self._add_entity_if_available(
             csv_row, 'NEL-METO', self.nel_meto, use_none_if_empty=True)
 
+    def _insert_entity_tag(self, list_to_modify: list, position: int, tag: str):
+        tag_to_insert = tag
+        if tag.startswith('B-'):
+            tag_to_insert = f'I-{tag[2:]}'
+
+        list_to_modify.insert(position, tag_to_insert)
+
     def tokenize_text(self, tokenizer_service: TokenizerService):
         text = self.get_text()
         offsets = self.get_token_offsets()
@@ -47,17 +56,18 @@ class NELine:
 
         # it means that the tokenizer has split some of the words, therefore we need to add
         # those tokens to our collection and repeat the entity labels for the new sub-tokens
+        position_changes = {i: [i] for i in range(len(self.tokens))}
         if len(encoded_tokens) > len(self.tokens):
-            new_misc = self.misc
-            new_ne_coarse_lit = self.ne_coarse_lit
-            new_ne_coarse_meto = self.ne_coarse_meto
-            new_ne_fine_lit = self.ne_fine_lit
-            new_ne_fine_meto = self.ne_fine_meto
-            new_ne_fine_comp = self.ne_fine_comp
+            new_misc = deepcopy(self.misc)
+            new_ne_coarse_lit = deepcopy(self.ne_coarse_lit)
+            new_ne_coarse_meto = deepcopy(self.ne_coarse_meto)
+            new_ne_fine_lit = deepcopy(self.ne_fine_lit)
+            new_ne_fine_meto = deepcopy(self.ne_fine_meto)
+            new_ne_fine_comp = deepcopy(self.ne_fine_comp)
 
-            new_ne_nested = self.ne_nested
-            new_nel_lit = self.nel_lit
-            new_nel_meto = self.nel_meto
+            new_ne_nested = deepcopy(self.ne_nested)
+            new_nel_lit = deepcopy(self.nel_lit)
+            new_nel_meto = deepcopy(self.nel_meto)
 
             position_changes = {}
             corresponding_counter = 0
@@ -68,22 +78,24 @@ class NELine:
                 while corresponding_counter < len(encoded_tokens) and encoded_offsets[corresponding_counter][1] < offsets[i][1]:
 
                     # we copy the value of the original token
-                    new_misc.insert(corresponding_counter, self.misc[i])
-                    new_ne_coarse_lit.insert(
-                        corresponding_counter, self.ne_coarse_lit[i])
-                    new_ne_coarse_meto.insert(
-                        corresponding_counter, self.ne_coarse_meto[i])
-                    new_ne_fine_lit.insert(
-                        corresponding_counter, self.ne_fine_lit[i])
-                    new_ne_fine_meto.insert(
-                        corresponding_counter, self.ne_fine_meto[i])
-                    new_ne_fine_comp.insert(
-                        corresponding_counter, self.ne_fine_comp[i])
-                    new_ne_nested.insert(
-                        corresponding_counter, self.ne_nested[i])
-                    new_nel_lit.insert(corresponding_counter, self.nel_lit[i])
-                    new_nel_meto.insert(
-                        corresponding_counter, self.nel_meto[i])
+                    self._insert_entity_tag(
+                        new_misc, corresponding_counter+1, self.misc[i])
+                    self._insert_entity_tag(
+                        new_ne_coarse_lit, corresponding_counter+1, self.ne_coarse_lit[i])
+                    self._insert_entity_tag(
+                        new_ne_coarse_meto, corresponding_counter+1, self.ne_coarse_meto[i])
+                    self._insert_entity_tag(
+                        new_ne_fine_lit, corresponding_counter+1, self.ne_fine_lit[i])
+                    self._insert_entity_tag(
+                        new_ne_fine_meto, corresponding_counter+1, self.ne_fine_meto[i])
+                    self._insert_entity_tag(
+                        new_ne_fine_comp, corresponding_counter+1, self.ne_fine_comp[i])
+                    self._insert_entity_tag(
+                        new_ne_nested, corresponding_counter+1, self.ne_nested[i])
+                    self._insert_entity_tag(
+                        new_nel_lit, corresponding_counter+1, self.nel_lit[i])
+                    self._insert_entity_tag(
+                        new_nel_meto, corresponding_counter+1, self.nel_meto[i])
 
                     corresponding_counter += 1
                     position_changes[i].append(corresponding_counter)
@@ -100,7 +112,8 @@ class NELine:
             self.ne_nested = new_ne_nested
             self.nel_lit = new_nel_lit
             self.nel_meto = new_nel_meto
-            self.position_changes = position_changes
+
+        self.position_changes = position_changes
 
         assert len(token_ids) == len(encoded_tokens)
         assert len(token_ids) == len(self.ne_coarse_lit)

@@ -128,7 +128,7 @@ def register_optimizer(
             )
         elif configuration == Configuration.RNNSimple:
             optimizer = providers.Singleton(
-                AdamOptimizer,
+                SGDOptimizer,
                 arguments_service=arguments_service,
                 model=model
             )
@@ -273,6 +273,7 @@ def register_model(
             model = providers.Singleton(
                 NERPredictor,
                 arguments_service=arguments_service,
+                pretrained_representations_service=pretrained_representations_service,
                 data_service=data_service,
                 metrics_service=metrics_service,
                 process_service=process_service,
@@ -374,7 +375,8 @@ class IocContainer(containers.DeclarativeContainer):
 
     pretrained_representations_service = providers.Singleton(
         PretrainedRepresentationsService,
-        arguments_service=arguments_service
+        arguments_service=arguments_service,
+        file_service=file_service
     )
 
     process_service = register_process_service(
