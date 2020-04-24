@@ -51,10 +51,12 @@ class NERDataset(DatasetBase):
         entity_labels = self._ner_process_service.get_entity_labels(
             item)
 
+        filtered_tokens = [token.replace('#', '') for token in item.tokens]
+
         return (
             item.token_ids,
             entity_labels,
-            item.tokens,
+            filtered_tokens,
             item.position_changes,
             item.original_length
         )

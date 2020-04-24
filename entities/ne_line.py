@@ -6,7 +6,7 @@ from copy import deepcopy
 
 class NELine:
     def __init__(self):
-        self.tokens = []
+        self.tokens: List[str] = []
         self.misc = []
         self.ne_coarse_lit = []
         self.ne_coarse_meto = []
