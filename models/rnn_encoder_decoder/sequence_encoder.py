@@ -6,7 +6,7 @@ from overrides import overrides
 from transformers import BertModel
 
 from enums.embedding_type import EmbeddingType
-from entities.batch_representations.ocr_batch_representation import OCRBatchRepresentation
+from entities.batch_representations.base_batch_representation import BaseBatchRepresentation
 
 from models.embedding.embedding_layer import EmbeddingLayer
 
@@ -67,7 +67,7 @@ class SequenceEncoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     @overrides
-    def forward(self, input_batch: OCRBatchRepresentation, debug: bool = False, **kwargs):
+    def forward(self, input_batch: BaseBatchRepresentation, debug: bool = False, **kwargs):
         embeddings = self._embedding_layer.forward(input_batch)
         # if self._learn_embeddings:
         #     if self._use_own_embeddings:

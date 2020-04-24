@@ -151,7 +151,7 @@ class OCRDataset(DatasetBase):
         batch_representation = BaseBatchRepresentation(
             device=self._device,
             batch_size=batch_size,
-            sequences=sequences,
+            subword_sequences=sequences,
             targets=targets)
 
         batch_representation.sort_batch()

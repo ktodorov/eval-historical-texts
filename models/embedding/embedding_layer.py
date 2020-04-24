@@ -73,20 +73,19 @@ class EmbeddingLayer(nn.Module):
         result = None
         if self._learn_subword_embeddings:
             subword_embeddings = self._token_embedding.forward(
-                batch_representation.sequences)
+                batch_representation.subword_sequences)
             subword_embeddings = self._token_embedding_dropout.forward(
                 subword_embeddings)
 
         if self._learn_character_embeddings:
             character_embeddings = self._character_embedding.forward(
-                batch_representation.sequences)
+                batch_representation.character_sequences)
             character_embeddings = self._character_embedding_dropout.forward(
                 character_embeddings)
 
         if self._include_pretrained:
-            tokenized_sequences = batch_representation.get_tokenized_sequences()
             pretrained_embeddings = self._pretrained_representations_service.get_pretrained_representation(
-                tokenized_sequences)
+                batch_representation.subword_sequences)
 
         if self._include_fasttext_model:
             fasttext_embeddings = self._pretrained_representations_service.get_fasttext_representation(

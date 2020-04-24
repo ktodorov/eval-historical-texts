@@ -77,7 +77,7 @@ class NERDataset(DatasetBase):
         batch_representation = NERBatchRepresentation(
             device=self._device,
             batch_size=batch_size,
-            sequences=sequences,
+            subword_sequences=sequences,
             targets=targets,
             tokens=tokens,
             position_changes=position_changes,

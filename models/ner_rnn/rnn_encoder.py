@@ -94,7 +94,7 @@ class RNNEncoder(nn.Module):
         new_embedded, new_lengths, new_targets = self._restore_position_changes(
             position_changes=batch_representation.position_changes,
             embeddings=embedded,
-            lengths=batch_representation.lengths,
+            lengths=batch_representation.subword_lengths,
             targets=batch_representation.targets)
 
         x_packed = pack_padded_sequence(new_embedded, new_lengths, batch_first=True)
