@@ -47,19 +47,6 @@ class NEREvaluationService(BaseEvaluationService):
                 prediction)
             result.append(predicted_entity)
 
-        if position_changes is not None:
-            new_predictions = []
-            for original_position, changes in position_changes.items():
-                merged_prediction = None
-                for change_position in changes:
-                    if result[change_position] is not None:
-                        merged_prediction = result[change_position]
-                        break
-
-                new_predictions.append(merged_prediction)
-
-            result = new_predictions
-
         evaluation = {EvaluationType.NamedEntityRecognitionMatch: result}
         return evaluation
 

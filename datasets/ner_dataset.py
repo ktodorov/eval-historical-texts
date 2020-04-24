@@ -54,7 +54,8 @@ class NERDataset(DatasetBase):
             item.token_ids,
             entity_labels,
             item.tokens,
-            item.position_changes
+            item.position_changes,
+            item.original_length
         )
 
     @overrides
@@ -69,7 +70,7 @@ class NERDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, tokens, position_changes = batch_split
+        sequences, targets, tokens, position_changes, original_lengths = batch_split
 
         lengths = [len(sequence) for sequence in sequences]
 
@@ -86,9 +87,28 @@ class NERDataset(DatasetBase):
             padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
             padded_targets[i][0:sequence_length] = targets[i][0:sequence_length]
 
-        return (
+        return self._sort_batch(
             torch.from_numpy(padded_sequences).to(self._device),
             torch.from_numpy(padded_targets).to(self._device),
             torch.tensor(lengths, device=self._device),
             tokens,
-            position_changes)
+            position_changes,
+            torch.tensor(original_lengths, device=self._device))
+
+    def _sort_batch(
+        self,
+        sequences,
+        targets,
+        lengths,
+        tokens,
+        position_changes,
+        original_lengths):
+        _, perm_idx = original_lengths.sort(descending=True)
+        lengths = lengths[perm_idx]
+        sequences = sequences[perm_idx]
+        targets = targets[perm_idx]
+
+        tokens = [tokens[i] for i in perm_idx]
+        position_changes = [position_changes[i] for i in perm_idx]
+
+        return sequences, targets, lengths, tokens, position_changes

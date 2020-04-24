@@ -111,6 +111,9 @@ class TrainService:
                 else:
                     epoch += 1
 
+            if epoch >= self._arguments_service.epochs:
+                print('Stopping training due to depleted epochs')
+
         except KeyboardInterrupt as e:
             print(f"Killed by user: {e}")
             self._model.save(
@@ -293,8 +296,7 @@ class TrainService:
         if self._arguments_service.skip_validation and batches_passed < self._arguments_service.eval_freq:
             return False
 
-        result = (batches_passed % self._arguments_service.eval_freq) == 0 or (
-            iteration + 1 == data_loader_length)
+        result = (batches_passed % self._arguments_service.eval_freq) == 0
         return result
 
     def _validate_time_passed(self):

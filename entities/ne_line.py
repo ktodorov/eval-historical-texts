@@ -17,6 +17,7 @@ class NELine:
         self.ne_nested = []
         self.nel_lit = []
         self.nel_meto = []
+        self.original_length = 0
         self.position_changes: Dict[int, List[int]] = None
 
     def add_data(self, csv_row: dict):
@@ -48,6 +49,7 @@ class NELine:
         list_to_modify.insert(position, tag_to_insert)
 
     def tokenize_text(self, tokenizer_service: TokenizerService):
+        self.original_length = len(self.tokens)
         text = self.get_text()
         offsets = self.get_token_offsets()
 

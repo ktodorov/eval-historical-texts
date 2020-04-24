@@ -94,11 +94,6 @@ class RNNEncoder(nn.Module):
         embedded = self._embedding_layer.forward(sequences, sequences_strings)
 
         new_embedded, new_lengths, new_targets = self._restore_position_changes(position_changes, embedded, lengths, targets)
-        
-        if new_lengths.min() == 0:
-            a = 0
-        
-        new_embedded, new_lengths, new_targets = self._sort_batch(new_embedded, new_lengths, new_targets)
 
         x_packed = pack_padded_sequence(new_embedded, new_lengths, batch_first=True)
 
@@ -125,8 +120,6 @@ class RNNEncoder(nn.Module):
             rnn_output = linear_combination * rnn_output
 
         output = self.hidden2tag.forward(rnn_output)
-
-        # result = F.log_softmax(output, dim=1)
         return output, new_lengths, new_targets
 
     def _sort_batch(self, embeddings, lengths, targets):
@@ -142,12 +135,9 @@ class RNNEncoder(nn.Module):
             embeddings,
             lengths,
             targets):
-        if position_changes is None:
-            return embeddings, targets
-
         batch_size, sequence_length, embeddings_size = embeddings.shape
 
-        new_max_sequence_length = max([sequence_length if x is None else len(x.keys()) for x in position_changes])
+        new_max_sequence_length = max([len(x.keys()) for x in position_changes])
 
         new_embeddings = torch.zeros(
             (batch_size, new_max_sequence_length, embeddings_size), dtype=embeddings.dtype).to(self.device)
@@ -155,12 +145,6 @@ class RNNEncoder(nn.Module):
         new_lengths = torch.zeros((batch_size), dtype=lengths.dtype).to(self.device)
 
         for i, current_position_changes in enumerate(position_changes):
-            if current_position_changes is None:
-                new_embeddings[i] = embeddings[i]
-                new_targets[i] = targets[i]
-                new_lengths[i] = lengths[i]
-                continue
-
             new_lengths[i] = len(current_position_changes.keys())
 
             for old_position, new_positions in current_position_changes.items():

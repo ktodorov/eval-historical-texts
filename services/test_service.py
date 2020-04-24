@@ -40,9 +40,12 @@ class TestService:
         self._model.eval()
 
         evaluation: Dict[EvaluationType, List] = {}
+        dataloader_length = len(self._dataloader)
 
         # targets = []
         for i, batch in enumerate(self._dataloader):
+            print(f'{i}/{dataloader_length}         \r', end='')
+
             # targets.append(target[0])
             outputs = self._model.forward(batch)
 

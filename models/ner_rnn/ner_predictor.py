@@ -3,8 +3,6 @@ import torch.nn as nn
 
 import numpy as np
 
-from models.ner_rnn.rnn_encoder import RNNEncoder
-from models.ner_rnn.linear_crf import LinearCRF
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from typing import Tuple, Dict, List
 from overrides import overrides
@@ -16,6 +14,8 @@ from enums.metric_type import MetricType
 from enums.tag_measure_averaging import TagMeasureAveraging
 from enums.tag_measure_type import TagMeasureType
 
+from models.ner_rnn.rnn_encoder import RNNEncoder
+from models.ner_rnn.conditional_random_field import ConditionalRandomField
 from models.model_base import ModelBase
 
 from services.arguments.ner_arguments_service import NERArgumentsService
@@ -69,7 +69,7 @@ class NERPredictor(ModelBase):
         stop_token_id = self._process_service.get_entity_label(
             self._process_service.PAD_TOKEN)
 
-        self.crf_layer = LinearCRF(
+        self.crf_layer = ConditionalRandomField(
             num_of_tags=self.number_of_tags,
             device=arguments_service.device,
             context_emb=arguments_service.hidden_dimension,
@@ -93,21 +93,18 @@ class NERPredictor(ModelBase):
             targets=targets)
 
         mask = self._create_mask(rnn_outputs, lengths)
-        loss = self.crf_layer.forward(rnn_outputs, lengths, targets, mask)
-        _, predictions = self.crf_layer.decode(rnn_outputs, lengths)
+        loss, predictions = self.crf_layer.forward(rnn_outputs, lengths, targets, mask)
 
-        return predictions, loss, targets
+        return predictions, loss, targets, lengths
 
     @overrides
     def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, _, targets = outputs
-        _, _, lengths, _, _ = batch
+        output, _, targets, lengths = outputs
 
         predictions = output.cpu().detach().numpy()
         targets = targets.cpu().detach().numpy()
 
-        mask = np.array(
-            (targets != self._process_service.get_entity_label(self._process_service.PAD_TOKEN)), dtype=bool)
+        mask = np.array((targets != self.pad_idx), dtype=bool)
         predicted_labels = predictions[mask]
         target_labels = targets[mask]
 
@@ -171,6 +168,8 @@ class NERPredictor(ModelBase):
     def _create_mask(self, rnn_outputs: torch.Tensor, lengths: torch.Tensor):
         batch_size = rnn_outputs.size(0)
         sent_len = rnn_outputs.size(1)
-        maskTemp = torch.arange(1, sent_len + 1, dtype=torch.long).view(1, sent_len).expand(batch_size, sent_len).to(self.device)
-        mask = torch.le(maskTemp, lengths.view(batch_size, 1).expand(batch_size, sent_len)).to(self.device)
+        maskTemp = torch.arange(1, sent_len + 1, dtype=torch.long).view(
+            1, sent_len).expand(batch_size, sent_len).to(self.device)
+        mask = torch.le(maskTemp, lengths.view(batch_size, 1).expand(
+            batch_size, sent_len)).to(self.device)
         return mask
