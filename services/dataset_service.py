@@ -123,6 +123,7 @@ class DatasetService:
                 result = NERDataset(
                     self._arguments_service,
                     self._pretrained_representations_service,
+                    self._vocabulary_service,
                     self._process_service,
                     run_type)
 

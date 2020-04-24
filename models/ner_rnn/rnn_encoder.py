@@ -37,7 +37,9 @@ class RNNEncoder(nn.Module):
             hidden_dimension: int,
             bidirectional: bool,
             number_of_layers: int,
-            merge_subword_embeddings: bool):
+            merge_subword_embeddings: bool,
+            learn_character_embeddings: bool,
+            character_embeddings_size: int):
         super().__init__()
 
         self._include_pretrained = include_pretrained_model
@@ -60,6 +62,8 @@ class RNNEncoder(nn.Module):
             fasttext_model_size=fasttext_model_size,
             vocabulary_size=vocabulary_size,
             merge_subword_embeddings=merge_subword_embeddings,
+            learn_character_embeddings=learn_character_embeddings,
+            character_embeddings_size=character_embeddings_size,
             dropout=dropout)
 
         # the LSTM takes embedded sentence

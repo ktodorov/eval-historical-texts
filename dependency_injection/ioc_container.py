@@ -295,12 +295,14 @@ def register_process_service(
         challenge: Challenge,
         arguments_service: ArgumentsServiceBase,
         file_service: FileService,
-        tokenizer_service: TokenizerService):
+        tokenizer_service: TokenizerService,
+        vocabulary_service: VocabularyService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
             NERProcessService,
             arguments_service=arguments_service,
+            vocabulary_service=vocabulary_service,
             file_service=file_service,
             tokenizer_service=tokenizer_service)
 
@@ -381,9 +383,10 @@ class IocContainer(containers.DeclarativeContainer):
 
     process_service = register_process_service(
         challenge,
-        arguments_service,
-        file_service,
-        tokenizer_service)
+        arguments_service=arguments_service,
+        file_service=file_service,
+        tokenizer_service=tokenizer_service,
+        vocabulary_service=vocabulary_service)
 
     dataset_service = providers.Factory(
         DatasetService,

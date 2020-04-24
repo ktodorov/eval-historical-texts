@@ -13,7 +13,9 @@ class BatchRepresentation:
             batch_size: int,
             character_sequences: list = [],
             subword_sequences: list = [],
+            subword_characters_count: List[List[int]] = None,
             word_sequences: list = [],
+            word_characters_count: List[List[int]] = None,
             targets: list = [],
             tokens: list = None,
             position_changes: Dict[int, Tuple] = None,
@@ -28,6 +30,9 @@ class BatchRepresentation:
         self._word_sequences, self._word_lengths = self._pad_and_convert_to_tensor(word_sequences, pad_idx)
 
         self._targets, self._target_lengths = self._pad_and_convert_to_tensor(targets, pad_idx)
+
+        self._subword_characters_count = subword_characters_count
+        self._word_characters_count = word_characters_count
 
         self._tokens = tokens
         self._offset_lists = offset_lists
@@ -56,6 +61,9 @@ class BatchRepresentation:
         self._tokens = self._sort_list(self._tokens, perm_idx)
         self._offset_lists = self._sort_list(self._offset_lists, perm_idx)
         self._position_changes = self._sort_list(self._position_changes, perm_idx)
+
+        self._subword_characters_count = self._sort_list(self._subword_characters_count, perm_idx)
+        self._word_characters_count = self._sort_list(self._word_characters_count, perm_idx)
 
         return perm_idx
 
@@ -136,3 +144,11 @@ class BatchRepresentation:
     @property
     def position_changes(self) -> list:
         return self._position_changes
+
+    @property
+    def subword_characters_count(self) -> List[List[int]]:
+        return self._subword_characters_count
+
+    @property
+    def word_characters_count(self) -> List[List[int]]:
+        return self._word_characters_count

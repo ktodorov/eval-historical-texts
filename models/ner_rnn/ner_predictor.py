@@ -62,7 +62,9 @@ class NERPredictor(ModelBase):
             hidden_dimension=arguments_service.hidden_dimension,
             bidirectional=arguments_service.bidirectional_rnn,
             number_of_layers=arguments_service.number_of_layers,
-            merge_subword_embeddings=arguments_service.merge_subwords)
+            merge_subword_embeddings=arguments_service.merge_subwords,
+            learn_character_embeddings=arguments_service.learn_character_embeddings,
+            character_embeddings_size=arguments_service.character_embeddings_size)
 
         self.pad_idx = self._process_service.get_entity_label(
             self._process_service.PAD_TOKEN)

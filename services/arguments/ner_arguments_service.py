@@ -29,7 +29,7 @@ class NERArgumentsService(PretrainedArgumentsService):
         super()._add_specific_arguments(parser)
 
         parser.add_argument('--embeddings-size', type=int, default=128,
-                            help='The size used for generating embeddings in the encoder')
+                            help='The size used for generating sub-word embeddings')
         parser.add_argument('--hidden-dimension', type=int, default=256,
                             help='The dimension size used for hidden layers')
         parser.add_argument('--dropout', type=float, default=0.0,
@@ -44,6 +44,10 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help="whether to use a bidirectional version of the RNN")
         parser.add_argument("--merge-subwords", action='store_true',
                             help="whether to merge the subword embeddings before passing through the RNN")
+        parser.add_argument("--learn-character-embeddings", action='store_true',
+                            help="whether to learn character embeddings next to the default subword ones")
+        parser.add_argument('--character-embeddings-size', type=int, default=32,
+                            help='The size used for generating character embeddings')
 
     @property
     def embeddings_size(self) -> int:
@@ -76,3 +80,11 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def merge_subwords(self) -> bool:
         return self._get_argument('merge_subwords')
+
+    @property
+    def learn_character_embeddings(self) -> bool:
+        return self._get_argument('learn_character_embeddings')
+
+    @property
+    def character_embeddings_size(self) -> int:
+        return self._get_argument('character_embeddings_size')

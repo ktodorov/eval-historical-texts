@@ -44,7 +44,7 @@ class DataService:
             print("Failed saving {}, continue anyway".format(name))
             return False
 
-    def load_python_obj(self, path: str, name: str, extension_included: bool = False) -> object:
+    def load_python_obj(self, path: str, name: str, extension_included: bool = False, print_on_error: bool = True) -> object:
         """Loads python object from disk if is pickled already
 
         :param path: path to the folder where the object pickle is located
@@ -62,7 +62,9 @@ class DataService:
                 obj = pickle.load(openfile)
 
         except FileNotFoundError:
-            print("{} not loaded because file is missing".format(name))
+            if print_on_error:
+                print("{} not loaded because file is missing".format(name))
+
             return None
 
         print("Loaded {}".format(name))

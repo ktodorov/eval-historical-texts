@@ -15,6 +15,7 @@ from entities.ne_line import NELine
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.tokenizer_service import TokenizerService
 from services.file_service import FileService
+from services.vocabulary_service import VocabularyService
 from services.process.process_service_base import ProcessServiceBase
 
 
@@ -22,6 +23,7 @@ class NERProcessService(ProcessServiceBase):
     def __init__(
             self,
             arguments_service: NERArgumentsService,
+            vocabulary_service: VocabularyService,
             file_service: FileService,
             tokenizer_service: TokenizerService):
         super().__init__()
@@ -55,6 +57,9 @@ class NERProcessService(ProcessServiceBase):
         (self._coarse_entity_mapping, self._fine_entity_mapping) = self._create_entity_mappings(
             self._train_ne_collection,
             self._validation_ne_collection)
+
+        vocabulary_data = self._create_vocabulary_data()
+        vocabulary_service.initialize_vocabulary_data(vocabulary_data)
 
     def preprocess_data(
             self,
@@ -171,3 +176,30 @@ class NERProcessService(ProcessServiceBase):
     def get_position_changes(self, idx: int) -> list:
         result = self._validation_ne_collection.lines[idx].position_changes
         return result
+
+    def _create_vocabulary_data(self):
+        unique_characters = set()
+
+        for ne_line in self._train_ne_collection.lines:
+            current_unique_characters = set([char for token in ne_line.tokens for char in token])
+            unique_characters = unique_characters.union(current_unique_characters)
+
+        for ne_line in self._validation_ne_collection.lines:
+            current_unique_characters = set([char for token in ne_line.tokens for char in token])
+            unique_characters = unique_characters.union(current_unique_characters)
+
+        unique_characters = list(unique_characters)
+        unique_characters.insert(0, '[PAD]')
+        unique_characters.insert(1, '[UNK]')
+        unique_characters.insert(2, '[CLS]')
+        unique_characters.insert(3, '[EOS]')
+
+        int2char = dict(enumerate(unique_characters))
+        char2int = {char: index for index, char in int2char.items()}
+        vocabulary_data = {
+            'characters-set': unique_characters,
+            'int2char' : int2char,
+            'char2int' : char2int
+        }
+
+        return vocabulary_data

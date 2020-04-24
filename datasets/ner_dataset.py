@@ -17,6 +17,7 @@ from enums.ner_type import NERType
 
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.pretrained_representations_service import PretrainedRepresentationsService
+from services.vocabulary_service import VocabularyService
 from services.process.ner_process_service import NERProcessService
 
 
@@ -25,12 +26,14 @@ class NERDataset(DatasetBase):
             self,
             arguments_service: NERArgumentsService,
             pretrained_representations_service: PretrainedRepresentationsService,
+            vocabulary_service: VocabularyService,
             ner_process_service: NERProcessService,
             run_type: RunType):
         super().__init__()
 
         self._ner_process_service = ner_process_service
         self._pretrained_representations_service = pretrained_representations_service
+        self._vocabulary_service = vocabulary_service
 
         self._device = arguments_service.device
         self._include_pretrained = arguments_service.include_pretrained_model
@@ -53,12 +56,18 @@ class NERDataset(DatasetBase):
 
         filtered_tokens = [token.replace('#', '') for token in item.tokens]
 
+        character_sequence = [self._vocabulary_service.string_to_ids(token) for token in filtered_tokens]
+        token_characters = [len(x) for x in character_sequence]
+        character_sequence = [char for sublist in character_sequence for char in sublist]
+
         return (
             item.token_ids,
             entity_labels,
             filtered_tokens,
             item.position_changes,
-            item.original_length
+            item.original_length,
+            character_sequence,
+            token_characters
         )
 
     @overrides
@@ -73,13 +82,15 @@ class NERDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, tokens, position_changes, original_lengths = batch_split
+        sequences, targets, tokens, position_changes, original_lengths, character_sequences, token_characters_count = batch_split
 
         pad_idx = self._ner_process_service.get_entity_label(self._ner_process_service.PAD_TOKEN)
         batch_representation = BatchRepresentation(
             device=self._device,
             batch_size=batch_size,
             subword_sequences=sequences,
+            character_sequences=character_sequences,
+            subword_characters_count=token_characters_count,
             targets=targets,
             tokens=tokens,
             position_changes=position_changes,

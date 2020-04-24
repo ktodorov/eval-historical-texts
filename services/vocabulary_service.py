@@ -20,11 +20,14 @@ class VocabularyService:
 
         vocabulary_data = data_service.load_python_obj(
             file_service.get_pickles_path(),
-            'vocabulary')
+            'vocabulary',
+            print_on_error=False)
 
-        if not vocabulary_data:
+        self.initialize_vocabulary_data(vocabulary_data)
+
+    def initialize_vocabulary_data(self, vocabulary_data):
+        if vocabulary_data is None:
             return
-            # raise Exception('Vocabulary not found')
 
         self._int2char: Dict[int, str] = vocabulary_data['int2char']
         self._char2int: Dict[str, int] = vocabulary_data['char2int']

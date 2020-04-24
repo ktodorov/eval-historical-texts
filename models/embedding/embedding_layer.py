@@ -122,13 +122,19 @@ class EmbeddingLayer(nn.Module):
                 raise Exception('Invalid configuration')
 
             if self._learn_character_embeddings:
-                pass  # TODO Concat character embeddings to sub-word embeddings
+                result_embeddings = self._add_character_to_subword_embeddings(
+                    batch_representation.batch_size,
+                    result_embeddings,
+                    character_embeddings,
+                    batch_representation.subword_characters_count)
 
             if self._include_pretrained:
-                result_embeddings = torch.cat((result_embeddings, pretrained_embeddings), dim=2)
+                result_embeddings = torch.cat(
+                    (result_embeddings, pretrained_embeddings), dim=2)
 
             if self._include_fasttext_model:
-                result_embeddings = torch.cat((result_embeddings, fasttext_embeddings), dim=2)
+                result_embeddings = torch.cat(
+                    (result_embeddings, fasttext_embeddings), dim=2)
 
             if self._merge_subword_embeddings and batch_representation.position_changes is not None:
                 (result_embeddings,
@@ -209,3 +215,31 @@ class EmbeddingLayer(nn.Module):
                 new_targets[i, old_position] = targets[i, new_positions[0]]
 
         return new_embeddings, new_lengths, new_targets
+
+    def _add_character_to_subword_embeddings(
+            self,
+            batch_size: int,
+            subword_embeddings: torch.Tensor,
+            character_embeddings: torch.Tensor,
+            subword_characters_count: List[List[int]]):
+
+        subword_dimension = subword_embeddings.shape[2]
+        concat_dimension = subword_dimension + character_embeddings.shape[2]
+        result_embeddings = torch.zeros(
+            (batch_size, subword_embeddings.shape[1], concat_dimension), device=self._device)
+        result_embeddings[:, :, :subword_dimension] = subword_embeddings
+
+        for b in range(batch_size):
+            counter = 0
+            for index, characters_count in enumerate(subword_characters_count[b]):
+                character_indices = [
+                    counter + i for i in range(characters_count)]
+                if len(character_indices) == 1:
+                    result_embeddings[b, :,
+                                      subword_dimension:] = character_embeddings[b, character_indices[0], :]
+                else:
+                    result_embeddings[b, :, subword_dimension:] = torch.mean(character_embeddings[b, character_indices, :])
+
+                counter += characters_count
+
+        return result_embeddings
