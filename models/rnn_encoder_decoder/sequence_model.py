@@ -7,8 +7,10 @@ from overrides import overrides
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
+from entities.batch_representations.ocr_batch_representation import OCRBatchRepresentation
 
 from enums.metric_type import MetricType
+from enums.embedding_type import EmbeddingType
 
 from models.model_base import ModelBase
 
@@ -24,6 +26,7 @@ from services.decoding_service import DecodingService
 from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
 from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
 from models.rnn_encoder_decoder.sequence_attention import SequenceAttention
+from models.embedding.embedding_layer import EmbeddingLayer
 
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
@@ -46,14 +49,22 @@ class SequenceModel(ModelBase):
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
 
-        self._shared_embeddings = None
+        self._shared_embedding_layer = None
         if self._arguments_service.share_embedding_layer:
-            self._shared_embeddings = nn.Embedding(
-                vocabulary_service.vocabulary_size(),
-                self._arguments_service.encoder_embedding_size)
+            self._shared_embedding_layer = EmbeddingLayer(
+                pretrained_representations_service,
+                device=self._device,
+                learn_character_embeddings=arguments_service.learn_new_embeddings,
+                include_pretrained_model=arguments_service.include_pretrained_model,
+                pretrained_model_size=arguments_service.pretrained_model_size,
+                vocabulary_size=vocabulary_service.vocabulary_size(),
+                character_embeddings_size=arguments_service.encoder_embedding_size,
+                dropout=arguments_service.dropout,
+                output_embedding_type=EmbeddingType.Character)
 
         self._encoder = SequenceEncoder(
             pretrained_representations_service=pretrained_representations_service,
+            device=self._device,
             embedding_size=arguments_service.encoder_embedding_size,
             input_size=vocabulary_service.vocabulary_size(),
             hidden_dimension=arguments_service.hidden_dimension,
@@ -63,16 +74,15 @@ class SequenceModel(ModelBase):
             pretrained_hidden_size=arguments_service.pretrained_model_size,
             learn_embeddings=arguments_service.learn_new_embeddings,
             bidirectional=arguments_service.bidirectional,
-            use_own_embeddings=(
-                not self._arguments_service.share_embedding_layer),
-            shared_embeddings=(lambda x: self._shared_embeddings(x))
-        )
+            use_own_embeddings=(not self._arguments_service.share_embedding_layer),
+            shared_embedding_layer=self._shared_embedding_layer)
 
         self._attention = SequenceAttention(
             encoder_hidden_dimension=arguments_service.hidden_dimension,
             decoder_hidden_dimension=arguments_service.hidden_dimension)
 
         self._decoder = SequenceDecoder(
+            device=self._device,
             embedding_size=arguments_service.decoder_embedding_size,
             output_dimension=vocabulary_service.vocabulary_size(),
             hidden_dimension=arguments_service.hidden_dimension * 2,
@@ -81,8 +91,7 @@ class SequenceModel(ModelBase):
             dropout=arguments_service.dropout,
             use_own_embeddings=(
                 not self._arguments_service.share_embedding_layer),
-            shared_embeddings=(lambda x: self._shared_embeddings(x))
-        )
+            shared_embedding_layer=self._shared_embedding_layer)
 
         self.apply(self.init_weights)
 
@@ -97,12 +106,11 @@ class SequenceModel(ModelBase):
             nn.init.uniform_(param.data, -0.08, 0.08)
 
     @overrides
-    def forward(self, input_batch, debug=False, **kwargs):
-        source, targets, lengths, pretrained_representations, offset_lists = input_batch
+    def forward(self, input_batch: OCRBatchRepresentation, debug=False, **kwargs):
+        # source, targets, lengths, pretrained_representations, offset_lists = input_batch
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        encoder_context = self._encoder.forward(
-            source, lengths, pretrained_representations, offset_lists, debug=debug)
+        encoder_context = self._encoder.forward(input_batch)
 
         encoder_context = encoder_context.permute(1, 0, 2)
 

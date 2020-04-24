@@ -16,12 +16,12 @@ class NERBatchRepresentation(BaseBatchRepresentation):
             position_changes: list,
             pad_idx: int = 0):
         super().__init__(
-            device,
-            batch_size,
-            sequences,
-            targets,
-            tokens,
-            pad_idx)
+            device=device,
+            batch_size=batch_size,
+            sequences=sequences,
+            targets=targets,
+            tokens=tokens,
+            pad_idx=pad_idx)
 
         self._position_changes = position_changes
 

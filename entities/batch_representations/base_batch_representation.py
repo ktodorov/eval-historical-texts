@@ -12,14 +12,16 @@ class BaseBatchRepresentation:
             device: str,
             batch_size: int,
             sequences: list,
-            targets: list,
+            targets: list = None,
             tokens: list = None,
+            offset_lists: list = None,
             pad_idx: int = 0):
 
         self._batch_size = batch_size
         self._device = device
 
         self._tokens = tokens
+        self._offset_lists = offset_lists
 
         self._lengths, self._sequences, self._targets = self._create_batch(
             sequences,
@@ -39,6 +41,9 @@ class BaseBatchRepresentation:
 
         if self._tokens is not None:
             self._tokens = [self._tokens[i] for i in perm_idx]
+
+        if self._offset_lists is not None:
+            self._offset_lists = [self._offset_lists[i] for i in perm_idx]
 
         return perm_idx
 
@@ -70,6 +75,9 @@ class BaseBatchRepresentation:
             torch.from_numpy(padded_sequences).to(self._device),
             torch.from_numpy(padded_targets).to(self._device))
 
+    def get_tokenized_sequences(self) -> torch.Tensor:
+        return self._sequences
+
     @property
     def batch_size(self) -> int:
         return self._batch_size
@@ -89,3 +97,7 @@ class BaseBatchRepresentation:
     @property
     def tokens(self) -> list:
         return self._tokens
+
+    @property
+    def offset_lists(self) -> list:
+        return self.offset_lists

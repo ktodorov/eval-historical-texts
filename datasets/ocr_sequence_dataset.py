@@ -10,6 +10,7 @@ from transformers import BertModel
 from datasets.ocr_dataset import OCRDataset
 from enums.run_type import RunType
 from entities.language_data import LanguageData
+from entities.batch_representations.ocr_batch_representation import OCRBatchRepresentation
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
@@ -88,44 +89,54 @@ class OCRSequenceDataset(OCRDataset):
 
         return ocr_aligned, gs_aligned, ocr_text, gs_text
 
-    @overrides
     def _pad_and_sort_batch(self, DataLoaderBatch):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, ocr_texts, gs_texts = batch_split
-        pretrained_representations = self._get_pretrained_representations(sequences)
+        sequences, _, ocr_texts, gs_texts = batch_split
 
-        lengths = np.array([[len(sequences[i]), len(gs_texts[i])]
-                            for i in range(batch_size)])
+        batch_representation = OCRBatchRepresentation(
+            device=self._device,
+            batch_size=batch_size,
+            tokenized_sequences=sequences,
+            ocr_texts=ocr_texts,
+            gs_texts=gs_texts,
+            offset_lists=None) # TODO add offset lists
 
-        max_length = lengths.max(axis=0)
+        batch_representation.sort_batch()
+        return batch_representation
 
-        padded_sequences = np.zeros(
-            (batch_size, max_length[0]), dtype=np.int64)
-        padded_targets = np.zeros((batch_size, max_length[1]), dtype=np.int64) * self._vocabulary_service.pad_token
-        padded_ocr_texts = np.zeros((batch_size, max([len(x) for x in ocr_texts])), dtype=np.int64) * self._vocabulary_service.pad_token
+    #     pretrained_representations = self._get_pretrained_representations(sequences)
 
-        for i, (sequence_length, target_length) in enumerate(lengths):
-            padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
-            padded_targets[i][0:target_length] = gs_texts[i][0:target_length]
-            padded_ocr_texts[i][0:len(ocr_texts[i])] = ocr_texts[i]
+    #     lengths = np.array([[len(sequences[i]), len(gs_texts[i])]
+    #                         for i in range(batch_size)])
 
-        return self._sort_batch(
-            torch.from_numpy(padded_sequences).to(self._device),
-            torch.from_numpy(padded_targets).to(self._device),
-            torch.tensor(lengths, device=self._device),
-            pretrained_representations,
-            torch.from_numpy(padded_ocr_texts).to(self._device))
+    #     max_length = lengths.max(axis=0)
 
-    @overrides
-    def _sort_batch(self, batch, targets, lengths, pretrained_embeddings, ocr_texts):
-        seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)
-        seq_tensor = batch[perm_idx]
-        targets_tensor = targets[perm_idx]
-        ocr_texts = ocr_texts[perm_idx]
+    #     padded_sequences = np.zeros(
+    #         (batch_size, max_length[0]), dtype=np.int64)
+    #     padded_targets = np.zeros((batch_size, max_length[1]), dtype=np.int64) * self._vocabulary_service.pad_token
+    #     padded_ocr_texts = np.zeros((batch_size, max([len(x) for x in ocr_texts])), dtype=np.int64) * self._vocabulary_service.pad_token
 
-        if self._include_pretrained:
-            pretrained_embeddings = pretrained_embeddings[perm_idx]
+    #     for i, (sequence_length, target_length) in enumerate(lengths):
+    #         padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
+    #         padded_targets[i][0:target_length] = gs_texts[i][0:target_length]
+    #         padded_ocr_texts[i][0:len(ocr_texts[i])] = ocr_texts[i]
 
-        return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings, ocr_texts
+    #     return self._sort_batch(
+    #         torch.from_numpy(padded_sequences).to(self._device),
+    #         torch.from_numpy(padded_targets).to(self._device),
+    #         torch.tensor(lengths, device=self._device),
+    #         pretrained_representations,
+    #         torch.from_numpy(padded_ocr_texts).to(self._device))
+
+    # def _sort_batch(self, batch, targets, lengths, pretrained_embeddings, ocr_texts):
+    #     seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)
+    #     seq_tensor = batch[perm_idx]
+    #     targets_tensor = targets[perm_idx]
+    #     ocr_texts = ocr_texts[perm_idx]
+
+    #     if self._include_pretrained:
+    #         pretrained_embeddings = pretrained_embeddings[perm_idx]
+
+    #     return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings, ocr_texts

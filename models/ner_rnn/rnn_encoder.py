@@ -51,13 +51,13 @@ class RNNEncoder(nn.Module):
         self._embedding_layer = EmbeddingLayer(
             pretrained_representations_service=pretrained_representations_service,
             device=device,
-            learn_new_embeddings=learn_new_embeddings,
+            learn_subword_embeddings=learn_new_embeddings,
+            subword_embeddings_size=embeddings_size,
             include_pretrained_model=include_pretrained_model,
             pretrained_model_size=pretrained_model_size,
             include_fasttext_model=include_fasttext_model,
             fasttext_model_size=fasttext_model_size,
             vocabulary_size=vocabulary_size,
-            new_embeddings_size=embeddings_size,
             dropout=dropout)
 
         # the LSTM takes embedded sentence

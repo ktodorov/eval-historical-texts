@@ -74,38 +74,3 @@ class PretrainedRepresentationsService:
 
     def get_pretrained_max_length(self) -> int:
         return self._pretrained_max_length
-
-    def add_pretrained_representations_to_character_embeddings(
-            self,
-            embedded,
-            pretrained_representations,
-            offset_lists):
-        batch_size = embedded.shape[0]
-        pretrained_embedding_size = pretrained_representations.shape[2]
-
-        new_embedded = torch.zeros(
-            (batch_size, embedded.shape[1], embedded.shape[2] + pretrained_representations.shape[2])).to(self._arguments_service.device)
-
-        new_embedded[:, :, :embedded.shape[2]] = embedded
-
-        for i in range(batch_size):
-            inserted_count = 0
-            last_item = 0
-            for p_i, offset in enumerate(offset_lists[i]):
-                current_offset = 0
-                if offset[0] == offset[1]:
-                    current_offset = 1
-
-                for k in range(offset[0] + inserted_count, offset[1] + inserted_count + current_offset):
-                    if offset[0] < last_item:
-                        continue
-
-                    last_item = offset[1]
-
-                    new_embedded[i, k, -pretrained_embedding_size:
-                                 ] = pretrained_representations[i, p_i]
-
-                if offset[0] == offset[1]:
-                    inserted_count += 1
-
-        return new_embedded
