@@ -7,6 +7,8 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from typing import List, Dict
 
+from entities.batch_representations.ner_batch_representation import NERBatchRepresentation
+
 from models.ner_rnn.rnn_attention import RNNAttention
 from models.embedding.embedding_layer import EmbeddingLayer
 
@@ -83,17 +85,17 @@ class RNNEncoder(nn.Module):
     @overrides
     def forward(
             self,
-            sequences,
-            sequences_strings,
-            lengths,
-            position_changes,
-            targets,
+            batch_representation: NERBatchRepresentation,
             debug=False,
             **kwargs):
 
-        embedded = self._embedding_layer.forward(sequences, sequences_strings)
+        embedded = self._embedding_layer.forward(batch_representation)
 
-        new_embedded, new_lengths, new_targets = self._restore_position_changes(position_changes, embedded, lengths, targets)
+        new_embedded, new_lengths, new_targets = self._restore_position_changes(
+            position_changes=batch_representation.position_changes,
+            embeddings=embedded,
+            lengths=batch_representation.lengths,
+            targets=batch_representation.targets)
 
         x_packed = pack_padded_sequence(new_embedded, new_lengths, batch_first=True)
 

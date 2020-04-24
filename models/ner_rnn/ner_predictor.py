@@ -9,6 +9,7 @@ from overrides import overrides
 
 from entities.metric import Metric
 from entities.data_output_log import DataOutputLog
+from entities.batch_representations.ner_batch_representation import NERBatchRepresentation
 
 from enums.metric_type import MetricType
 from enums.tag_measure_averaging import TagMeasureAveraging
@@ -82,15 +83,8 @@ class NERPredictor(ModelBase):
         self.tag_measure_types = [TagMeasureType.Strict]
 
     @overrides
-    def forward(self, input_batch):
-        sequences, targets, lengths, tokens, position_changes = input_batch
-
-        rnn_outputs, lengths, targets = self.rnn_encoder.forward(
-            sequences=sequences,
-            sequences_strings=tokens,
-            lengths=lengths,
-            position_changes=position_changes,
-            targets=targets)
+    def forward(self, batch_representation: NERBatchRepresentation):
+        rnn_outputs, lengths, targets = self.rnn_encoder.forward(batch_representation)
 
         mask = self._create_mask(rnn_outputs, lengths)
         loss, predictions = self.crf_layer.forward(rnn_outputs, lengths, targets, mask)
@@ -98,7 +92,11 @@ class NERPredictor(ModelBase):
         return predictions, loss, targets, lengths
 
     @overrides
-    def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
+    def calculate_accuracies(
+        self,
+        batch: NERBatchRepresentation,
+        outputs,
+        output_characters=False) -> Dict[MetricType, float]:
         output, _, targets, lengths = outputs
 
         predictions = output.cpu().detach().numpy()
@@ -136,8 +134,7 @@ class NERPredictor(ModelBase):
         output_log = None
         if output_characters:
             output_log = DataOutputLog()
-            batch_size = targets.shape[0]
-            for i in range(batch_size):
+            for i in range(batch.batch_size):
                 predicted_string = ','.join(
                     [self._process_service.get_entity_by_label(predicted_label) for predicted_label in predictions[i][:lengths[i]]])
                 target_string = ','.join([self._process_service.get_entity_by_label(target_label)

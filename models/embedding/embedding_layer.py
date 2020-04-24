@@ -6,6 +6,8 @@ from typing import List
 from overrides import overrides
 import fasttext
 
+from entities.batch_representations.base_batch_representation import BaseBatchRepresentation
+
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.tokenizer_service import TokenizerService
@@ -52,22 +54,21 @@ class EmbeddingLayer(nn.Module):
     @overrides
     def forward(
             self,
-            sequences_tokens: torch.Tensor,
-            sequences_strings: List[List[str]]):
+            batch_representation: BaseBatchRepresentation):
 
         if self._learn_new_embeddings:
             embedded = self._embedding_dropout(
-                self._embedding(sequences_tokens))
+                self._embedding(batch_representation.sequences))
 
             if self._include_pretrained:
                 pretrained_representations = self._pretrained_representations_service.get_pretrained_representation(
-                    sequences_tokens)
+                    batch_representation.sequences)
                 embedded = torch.cat(
                     (embedded, pretrained_representations), dim=2)
 
             if self._include_fasttext_model:
                 fasttext_tensor = self._pretrained_representations_service.get_fasttext_representation(
-                    sequences_strings)
+                    batch_representation.tokens)
 
                 embedded = torch.cat((embedded, fasttext_tensor), dim=2)
         else:

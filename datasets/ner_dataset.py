@@ -8,6 +8,7 @@ from overrides import overrides
 
 from entities.ne_line import NELine
 from entities.ne_collection import NECollection
+from entities.batch_representations.ner_batch_representation import NERBatchRepresentation
 
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
@@ -72,43 +73,16 @@ class NERDataset(DatasetBase):
 
         sequences, targets, tokens, position_changes, original_lengths = batch_split
 
-        lengths = [len(sequence) for sequence in sequences]
+        pad_idx = self._ner_process_service.get_entity_label(self._ner_process_service.PAD_TOKEN)
+        batch_representation = NERBatchRepresentation(
+            device=self._device,
+            batch_size=batch_size,
+            sequences=sequences,
+            targets=targets,
+            tokens=tokens,
+            position_changes=position_changes,
+            pad_idx=pad_idx)
 
-        max_length = max(lengths)
-
-        padded_sequences = np.zeros((batch_size, max_length), dtype=np.int64) + \
-            self._ner_process_service.get_entity_label(
-                self._ner_process_service.PAD_TOKEN)
-        padded_targets = np.zeros((batch_size, max_length), dtype=np.int64) + \
-            self._ner_process_service.get_entity_label(
-                self._ner_process_service.PAD_TOKEN)
-
-        for i, sequence_length in enumerate(lengths):
-            padded_sequences[i][0:sequence_length] = sequences[i][0:sequence_length]
-            padded_targets[i][0:sequence_length] = targets[i][0:sequence_length]
-
-        return self._sort_batch(
-            torch.from_numpy(padded_sequences).to(self._device),
-            torch.from_numpy(padded_targets).to(self._device),
-            torch.tensor(lengths, device=self._device),
-            tokens,
-            position_changes,
-            torch.tensor(original_lengths, device=self._device))
-
-    def _sort_batch(
-        self,
-        sequences,
-        targets,
-        lengths,
-        tokens,
-        position_changes,
-        original_lengths):
-        _, perm_idx = original_lengths.sort(descending=True)
-        lengths = lengths[perm_idx]
-        sequences = sequences[perm_idx]
-        targets = targets[perm_idx]
-
-        tokens = [tokens[i] for i in perm_idx]
-        position_changes = [position_changes[i] for i in perm_idx]
-
-        return sequences, targets, lengths, tokens, position_changes
+        lengths_tensor = torch.tensor(original_lengths, device=self._device)
+        batch_representation.sort_batch(lengths_tensor)
+        return batch_representation
