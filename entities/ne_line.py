@@ -1,7 +1,8 @@
-from services.tokenizer_service import TokenizerService
-
 from typing import Dict, List
 from copy import deepcopy
+import re
+
+from services.tokenizer_service import TokenizerService
 
 
 class NELine:
@@ -48,9 +49,16 @@ class NELine:
 
         list_to_modify.insert(position, tag_to_insert)
 
-    def tokenize_text(self, tokenizer_service: TokenizerService):
+    def tokenize_text(
+        self,
+        tokenizer_service: TokenizerService,
+        replace_all_numbers: bool = False):
         self.original_length = len(self.tokens)
         text = self.get_text()
+
+        if replace_all_numbers:
+            text = re.sub('\d', '0', text) # replace digit with 0.
+
         offsets = self.get_token_offsets()
 
         token_ids, encoded_tokens, encoded_offsets, _ = tokenizer_service.encode_sequence(

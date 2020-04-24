@@ -48,6 +48,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help="whether to learn character embeddings next to the default subword ones")
         parser.add_argument('--character-embeddings-size', type=int, default=32,
                             help='The size used for generating character embeddings')
+        parser.add_argument("--replace-all-numbers", action='store_true',
+                            help="If all numbers should be replaced by a hard-coded fixed string")
 
     @property
     def embeddings_size(self) -> int:
@@ -88,3 +90,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def character_embeddings_size(self) -> int:
         return self._get_argument('character_embeddings_size')
+
+    @property
+    def replace_all_numbers(self) -> int:
+        return self._get_argument('replace_all_numbers')
