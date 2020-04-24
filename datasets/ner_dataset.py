@@ -8,7 +8,7 @@ from overrides import overrides
 
 from entities.ne_line import NELine
 from entities.ne_collection import NECollection
-from entities.batch_representations.ner_batch_representation import NERBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
@@ -74,7 +74,7 @@ class NERDataset(DatasetBase):
         sequences, targets, tokens, position_changes, original_lengths = batch_split
 
         pad_idx = self._ner_process_service.get_entity_label(self._ner_process_service.PAD_TOKEN)
-        batch_representation = NERBatchRepresentation(
+        batch_representation = BatchRepresentation(
             device=self._device,
             batch_size=batch_size,
             subword_sequences=sequences,

@@ -7,7 +7,7 @@ from overrides import overrides
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
-from entities.batch_representations.base_batch_representation import BaseBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 
 from enums.metric_type import MetricType
 from enums.embedding_type import EmbeddingType
@@ -106,7 +106,7 @@ class SequenceModel(ModelBase):
             nn.init.uniform_(param.data, -0.08, 0.08)
 
     @overrides
-    def forward(self, input_batch: BaseBatchRepresentation, debug=False, **kwargs):
+    def forward(self, input_batch: BatchRepresentation, debug=False, **kwargs):
         # source, targets, lengths, pretrained_representations, offset_lists = input_batch
 
         # last hidden state of the encoder is used as the initial hidden state of the decoder
@@ -139,7 +139,7 @@ class SequenceModel(ModelBase):
         return outputs, targets
 
     @overrides
-    def calculate_accuracies(self, batch: BaseBatchRepresentation, outputs, output_characters=False) -> Dict[MetricType, float]:
+    def calculate_accuracies(self, batch: BatchRepresentation, outputs, output_characters=False) -> Dict[MetricType, float]:
         output, targets = outputs
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()

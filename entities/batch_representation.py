@@ -1,12 +1,12 @@
 import numpy as np
 import torch
 
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 from services.pretrained_representations_service import PretrainedRepresentationsService
 
 
-class BaseBatchRepresentation:
+class BatchRepresentation:
     def __init__(
             self,
             device: str,
@@ -16,7 +16,8 @@ class BaseBatchRepresentation:
             word_sequences: list = [],
             targets: list = [],
             tokens: list = None,
-            offset_lists: list = None,
+            position_changes: Dict[int, Tuple] = None,
+            offset_lists: List[Tuple] = None,
             pad_idx: int = 0):
 
         self._batch_size = batch_size
@@ -30,6 +31,7 @@ class BaseBatchRepresentation:
 
         self._tokens = tokens
         self._offset_lists = offset_lists
+        self._position_changes = position_changes
 
     def sort_batch(
         self,
@@ -53,6 +55,7 @@ class BaseBatchRepresentation:
 
         self._tokens = self._sort_list(self._tokens, perm_idx)
         self._offset_lists = self._sort_list(self._offset_lists, perm_idx)
+        self._position_changes = self._sort_list(self._position_changes, perm_idx)
 
         return perm_idx
 
@@ -129,3 +132,7 @@ class BaseBatchRepresentation:
     @property
     def offset_lists(self) -> list:
         return self.offset_lists
+
+    @property
+    def position_changes(self) -> list:
+        return self._position_changes

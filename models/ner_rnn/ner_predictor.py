@@ -9,7 +9,7 @@ from overrides import overrides
 
 from entities.metric import Metric
 from entities.data_output_log import DataOutputLog
-from entities.batch_representations.ner_batch_representation import NERBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 
 from enums.metric_type import MetricType
 from enums.tag_measure_averaging import TagMeasureAveraging
@@ -61,7 +61,8 @@ class NERPredictor(ModelBase):
             dropout=arguments_service.dropout,
             hidden_dimension=arguments_service.hidden_dimension,
             bidirectional=arguments_service.bidirectional_rnn,
-            number_of_layers=arguments_service.number_of_layers)
+            number_of_layers=arguments_service.number_of_layers,
+            merge_subword_embeddings=arguments_service.merge_subwords)
 
         self.pad_idx = self._process_service.get_entity_label(
             self._process_service.PAD_TOKEN)
@@ -83,7 +84,7 @@ class NERPredictor(ModelBase):
         self.tag_measure_types = [TagMeasureType.Strict]
 
     @overrides
-    def forward(self, batch_representation: NERBatchRepresentation):
+    def forward(self, batch_representation: BatchRepresentation):
         rnn_outputs, lengths, targets = self.rnn_encoder.forward(batch_representation)
 
         mask = self._create_mask(rnn_outputs, lengths)
@@ -94,7 +95,7 @@ class NERPredictor(ModelBase):
     @overrides
     def calculate_accuracies(
         self,
-        batch: NERBatchRepresentation,
+        batch: BatchRepresentation,
         outputs,
         output_characters=False) -> Dict[MetricType, float]:
         output, _, targets, lengths = outputs

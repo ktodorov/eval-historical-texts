@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from typing import List, Dict
 
-from entities.batch_representations.ner_batch_representation import NERBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 
 from models.ner_rnn.rnn_attention import RNNAttention
 from models.embedding.embedding_layer import EmbeddingLayer
@@ -36,7 +36,8 @@ class RNNEncoder(nn.Module):
             dropout: float,
             hidden_dimension: int,
             bidirectional: bool,
-            number_of_layers: int):
+            number_of_layers: int,
+            merge_subword_embeddings: bool):
         super().__init__()
 
         self._include_pretrained = include_pretrained_model
@@ -58,6 +59,7 @@ class RNNEncoder(nn.Module):
             include_fasttext_model=include_fasttext_model,
             fasttext_model_size=fasttext_model_size,
             vocabulary_size=vocabulary_size,
+            merge_subword_embeddings=merge_subword_embeddings,
             dropout=dropout)
 
         # the LSTM takes embedded sentence
@@ -85,19 +87,13 @@ class RNNEncoder(nn.Module):
     @overrides
     def forward(
             self,
-            batch_representation: NERBatchRepresentation,
+            batch_representation: BatchRepresentation,
             debug=False,
             **kwargs):
 
         embedded = self._embedding_layer.forward(batch_representation)
 
-        new_embedded, new_lengths, new_targets = self._restore_position_changes(
-            position_changes=batch_representation.position_changes,
-            embeddings=embedded,
-            lengths=batch_representation.subword_lengths,
-            targets=batch_representation.targets)
-
-        x_packed = pack_padded_sequence(new_embedded, new_lengths, batch_first=True)
+        x_packed = pack_padded_sequence(embedded, batch_representation.subword_lengths, batch_first=True)
 
         packed_output, hidden = self.rnn.forward(x_packed)
 
@@ -122,7 +118,7 @@ class RNNEncoder(nn.Module):
             rnn_output = linear_combination * rnn_output
 
         output = self.hidden2tag.forward(rnn_output)
-        return output, new_lengths, new_targets
+        return output, batch_representation.subword_lengths, batch_representation.targets
 
     def _sort_batch(self, embeddings, lengths, targets):
         lengths, perm_idx = lengths.sort(descending=True)
@@ -130,31 +126,3 @@ class RNNEncoder(nn.Module):
         targets = targets[perm_idx]
 
         return embeddings, lengths, targets
-
-    def _restore_position_changes(
-            self,
-            position_changes,
-            embeddings,
-            lengths,
-            targets):
-        batch_size, sequence_length, embeddings_size = embeddings.shape
-
-        new_max_sequence_length = max([len(x.keys()) for x in position_changes])
-
-        new_embeddings = torch.zeros(
-            (batch_size, new_max_sequence_length, embeddings_size), dtype=embeddings.dtype).to(self.device)
-        new_targets = torch.zeros((batch_size, new_max_sequence_length), dtype=targets.dtype).to(self.device)
-        new_lengths = torch.zeros((batch_size), dtype=lengths.dtype).to(self.device)
-
-        for i, current_position_changes in enumerate(position_changes):
-            new_lengths[i] = len(current_position_changes.keys())
-
-            for old_position, new_positions in current_position_changes.items():
-                if len(new_positions) == 1:
-                    new_embeddings[i,old_position,:] = embeddings[i, new_positions[0], :]
-                else:
-                    new_embeddings[i,old_position,:] = torch.mean(embeddings[i, new_positions], dim=0)
-
-                new_targets[i,old_position] = targets[i, new_positions[0]]
-
-        return new_embeddings, new_lengths, new_targets

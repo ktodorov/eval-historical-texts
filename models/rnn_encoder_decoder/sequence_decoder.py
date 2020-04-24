@@ -5,7 +5,7 @@ from torch.functional import F
 from overrides import overrides
 
 from enums.embedding_type import EmbeddingType
-from entities.batch_representations.base_batch_representation import BaseBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 
 from models.embedding.embedding_layer import EmbeddingLayer
 
@@ -51,7 +51,7 @@ class SequenceDecoder(nn.Module):
 
     @overrides
     def forward(self, input_sequence, hidden, encoder_context):
-        input_batch = BaseBatchRepresentation(
+        input_batch = BatchRepresentation(
             device=self._device,
             batch_size=input_sequence.shape[0],
             character_sequences=input_sequence.unsqueeze(1))

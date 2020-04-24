@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple
 
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
-from entities.batch_representations.base_batch_representation import BaseBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 from enums.metric_type import MetricType
 
 from services.data_service import DataService
@@ -26,12 +26,12 @@ class ModelBase(nn.Module):
         self._data_service = data_service
         self._arguments_service = arguments_service
 
-    def forward(self, batch_representation: BaseBatchRepresentation):
+    def forward(self, batch_representation: BatchRepresentation):
         return None
 
     def calculate_accuracies(
         self,
-        batch: BaseBatchRepresentation,
+        batch: BatchRepresentation,
         outputs,
         output_characters=False) -> Tuple[Dict[MetricType, float], List[str]]:
         return ({}, None)

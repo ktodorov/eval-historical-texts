@@ -42,6 +42,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help="whether to skip the attention layer")
         parser.add_argument("--bidirectional-rnn", action='store_true',
                             help="whether to use a bidirectional version of the RNN")
+        parser.add_argument("--merge-subwords", action='store_true',
+                            help="whether to merge the subword embeddings before passing through the RNN")
 
     @property
     def embeddings_size(self) -> int:
@@ -70,3 +72,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def bidirectional_rnn(self) -> bool:
         return not self._get_argument('bidirectional_rnn')
+
+    @property
+    def merge_subwords(self) -> bool:
+        return self._get_argument('merge_subwords')

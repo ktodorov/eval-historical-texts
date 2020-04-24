@@ -6,7 +6,7 @@ from typing import List
 from overrides import overrides
 import fasttext
 
-from entities.batch_representations.base_batch_representation import BaseBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 
 from enums.embedding_type import EmbeddingType
 
@@ -22,6 +22,7 @@ class EmbeddingLayer(nn.Module):
             device: str,
             learn_subword_embeddings: bool = False,
             include_pretrained_model: bool = False,
+            merge_subword_embeddings: bool = False,
             pretrained_model_size: int = None,
             include_fasttext_model: bool = False,
             fasttext_model_size: int = None,
@@ -35,6 +36,7 @@ class EmbeddingLayer(nn.Module):
 
         self._pretrained_representations_service = pretrained_representations_service
         self._output_embedding_type = output_embedding_type
+        self._merge_subword_embeddings = merge_subword_embeddings
 
         self._include_pretrained = include_pretrained_model
         self._include_fasttext_model = include_fasttext_model
@@ -68,9 +70,8 @@ class EmbeddingLayer(nn.Module):
     @overrides
     def forward(
             self,
-            batch_representation: BaseBatchRepresentation):
+            batch_representation: BatchRepresentation):
 
-        result = None
         if self._learn_subword_embeddings:
             subword_embeddings = self._token_embedding.forward(
                 batch_representation.subword_sequences)
@@ -91,10 +92,11 @@ class EmbeddingLayer(nn.Module):
             fasttext_embeddings = self._pretrained_representations_service.get_fasttext_representation(
                 batch_representation.tokens)
 
+        result_embeddings = None
         if self._output_embedding_type == EmbeddingType.Character:
-            result = character_embeddings
+            result_embeddings = character_embeddings
 
-            if result is None and not self._include_pretrained and not self._include_fasttext_model:
+            if result_embeddings is None and not self._include_pretrained and not self._include_fasttext_model:
                 raise Exception('Invalid configuration')
 
             if self._learn_subword_embeddings:
@@ -102,34 +104,42 @@ class EmbeddingLayer(nn.Module):
                 pass
 
             if self._include_pretrained:
-                result = self._add_subword_to_character_embeddings(
-                    result,
+                result_embeddings = self._add_subword_to_character_embeddings(
+                    result_embeddings,
                     pretrained_embeddings,
                     batch_representation.offset_lists)
 
             if self._include_fasttext_model:
-                result = self._add_subword_to_character_embeddings(
-                    result,
+                result_embeddings = self._add_subword_to_character_embeddings(
+                    result_embeddings,
                     fasttext_embeddings,
                     batch_representation.offset_lists)
 
         elif self._output_embedding_type == EmbeddingType.SubWord:
-            result = subword_embeddings
+            result_embeddings = subword_embeddings
 
-            if result is None and not self._include_pretrained and not self._include_fasttext_model:
+            if result_embeddings is None and not self._include_pretrained and not self._include_fasttext_model:
                 raise Exception('Invalid configuration')
 
             if self._learn_character_embeddings:
-                pass # TODO Concat character embeddings to sub-word embeddings
+                pass  # TODO Concat character embeddings to sub-word embeddings
 
             if self._include_pretrained:
-                result = torch.cat((result, pretrained_embeddings), dim=2)
+                result_embeddings = torch.cat((result_embeddings, pretrained_embeddings), dim=2)
 
             if self._include_fasttext_model:
-                result = torch.cat((result, fasttext_embeddings), dim=2)
+                result_embeddings = torch.cat((result_embeddings, fasttext_embeddings), dim=2)
 
-        return result
+            if self._merge_subword_embeddings and batch_representation.position_changes is not None:
+                (result_embeddings,
+                 batch_representation._subword_lengths,
+                 batch_representation._targets) = self._restore_position_changes(
+                    position_changes=batch_representation.position_changes,
+                    embeddings=result_embeddings,
+                    lengths=batch_representation.subword_lengths,
+                    targets=batch_representation.targets)
 
+        return result_embeddings
 
     def _add_subword_to_character_embeddings(
             self,
@@ -142,7 +152,8 @@ class EmbeddingLayer(nn.Module):
         new_character_embeddings = torch.zeros(
             (batch_size, character_embeddings.shape[1], character_embeddings.shape[2] + subword_embeddings.shape[2])).to(self._arguments_service.device)
 
-        new_character_embeddings[:, :, :character_embeddings.shape[2]] = character_embeddings
+        new_character_embeddings[:, :,
+                                 :character_embeddings.shape[2]] = character_embeddings
 
         for i in range(batch_size):
             inserted_count = 0
@@ -159,9 +170,42 @@ class EmbeddingLayer(nn.Module):
                     last_item = offset[1]
 
                     new_character_embeddings[i, k, -pretrained_embedding_size:
-                                 ] = subword_embeddings[i, p_i]
+                                             ] = subword_embeddings[i, p_i]
 
                 if offset[0] == offset[1]:
                     inserted_count += 1
 
         return new_character_embeddings
+
+    def _restore_position_changes(
+            self,
+            position_changes,
+            embeddings,
+            lengths,
+            targets):
+        batch_size, sequence_length, embeddings_size = embeddings.shape
+
+        new_max_sequence_length = max(
+            [len(x.keys()) for x in position_changes])
+
+        new_embeddings = torch.zeros(
+            (batch_size, new_max_sequence_length, embeddings_size), dtype=embeddings.dtype).to(self._device)
+        new_targets = torch.zeros(
+            (batch_size, new_max_sequence_length), dtype=targets.dtype).to(self._device)
+        new_lengths = torch.zeros(
+            (batch_size), dtype=lengths.dtype).to(self._device)
+
+        for i, current_position_changes in enumerate(position_changes):
+            new_lengths[i] = len(current_position_changes.keys())
+
+            for old_position, new_positions in current_position_changes.items():
+                if len(new_positions) == 1:
+                    new_embeddings[i, old_position,
+                                   :] = embeddings[i, new_positions[0], :]
+                else:
+                    new_embeddings[i, old_position, :] = torch.mean(
+                        embeddings[i, new_positions], dim=0)
+
+                new_targets[i, old_position] = targets[i, new_positions[0]]
+
+        return new_embeddings, new_lengths, new_targets

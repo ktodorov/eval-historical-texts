@@ -10,7 +10,7 @@ from transformers import BertModel
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
 from entities.language_data import LanguageData
-from entities.batch_representations.base_batch_representation import BaseBatchRepresentation
+from entities.batch_representation import BatchRepresentation
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenizer_service import TokenizerService
@@ -148,7 +148,7 @@ class OCRDataset(DatasetBase):
 
         sequences, targets = batch_split
 
-        batch_representation = BaseBatchRepresentation(
+        batch_representation = BatchRepresentation(
             device=self._device,
             batch_size=batch_size,
             subword_sequences=sequences,
