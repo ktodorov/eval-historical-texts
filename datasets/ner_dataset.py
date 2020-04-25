@@ -58,7 +58,6 @@ class NERDataset(DatasetBase):
 
         character_sequence = [self._vocabulary_service.string_to_ids(token) for token in filtered_tokens]
         token_characters = [len(x) for x in character_sequence]
-        character_sequence = [char for sublist in character_sequence for char in sublist]
 
         return (
             item.token_ids,

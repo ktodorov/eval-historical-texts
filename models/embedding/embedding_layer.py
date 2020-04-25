@@ -10,6 +10,8 @@ from entities.batch_representation import BatchRepresentation
 
 from enums.embedding_type import EmbeddingType
 
+from models.embedding.character_rnn import CharacterRNN
+
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.tokenizer_service import TokenizerService
@@ -31,6 +33,7 @@ class EmbeddingLayer(nn.Module):
             learn_character_embeddings: int = False,
             character_embeddings_size: int = None,
             output_embedding_type: EmbeddingType = EmbeddingType.SubWord,
+            character_rnn_hidden_size: int = 64,
             dropout: float = 0.0):
         super().__init__()
 
@@ -59,11 +62,22 @@ class EmbeddingLayer(nn.Module):
 
         self._learn_character_embeddings = learn_character_embeddings
         if self._learn_character_embeddings:
-            self._character_embedding = nn.Embedding(
-                vocabulary_size,
-                character_embeddings_size)
-            self._character_embedding_dropout = nn.Dropout(dropout)
-            self.output_size += character_embeddings_size
+            if output_embedding_type == EmbeddingType.Character:
+                self._character_embedding = nn.Embedding(
+                    vocabulary_size,
+                    character_embeddings_size)
+                self._character_embedding_dropout = nn.Dropout(dropout)
+                self.output_size += character_embeddings_size
+            else:
+                self._character_embedding = CharacterRNN(
+                    vocabulary_size=vocabulary_size,
+                    character_embedding_size=character_embeddings_size,
+                    hidden_size=character_rnn_hidden_size,
+                    number_of_layers=1,
+                    bidirectional_rnn=True,
+                    dropout=0)
+
+                self.output_size += (character_rnn_hidden_size * 2)
 
         self._device = device
 
@@ -79,10 +93,17 @@ class EmbeddingLayer(nn.Module):
                 subword_embeddings)
 
         if self._learn_character_embeddings:
-            character_embeddings = self._character_embedding.forward(
-                batch_representation.character_sequences)
-            character_embeddings = self._character_embedding_dropout.forward(
-                character_embeddings)
+            if self._output_embedding_type == EmbeddingType.Character:
+                character_embeddings = self._character_embedding.forward(
+                    batch_representation.character_sequences)
+
+                if self._character_embedding_dropout is not None:
+                    character_embeddings = self._character_embedding_dropout.forward(
+                        character_embeddings)
+            else:
+                character_embeddings = self._character_embedding.forward(
+                    batch_representation.character_sequences,
+                    batch_representation.subword_characters_count)
 
         if self._include_pretrained:
             pretrained_embeddings = self._pretrained_representations_service.get_pretrained_representation(
@@ -225,21 +246,27 @@ class EmbeddingLayer(nn.Module):
 
         subword_dimension = subword_embeddings.shape[2]
         concat_dimension = subword_dimension + character_embeddings.shape[2]
-        result_embeddings = torch.zeros(
-            (batch_size, subword_embeddings.shape[1], concat_dimension), device=self._device)
-        result_embeddings[:, :, :subword_dimension] = subword_embeddings
+        # result_embeddings = torch.zeros(
+        #     (batch_size, subword_embeddings.shape[1], concat_dimension), device=self._device)
+        # result_embeddings[:, :, :subword_dimension] = subword_embeddings
 
-        for b in range(batch_size):
-            counter = 0
-            for index, characters_count in enumerate(subword_characters_count[b]):
-                character_indices = [
-                    counter + i for i in range(characters_count)]
-                if len(character_indices) == 1:
-                    result_embeddings[b, :,
-                                      subword_dimension:] = character_embeddings[b, character_indices[0], :]
-                else:
-                    result_embeddings[b, :, subword_dimension:] = torch.mean(character_embeddings[b, character_indices, :])
+        result_embeddings = torch.cat([subword_embeddings, character_embeddings], dim=-1)
 
-                counter += characters_count
+        # for b in range(batch_size):
+        #     counter = 0
+        #     for index, characters_count in enumerate(subword_characters_count[b]):
+        #         characters_count = characters_count.item()
+        #         if characters_count == 0:
+        #             continue
+
+        #         character_indices = [
+        #             counter + i for i in range(characters_count)]
+        #         if len(character_indices) == 1:
+        #             result_embeddings[b, :,
+        #                               subword_dimension:] = character_embeddings[b, character_indices[0], :]
+        #         else:
+        #             result_embeddings[b, :, subword_dimension:] = torch.mean(character_embeddings[b, character_indices, :])
+
+        #         counter += characters_count
 
         return result_embeddings

@@ -44,7 +44,7 @@ class PretrainedRepresentationsService:
             self._fasttext_model = fasttext.load_model(fasttext_path)
 
     def get_pretrained_representation(self, input):
-        if self.pretrained_model is None:
+        if self._pretrained_model is None:
             return []
 
         output = self._pretrained_model.forward(input)

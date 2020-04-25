@@ -43,6 +43,7 @@ class LogService:
             self,
             current_step: int,
             all_steps: int,
+            epoch_num: int = None,
             evaluation: bool = False):
 
         prefix = 'Train'
@@ -51,8 +52,13 @@ class LogService:
         else:
             self.log_summary('Iteration', current_step)
 
+
+        epoch_str = 'N/A'
+        if epoch_num is not None:
+            epoch_str = str(epoch_num)
+
         print(colored(
-            f'{prefix}: {current_step}/{all_steps}       \r', self._progress_color), end='')
+            f'{prefix}: {current_step}/{all_steps}       | Epoch: {epoch_str}           \r', self._progress_color), end='')
 
     def initialize_evaluation(self):
         print(self._log_header)

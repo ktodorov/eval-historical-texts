@@ -31,7 +31,7 @@ class BatchRepresentation:
 
         self._targets, self._target_lengths = self._pad_and_convert_to_tensor(targets, pad_idx)
 
-        self._subword_characters_count = subword_characters_count
+        self._subword_characters_count, _ = self._pad_and_convert_to_tensor(subword_characters_count, pad_idx)#subword_characters_count
         self._word_characters_count = word_characters_count
 
         self._tokens = tokens
@@ -58,11 +58,12 @@ class BatchRepresentation:
         self._targets = self._sort_tensor(self._targets, perm_idx)
         self._target_lengths = self._sort_tensor(self._target_lengths, perm_idx)
 
+        self._subword_characters_count = self._sort_tensor(self._subword_characters_count, perm_idx)
+
         self._tokens = self._sort_list(self._tokens, perm_idx)
         self._offset_lists = self._sort_list(self._offset_lists, perm_idx)
         self._position_changes = self._sort_list(self._position_changes, perm_idx)
 
-        self._subword_characters_count = self._sort_list(self._subword_characters_count, perm_idx)
         self._word_characters_count = self._sort_list(self._word_characters_count, perm_idx)
 
         return perm_idx
@@ -79,23 +80,43 @@ class BatchRepresentation:
 
         return [list_to_sort[i] for i in perm_idx]
 
-    def _pad_and_convert_to_tensor(self, list_to_modify: list, pad_idx: int):
+    def _pad_and_convert_to_tensor(
+        self,
+        list_to_modify: list,
+        pad_idx: int,
+        return_tensor: bool = True):
         if list_to_modify is None or len(list_to_modify) == 0:
             return (None, None)
 
+        batch_size = len(list_to_modify)
+
+        use_3d_padding = isinstance(list_to_modify[0][0], list)
         lengths = np.array([len(x) for x in list_to_modify])
         max_length = max(lengths)
-        padded_list = np.zeros((self._batch_size, max_length), dtype=np.int64)
+
+        if use_3d_padding:
+            sub_max_length = max([max([len(y) for y in x]) for x in list_to_modify])
+            padded_list = np.zeros((batch_size, max_length, sub_max_length), dtype=np.int64)
+        else:
+            padded_list = np.zeros((batch_size, max_length), dtype=np.int64)
 
         if pad_idx != 0:
-            padded_list = padded_list.fill(pad_idx)
+            padded_list.fill(pad_idx)
 
         for i, length in enumerate(lengths):
-            padded_list[i][0:length] = list_to_modify[i][0:length]
+            if use_3d_padding:
+                padded_sublist, _ = self._pad_and_convert_to_tensor(list_to_modify[i], pad_idx, return_tensor=False)
+                max_sublength = padded_sublist.shape[-1]
+                padded_list[i, :length, :max_sublength] = padded_sublist
+            else:
+                padded_list[i, :length] = list_to_modify[i]
 
-        return (
-            torch.from_numpy(padded_list).to(self._device),
-            torch.tensor(lengths, dtype=torch.long, device=self._device))
+        if return_tensor:
+            return (
+                torch.from_numpy(padded_list).to(self._device),
+                torch.tensor(lengths, dtype=torch.long, device=self._device))
+        else:
+            return (padded_list, lengths)
 
     @property
     def batch_size(self) -> int:

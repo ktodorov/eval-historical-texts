@@ -165,7 +165,7 @@ class TrainService:
             if i < start_iteration:
                 continue
 
-            self._log_service.log_progress(i, data_loader_length)
+            self._log_service.log_progress(i, data_loader_length, epoch_num)
 
             loss_batch, accuracies_batch, _ = self._perform_batch_iteration(
                 batch)
