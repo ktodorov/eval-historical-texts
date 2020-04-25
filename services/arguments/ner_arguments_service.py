@@ -13,14 +13,20 @@ class NERArgumentsService(PretrainedArgumentsService):
 
     @overrides
     def get_configuration_name(self) -> str:
-        result = f'ner-{str(self.language)}'
-        result += f'-{str(self.label_type)}'
+        result = f'ner-{str(self.language)[:2]}'
+        result += f'-{str(self.label_type)[:1]}'
 
         if self.include_pretrained_model:
-            result += '-pretr'
+            result += '-pr'
+
+        if self.include_fasttext_model:
+            result += '-ft'
+
+        if self.learn_character_embeddings:
+            result += '-ce'
 
         if not self.learn_new_embeddings:
-            result += '-no-emb'
+            result += '-ne'
 
         return result
 

@@ -128,7 +128,7 @@ def register_optimizer(
             )
         elif configuration == Configuration.RNNSimple:
             optimizer = providers.Singleton(
-                SGDOptimizer,
+                AdamOptimizer,
                 arguments_service=arguments_service,
                 model=model
             )
