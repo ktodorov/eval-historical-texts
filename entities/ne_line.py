@@ -2,7 +2,7 @@ from typing import Dict, List
 from copy import deepcopy
 import re
 
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class NELine:
@@ -51,17 +51,16 @@ class NELine:
 
     def tokenize_text(
         self,
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         replace_all_numbers: bool = False):
+        if replace_all_numbers:
+            self.tokens = [re.sub('(([0-9]+)|(([0-9]*)\.([0-9]*)))', '0', token) for token in self.tokens] # replace digit with 0
+
         self.original_length = len(self.tokens)
         text = self.get_text()
-
-        if replace_all_numbers:
-            text = re.sub('\d', '0', text) # replace digit with 0.
-
         offsets = self.get_token_offsets()
 
-        token_ids, encoded_tokens, encoded_offsets, _ = tokenizer_service.encode_sequence(
+        token_ids, encoded_tokens, encoded_offsets, _ = tokenize_service.encode_sequence(
             text)
 
         # it means that the tokenizer has split some of the words, therefore we need to add

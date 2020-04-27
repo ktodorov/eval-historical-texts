@@ -16,7 +16,7 @@ from models.model_base import ModelBase
 
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.data_service import DataService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService

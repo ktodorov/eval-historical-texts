@@ -22,7 +22,7 @@ from models.model_base import ModelBase
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.process.ner_process_service import NERProcessService
 
@@ -36,7 +36,7 @@ class NERPredictor(ModelBase):
             data_service: DataService,
             metrics_service: MetricsService,
             process_service: NERProcessService,
-            tokenizer_service: TokenizerService):
+            tokenize_service: BaseTokenizeService):
         super().__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
@@ -56,7 +56,7 @@ class NERPredictor(ModelBase):
             include_fasttext_model=arguments_service.include_fasttext_model,
             fasttext_model_size=arguments_service.fasttext_model_size,
             learn_new_embeddings=arguments_service.learn_new_embeddings,
-            vocabulary_size=tokenizer_service.vocabulary_size,
+            vocabulary_size=tokenize_service.vocabulary_size,
             embeddings_size=arguments_service.embeddings_size,
             dropout=arguments_service.dropout,
             hidden_dimension=arguments_service.hidden_dimension,

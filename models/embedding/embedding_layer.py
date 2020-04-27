@@ -14,7 +14,7 @@ from models.embedding.character_rnn import CharacterRNN
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.pretrained_representations_service import PretrainedRepresentationsService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class EmbeddingLayer(nn.Module):

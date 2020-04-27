@@ -11,7 +11,7 @@ from enums.run_type import RunType
 
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.dataset_service import DatasetService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class DataLoaderService:

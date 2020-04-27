@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import math
 
 from services.vocabulary_service import VocabularyService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class LanguageData:
@@ -35,14 +35,14 @@ class LanguageData:
             gs_aligned_entry: List[str],
             ocr_text: str,
             gs_text: str,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             vocabulary_service: VocabularyService):
 
-        # ocr_ids = tokenizer_service.encode_tokens(ocr_aligned_entry)
-        # gs_ids = tokenizer_service.encode_tokens(gs_aligned_entry)
-        ocr_ids, _, ocr_offsets, _ = tokenizer_service.encode_sequence(
+        # ocr_ids = tokenize_service.encode_tokens(ocr_aligned_entry)
+        # gs_ids = tokenize_service.encode_tokens(gs_aligned_entry)
+        ocr_ids, _, ocr_offsets, _ = tokenize_service.encode_sequence(
             ocr_text)
-        gs_ids, _, gs_offsets, _ = tokenizer_service.encode_sequence(gs_text)
+        gs_ids, _, gs_offsets, _ = tokenize_service.encode_sequence(gs_text)
 
         ocr_vocab_ids = vocabulary_service.string_to_ids(ocr_text)
         ocr_vocab_ids.insert(0, vocabulary_service.cls_token)

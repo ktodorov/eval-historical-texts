@@ -15,7 +15,7 @@ from models.model_base import ModelBase
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.metrics_service import MetricsService
 from services.file_service import FileService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
 from services.data_service import DataService
@@ -27,7 +27,7 @@ class ExperimentService:
             arguments_service: PretrainedArgumentsService,
             metrics_service: MetricsService,
             file_service: FileService,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             vocabulary_service: VocabularyService,
             plot_service: PlotService,
             data_service: DataService,
@@ -36,7 +36,7 @@ class ExperimentService:
         self._arguments_service = arguments_service
         self._metrics_service = metrics_service
         self._file_service = file_service
-        self._tokenizer_service = tokenizer_service
+        self._tokenize_service = tokenize_service
         self._vocabulary_service = vocabulary_service
         self._plot_service = plot_service
         self._data_service = data_service
@@ -177,7 +177,7 @@ class ExperimentService:
             hide_axis=True)
 
     def _calculate_word_embeddings(self, word: str) -> List[np.array]:
-        word_tokens, _, _, _ = self._tokenizer_service.encode_sequence(
+        word_tokens, _, _, _ = self._tokenize_service.encode_sequence(
             word)
 
         word_tokens_tensor = torch.tensor(word_tokens).unsqueeze(0).to(

@@ -2,19 +2,19 @@ import torch
 
 from typing import Tuple
 
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 
 class MaskService:
     def __init__(
             self,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             arguments_service: PretrainedArgumentsService):
 
-        self._tokenizer_service = tokenizer_service
+        self._tokenize_service = tokenize_service
         self._arguments_service = arguments_service
-        token_results = self._tokenizer_service.encode_tokens(['[MASK]'])
+        token_results = self._tokenize_service.encode_tokens(['[MASK]'])
         if token_results and len(token_results) > 0:
             self._mask_token_id = token_results[0]
         else:
@@ -68,7 +68,7 @@ class MaskService:
         ).bool() & masked_indices & ~indices_replaced
 
         random_words = torch.randint(
-            self._tokenizer_service.vocabulary_size,
+            self._tokenize_service.vocabulary_size,
             labels.shape,
             dtype=torch.long,
             device=self._arguments_service.device)

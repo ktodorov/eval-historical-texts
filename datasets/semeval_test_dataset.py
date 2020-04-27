@@ -10,7 +10,7 @@ from enums.language import Language
 
 from datasets.dataset_base import DatasetBase
 from services.arguments.arguments_service_base import ArgumentsServiceBase
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
 
 from utils import path_utils
@@ -21,7 +21,7 @@ class SemEvalTestDataset(DatasetBase):
             self,
             language: Language,
             arguments_service: ArgumentsServiceBase,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             file_service: FileService,
             **kwargs):
         super(SemEvalTestDataset, self).__init__()
@@ -41,7 +41,7 @@ class SemEvalTestDataset(DatasetBase):
         else:
             target_words = self._target_words
 
-        encodings = tokenizer_service.encode_sequences(target_words)
+        encodings = tokenize_service.encode_sequences(target_words)
         self._target_word_ids = [x[0] for x in encodings]
 
     @overrides

@@ -1,11 +1,12 @@
 import torch
 import os
-from transformers import BertModel
+from transformers import BertModel, CamembertModel
 import fasttext
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.file_service import FileService
 
+from enums.pretrained_model import PretrainedModel
 
 class PretrainedRepresentationsService:
     def __init__(
@@ -25,8 +26,13 @@ class PretrainedRepresentationsService:
         self._include_fasttext_model = arguments_service.include_fasttext_model
 
         if self._include_pretrained and self._pretrained_model_size and self._pretrained_weights:
-            self._pretrained_model = BertModel.from_pretrained(
-                arguments_service.pretrained_weights).to(arguments_service.device)
+            if self._arguments_service.pretrained_model == PretrainedModel.BERT:
+                self._pretrained_model = BertModel.from_pretrained(
+                    arguments_service.pretrained_weights).to(arguments_service.device)
+            elif self._arguments_service.pretrained_model == PretrainedModel.CamemBERT:
+                self._pretrained_model = CamembertModel.from_pretrained(
+                    arguments_service.pretrained_weights).to(arguments_service.device)
+
             self._pretrained_model.eval()
 
             for param in self._pretrained_model.parameters():

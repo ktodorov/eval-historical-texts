@@ -5,11 +5,12 @@ from services.arguments.arguments_service_base import ArgumentsServiceBase
 
 from enums.metric_type import MetricType
 from enums.configuration import Configuration
+from enums.pretrained_model import PretrainedModel
 
 
 class PretrainedArgumentsService(ArgumentsServiceBase):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, raise_errors_on_invalid_args=True):
+        super().__init__(raise_errors_on_invalid_args)
 
     @overrides
     def _add_specific_arguments(self, parser: argparse.ArgumentParser):
@@ -32,6 +33,8 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
                             help='Should a fasttext model be used to provide more information')
         parser.add_argument('--fasttext-model-size', type=int, default=300,
                             help='The hidden size dimension of the fasttext model. Default is 300')
+        parser.add_argument("--pretrained-model", type=PretrainedModel, choices=list(PretrainedModel), default=PretrainedModel.BERT,
+                            help="Pretrained model that will be used to tokenize strings and generate embeddings")
 
     @property
     def pretrained_weights(self) -> str:
@@ -64,3 +67,8 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
     @property
     def fasttext_model_size(self) -> int:
         return self._get_argument('fasttext_model_size')
+
+    @property
+    def pretrained_model(self) -> PretrainedModel:
+        return self._get_argument('pretrained_model')
+

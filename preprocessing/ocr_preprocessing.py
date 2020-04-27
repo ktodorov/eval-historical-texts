@@ -15,13 +15,13 @@ from entities.language_data import LanguageData
 from utils import path_utils
 
 from services.vocabulary_service import VocabularyService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
 
 
 def preprocess_data(
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         metrics_service: MetricsService,
         vocabulary_service: VocabularyService,
         data_service: DataService,
@@ -30,7 +30,7 @@ def preprocess_data(
         data_output_path: str):
 
     train_language_data, validation_language_data = parse_language_data(
-        tokenizer_service,
+        tokenize_service,
         metrics_service,
         vocabulary_service,
         data_service,
@@ -80,7 +80,7 @@ def save_data_files(
 
 
 def read_data(
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         data_service: DataService,
         full_data_path: str,
         full_ocr_path: str,
@@ -106,13 +106,13 @@ def read_data(
         gs_tokens = []
         skipped_indices = []
         for i in range(len(ocr_file_data)):
-            current_ids, _, _, _ = tokenizer_service.encode_sequence(
+            current_ids, _, _, _ = tokenize_service.encode_sequence(
                 ocr_file_data[i])
             if len(current_ids) > 2000:
                 skipped_indices.append(i)
                 continue
 
-            gs_ids, _, _, _ = tokenizer_service.encode_sequence(
+            gs_ids, _, _, _ = tokenize_service.encode_sequence(
                 gs_file_data[i])
 
             ocr_tokens.append(current_ids)
@@ -179,7 +179,7 @@ def load_metrics_obj(pickles_path: str):
 
 
 def parse_metrics_obj(
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         metrics_service: MetricsService,
         ocr_tokens: List[List[int]],
         gs_tokens: List[List[int]],
@@ -189,8 +189,8 @@ def parse_metrics_obj(
     token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = load_metrics_obj(pickles_path)
 
     if token_pairs is None:
-        token_pairs = [([tokenizer_service.id_to_token(x) for x in ocr_tokens[i]], [
-                        tokenizer_service.id_to_token(x) for x in gs_tokens[i]]) for i in range(len(ocr_tokens))]
+        token_pairs = [([tokenize_service.id_to_token(x) for x in ocr_tokens[i]], [
+                        tokenize_service.id_to_token(x) for x in gs_tokens[i]]) for i in range(len(ocr_tokens))]
         save_metrics_obj(token_pairs, decoded_pairs,
                          jaccard_similarities, levenshtein_distances, pickles_path)
 
@@ -233,7 +233,7 @@ def parse_metrics_obj(
 
 
 def load_split_data(
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         metrics_service: MetricsService,
         data_service: DataService,
         full_data_path: str,
@@ -247,7 +247,7 @@ def load_split_data(
 
     if not os.path.exists(train_pickle_path) or not os.path.exists(validation_pickle_path):
         ocr_file_data, gs_file_data, ocr_tokens, gs_tokens = read_data(
-            tokenizer_service,
+            tokenize_service,
             data_service,
             full_data_path,
             full_ocr_path,
@@ -256,7 +256,7 @@ def load_split_data(
             full_gs_tokens_path)
 
         token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = parse_metrics_obj(
-            tokenizer_service,
+            tokenize_service,
             metrics_service,
             ocr_tokens,
             gs_tokens,
@@ -292,7 +292,7 @@ def load_split_data(
 
 
 def parse_language_data(
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         metrics_service: MetricsService,
         vocabulary_service: VocabularyService,
         data_service: DataService,
@@ -311,7 +311,7 @@ def parse_language_data(
         pickles_path, 'combined_gs_tokens.pickle')
 
     train_pairs, validation_pairs = load_split_data(
-        tokenizer_service,
+        tokenize_service,
         metrics_service,
         data_service,
         full_data_path,
@@ -326,11 +326,11 @@ def parse_language_data(
     train_language_data = LanguageData([], [], [], [], [], [], [])
     for train_pair in train_pairs:
         train_language_data.add_entry(
-            None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenizer_service, vocabulary_service)
+            None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenize_service, vocabulary_service)
 
     validation_language_data = LanguageData([], [], [], [], [], [], [])
     for validation_pair in validation_pairs:
         validation_language_data.add_entry(
-            None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenizer_service, vocabulary_service)
+            None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenize_service, vocabulary_service)
 
     return train_language_data, validation_language_data

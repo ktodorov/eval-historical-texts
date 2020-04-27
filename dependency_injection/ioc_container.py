@@ -9,6 +9,7 @@ import main
 
 from enums.configuration import Configuration
 from enums.challenge import Challenge
+from enums.pretrained_model import PretrainedModel
 
 from losses.sequence_loss import SequenceLoss
 from losses.transformer_sequence_loss import TransformerSequenceLoss
@@ -39,6 +40,7 @@ from services.arguments.transformer_arguments_service import TransformerArgument
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.arguments.arguments_service_base import ArgumentsServiceBase
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 from services.process.process_service_base import ProcessServiceBase
 from services.process.ner_process_service import NERProcessService
@@ -57,7 +59,9 @@ from services.metrics_service import MetricsService
 from services.model_service import ModelService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.test_service import TestService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
+from services.tokenize.bert_tokenize_service import BERTTokenizeService
+from services.tokenize.camembert_tokenize_service import CamembertTokenizeService
 from services.train_service import TrainService
 from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
@@ -210,7 +214,7 @@ def register_model(
         plot_service: PlotService,
         metrics_service: MetricsService,
         data_service: DataService,
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         log_service: LogService,
         vocabulary_service: VocabularyService,
         model_service: ModelService,
@@ -238,7 +242,7 @@ def register_model(
                     MultiFitModel,
                     arguments_service=arguments_service,
                     data_service=data_service,
-                    tokenizer_service=tokenizer_service,
+                    tokenize_service=tokenize_service,
                     metrics_service=metrics_service,
                     log_service=log_service
                 )
@@ -259,7 +263,7 @@ def register_model(
                     vocabulary_service=vocabulary_service,
                     metrics_service=metrics_service,
                     log_service=log_service,
-                    tokenizer_service=tokenizer_service
+                    tokenize_service=tokenize_service
                 )
             elif configuration == Configuration.CharacterToCharacter:
                 model = providers.Singleton(
@@ -277,7 +281,7 @@ def register_model(
                 data_service=data_service,
                 metrics_service=metrics_service,
                 process_service=process_service,
-                tokenizer_service=tokenizer_service
+                tokenize_service=tokenize_service
             )
 
     elif joint_model:
@@ -295,7 +299,7 @@ def register_process_service(
         challenge: Challenge,
         arguments_service: ArgumentsServiceBase,
         file_service: FileService,
-        tokenizer_service: TokenizerService,
+        tokenize_service: BaseTokenizeService,
         vocabulary_service: VocabularyService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
@@ -304,9 +308,26 @@ def register_process_service(
             arguments_service=arguments_service,
             vocabulary_service=vocabulary_service,
             file_service=file_service,
-            tokenizer_service=tokenizer_service)
+            tokenize_service=tokenize_service)
 
     return process_service
+
+def register_tokenize_service(
+    arguments_service: ArgumentsServiceBase,
+    pretrained_model_type: PretrainedModel):
+    tokenize_service = None
+    if pretrained_model_type == PretrainedModel.BERT:
+        tokenize_service = providers.Singleton(
+            BERTTokenizeService,
+            arguments_service=arguments_service)
+    elif pretrained_model_type == PretrainedModel.CamemBERT:
+        tokenize_service = providers.Singleton(
+            CamembertTokenizeService,
+            arguments_service=arguments_service)
+    else:
+        raise Exception("Pretrained model type not supported")
+
+    return tokenize_service
 
 
 class IocContainer(containers.DeclarativeContainer):
@@ -316,7 +337,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     # Services
 
-    arguments_service_base = ArgumentsServiceBase(
+    arguments_service_base = PretrainedArgumentsService(
         raise_errors_on_invalid_args=False)
 
     challenge = arguments_service_base.challenge
@@ -327,6 +348,7 @@ class IocContainer(containers.DeclarativeContainer):
     evaluate = arguments_service_base.evaluate
     run_experiments = arguments_service_base.run_experiments
     external_logging_enabled = arguments_service_base.enable_external_logging
+    pretrained_model_type = arguments_service_base.pretrained_model
 
     argument_service_type = get_argument_service_type(challenge, configuration)
     arguments_service = providers.Singleton(
@@ -353,15 +375,13 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service
     )
 
-    tokenizer_service = providers.Singleton(
-        TokenizerService,
+    tokenize_service = register_tokenize_service(
         arguments_service=arguments_service,
-        file_service=file_service
-    )
+        pretrained_model_type=pretrained_model_type)
 
     mask_service = providers.Factory(
         MaskService,
-        tokenizer_service=tokenizer_service,
+        tokenize_service=tokenize_service,
         arguments_service=arguments_service
     )
 
@@ -385,14 +405,14 @@ class IocContainer(containers.DeclarativeContainer):
         challenge,
         arguments_service=arguments_service,
         file_service=file_service,
-        tokenizer_service=tokenizer_service,
+        tokenize_service=tokenize_service,
         vocabulary_service=vocabulary_service)
 
     dataset_service = providers.Factory(
         DatasetService,
         arguments_service=arguments_service,
         mask_service=mask_service,
-        tokenizer_service=tokenizer_service,
+        tokenize_service=tokenize_service,
         file_service=file_service,
         log_service=log_service,
         pretrained_representations_service=pretrained_representations_service,
@@ -425,7 +445,7 @@ class IocContainer(containers.DeclarativeContainer):
         plot_service=plot_service,
         metrics_service=metrics_service,
         data_service=data_service,
-        tokenizer_service=tokenizer_service,
+        tokenize_service=tokenize_service,
         log_service=log_service,
         vocabulary_service=vocabulary_service,
         model_service=model_service,
@@ -464,7 +484,7 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service,
         metrics_service=metrics_service,
         file_service=file_service,
-        tokenizer_service=tokenizer_service,
+        tokenize_service=tokenize_service,
         vocabulary_service=vocabulary_service,
         plot_service=plot_service,
         data_service=data_service,

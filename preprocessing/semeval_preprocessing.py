@@ -5,7 +5,7 @@ import pickle
 from typing import List
 
 from enums.language import Language
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 sys.path.append('..')
 from utils import path_utils
@@ -13,7 +13,7 @@ from utils import path_utils
 
 def generate_transformer_tokens(
     text_file_paths: List[str],
-    tokenizer_service: TokenizerService):
+    tokenize_service: BaseTokenizeService):
     lines = []
 
     for text_file_path in text_file_paths:
@@ -24,7 +24,7 @@ def generate_transformer_tokens(
     counter = 0
     step = 500
     while counter < len(lines):
-        encodings.extend(tokenizer_service.encode_sequences(lines[counter:counter+step]))
+        encodings.extend(tokenize_service.encode_sequences(lines[counter:counter+step]))
         counter += step
 
     input_ids = [(x[0], x[3]) for x in encodings]
@@ -35,7 +35,7 @@ def preprocess_data(
     language: Language,
     semeval_path: str,
     data_output_path: str,
-    tokenizer_service: TokenizerService):
+    tokenize_service: BaseTokenizeService):
     language_data_folder = path_utils.combine_path(semeval_path, str(language))
     corpus_path = path_utils.combine_path(language_data_folder, f'corpus{corpus_id}', 'lemma')
 
@@ -44,7 +44,7 @@ def preprocess_data(
         if file_name.endswith('.txt'):
             text_file_paths.append(os.path.join(corpus_path, file_name))
 
-    ids = generate_transformer_tokens(text_file_paths, tokenizer_service)
+    ids = generate_transformer_tokens(text_file_paths, tokenize_service)
 
     ids_filepath = os.path.join(data_output_path, f'ids{corpus_id}.pickle')
     with open(ids_filepath, 'wb') as handle:

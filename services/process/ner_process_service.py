@@ -13,7 +13,7 @@ from entities.ne_collection import NECollection
 from entities.ne_line import NELine
 
 from services.arguments.ner_arguments_service import NERArgumentsService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
 from services.vocabulary_service import VocabularyService
 from services.process.process_service_base import ProcessServiceBase
@@ -25,11 +25,11 @@ class NERProcessService(ProcessServiceBase):
             arguments_service: NERArgumentsService,
             vocabulary_service: VocabularyService,
             file_service: FileService,
-            tokenizer_service: TokenizerService):
+            tokenize_service: BaseTokenizeService):
         super().__init__()
 
         self._arguments_service = arguments_service
-        self._tokenizer_service = tokenizer_service
+        self._tokenize_service = tokenize_service
         self._file_service = file_service
         self._label_type = arguments_service.label_type
 
@@ -82,7 +82,7 @@ class NERProcessService(ProcessServiceBase):
 
                 if 'EndOfLine' in row['MISC']:
                     current_sentence.tokenize_text(
-                        self._tokenizer_service,
+                        self._tokenize_service,
                         replace_all_numbers=self._arguments_service.replace_all_numbers)
 
                     collection.add_line(current_sentence)

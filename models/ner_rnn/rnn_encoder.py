@@ -13,7 +13,7 @@ from models.ner_rnn.rnn_attention import RNNAttention
 from models.embedding.embedding_layer import EmbeddingLayer
 
 from services.arguments.ner_arguments_service import NERArgumentsService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 
 from overrides import overrides

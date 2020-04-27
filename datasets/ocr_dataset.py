@@ -13,7 +13,7 @@ from entities.language_data import LanguageData
 from entities.batch_representation import BatchRepresentation
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
@@ -30,7 +30,7 @@ class OCRDataset(DatasetBase):
             self,
             arguments_service: PostOCRArgumentsService,
             file_service: FileService,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             vocabulary_service: VocabularyService,
             metrics_service: MetricsService,
             log_service: LogService,
@@ -39,7 +39,7 @@ class OCRDataset(DatasetBase):
             run_type: RunType):
         super(OCRDataset, self).__init__()
 
-        self._tokenizer_service = tokenizer_service
+        self._tokenize_service = tokenize_service
         self._metrics_service = metrics_service
         self._vocabulary_service = vocabulary_service
         self._data_service = data_service
@@ -72,7 +72,7 @@ class OCRDataset(DatasetBase):
             train_data_path = file_service.get_pickles_path()
             test_data_path = None
             preprocess_data(train_data_path, test_data_path,
-                            output_data_path, self._tokenizer_service.tokenizer, self._vocabulary_service)
+                            output_data_path, self._tokenize_service.tokenizer, self._vocabulary_service)
 
         return language_data_path
 

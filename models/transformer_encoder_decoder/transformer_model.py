@@ -19,7 +19,7 @@ from services.data_service import DataService
 from services.metrics_service import MetricsService
 from services.vocabulary_service import VocabularyService
 from services.log_service import LogService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class TransformerModel(ModelBase):
@@ -30,19 +30,19 @@ class TransformerModel(ModelBase):
             vocabulary_service: VocabularyService,
             metrics_service: MetricsService,
             log_service: LogService,
-            tokenizer_service: TokenizerService):
+            tokenize_service: BaseTokenizeService):
         super().__init__(data_service, arguments_service)
 
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
         self._log_service = log_service
-        self._tokenizer_service = tokenizer_service
+        self._tokenize_service = tokenize_service
 
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
 
         self.encoder = TransformerEncoder(
-            input_dim=tokenizer_service.vocabulary_size,
+            input_dim=tokenize_service.vocabulary_size,
             hid_dim=arguments_service.hidden_dimension,
             n_layers=arguments_service.number_of_layers,
             n_heads=arguments_service.number_of_heads,

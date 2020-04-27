@@ -8,7 +8,7 @@ from datasets.dataset_base import DatasetBase
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
 from services.mask_service import MaskService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.log_service import LogService
 
 from preprocessing.semeval_preprocessing import preprocess_data
@@ -23,7 +23,7 @@ class SemanticChangeDataset(DatasetBase):
             arguments_service: SemanticArgumentsService,
             mask_service: MaskService,
             file_service: FileService,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             log_service: LogService,
             corpus_id: int = None,
             **kwargs):
@@ -48,7 +48,7 @@ class SemanticChangeDataset(DatasetBase):
                 language,
                 semeval_data_path,
                 full_data_path,
-                tokenizer_service)
+                tokenize_service)
 
         with open(ids_path, 'rb') as data_file:
             self._ids = pickle.load(data_file)

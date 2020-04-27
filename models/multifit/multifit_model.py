@@ -15,7 +15,7 @@ from models.model_base import ModelBase
 
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.data_service import DataService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.metrics_service import MetricsService
 from services.log_service import LogService
 
@@ -28,25 +28,25 @@ class MultiFitModel(ModelBase):
             self,
             arguments_service: PostOCRArgumentsService,
             data_service: DataService,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             metrics_service: MetricsService,
             log_service: LogService):
         super(MultiFitModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
         self._log_service = log_service
-        self._tokenizer_service = tokenizer_service
+        self._tokenize_service = tokenize_service
 
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
 
-        self._output_dimension = tokenizer_service.vocabulary_size
+        self._output_dimension = tokenize_service.vocabulary_size
 
         self._teacher_forcing_ratio = arguments_service.teacher_forcing_ratio
 
         self._encoder = SequenceEncoder(
             embedding_size=arguments_service.encoder_embedding_size,
-            input_size=tokenizer_service.vocabulary_size,
+            input_size=tokenize_service.vocabulary_size,
             hidden_dimension=arguments_service.hidden_dimension,
             number_of_layers=arguments_service.number_of_layers,
             dropout=arguments_service.dropout,
@@ -132,9 +132,9 @@ class MultiFitModel(ModelBase):
         metrics = {}
 
         if MetricType.JaccardSimilarity in self._metric_types:
-            predicted_tokens = [self._tokenizer_service.decode_tokens(
+            predicted_tokens = [self._tokenize_service.decode_tokens(
                 x) for x in predicted_characters]
-            target_tokens = [self._tokenizer_service.decode_tokens(
+            target_tokens = [self._tokenize_service.decode_tokens(
                 x) for x in target_characters]
             jaccard_score = np.mean([self._metrics_service.calculate_jaccard_similarity(
                 target_tokens[i], predicted_tokens[i]) for i in range(len(predicted_tokens))])
@@ -143,9 +143,9 @@ class MultiFitModel(ModelBase):
 
         character_results = None
         if MetricType.LevenshteinDistance in self._metric_types:
-            predicted_strings = [self._tokenizer_service.decode_string(
+            predicted_strings = [self._tokenize_service.decode_string(
                 x) for x in predicted_characters]
-            target_strings = [self._tokenizer_service.decode_string(
+            target_strings = [self._tokenize_service.decode_string(
                 x) for x in target_characters]
 
             levenshtein_distance = np.mean([self._metrics_service.calculate_normalized_levenshtein_distance(
@@ -159,7 +159,7 @@ class MultiFitModel(ModelBase):
                 for i in range(source.shape[0]):
                     source_character_ids = source[i][:lengths[i]].cpu(
                     ).detach().tolist()
-                    input_string = self._tokenizer_service.decode_string(
+                    input_string = self._tokenize_service.decode_string(
                         source_character_ids)
 
                     character_results.append(

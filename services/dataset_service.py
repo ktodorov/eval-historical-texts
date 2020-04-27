@@ -14,7 +14,7 @@ from datasets.ner_dataset import NERDataset
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.file_service import FileService
 from services.mask_service import MaskService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
@@ -28,7 +28,7 @@ class DatasetService:
             self,
             arguments_service: ArgumentsServiceBase,
             mask_service: MaskService,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             file_service: FileService,
             log_service: LogService,
             metrics_service: MetricsService,
@@ -39,7 +39,7 @@ class DatasetService:
 
         self._arguments_service = arguments_service
         self._mask_service = mask_service
-        self._tokenizer_service = tokenizer_service
+        self._tokenize_service = tokenize_service
         self._file_service = file_service
         self._log_service = log_service
         self._pretrained_representations_service = pretrained_representations_service
@@ -67,7 +67,7 @@ class DatasetService:
                 return SemEvalTestDataset(
                     language,
                     self._arguments_service,
-                    self._tokenizer_service,
+                    self._tokenize_service,
                     self._file_service)
             elif configuration == Configuration.RNNSimple:
                 return NERDataset(
@@ -83,14 +83,14 @@ class DatasetService:
                     self._arguments_service,
                     self._mask_service,
                     self._file_service,
-                    self._tokenizer_service,
+                    self._tokenize_service,
                     self._log_service)
 
             elif configuration == Configuration.MultiFit:
                 result = OCRDataset(
                     self._arguments_service,
                     self._file_service,
-                    self._tokenizer_service,
+                    self._tokenize_service,
                     self._vocabulary_service,
                     self._metrics_service,
                     self._log_service,
@@ -101,7 +101,7 @@ class DatasetService:
                 result = OCRSequenceDataset(
                     self._arguments_service,
                     self._file_service,
-                    self._tokenizer_service,
+                    self._tokenize_service,
                     self._vocabulary_service,
                     self._metrics_service,
                     self._log_service,
@@ -112,7 +112,7 @@ class DatasetService:
                 result = OCRCharacterDataset(
                     self._arguments_service,
                     self._file_service,
-                    self._tokenizer_service,
+                    self._tokenize_service,
                     self._vocabulary_service,
                     self._metrics_service,
                     self._log_service,
@@ -141,7 +141,7 @@ class DatasetService:
 
         result = []
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
-            result = [SemanticChangeDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenizer_service, self._log_service, corpus_id=i+1)
+            result = [SemanticChangeDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenize_service, self._log_service, corpus_id=i+1)
                       for i in range(number_of_datasets)]
         else:
             raise Exception('Unsupported configuration')

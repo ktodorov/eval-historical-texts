@@ -13,7 +13,7 @@ from entities.language_data import LanguageData
 from entities.batch_representation import BatchRepresentation
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
-from services.tokenizer_service import TokenizerService
+from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.log_service import LogService
 from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
@@ -31,7 +31,7 @@ class OCRSequenceDataset(OCRDataset):
             self,
             arguments_service: PostOCRArgumentsService,
             file_service: FileService,
-            tokenizer_service: TokenizerService,
+            tokenize_service: BaseTokenizeService,
             vocabulary_service: VocabularyService,
             metrics_service: MetricsService,
             log_service: LogService,
@@ -42,7 +42,7 @@ class OCRSequenceDataset(OCRDataset):
         super().__init__(
             arguments_service,
             file_service,
-            tokenizer_service,
+            tokenize_service,
             vocabulary_service,
             metrics_service,
             log_service,
@@ -72,7 +72,7 @@ class OCRSequenceDataset(OCRDataset):
             pickles_path = file_service.get_pickles_path()
             train_data_path = file_service.get_pickles_path()
             preprocess_data(
-                self._tokenizer_service,
+                self._tokenize_service,
                 self._metrics_service,
                 self._vocabulary_service,
                 pickles_path,
