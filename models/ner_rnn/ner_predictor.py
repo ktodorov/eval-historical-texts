@@ -10,6 +10,7 @@ from overrides import overrides
 from entities.metric import Metric
 from entities.data_output_log import DataOutputLog
 from entities.batch_representation import BatchRepresentation
+from entities.options.rnn_encoder_options import RNNEncoderOptions
 
 from enums.metric_type import MetricType
 from enums.tag_measure_averaging import TagMeasureAveraging
@@ -46,7 +47,7 @@ class NERPredictor(ModelBase):
         self.number_of_tags = process_service.get_labels_amount()
         self._metric_types = arguments_service.metric_types
 
-        self.rnn_encoder = RNNEncoder(
+        rnn_encoder_options = RNNEncoderOptions(
             pretrained_representations_service=pretrained_representations_service,
             device=self.device,
             number_of_tags=self.number_of_tags,
@@ -65,6 +66,8 @@ class NERPredictor(ModelBase):
             merge_subword_embeddings=arguments_service.merge_subwords,
             learn_character_embeddings=arguments_service.learn_character_embeddings,
             character_embeddings_size=arguments_service.character_embeddings_size)
+
+        self.rnn_encoder = RNNEncoder(rnn_encoder_options)
 
         self.pad_idx = self._process_service.get_entity_label(
             self._process_service.PAD_TOKEN)
@@ -87,19 +90,21 @@ class NERPredictor(ModelBase):
 
     @overrides
     def forward(self, batch_representation: BatchRepresentation):
-        rnn_outputs, lengths, targets = self.rnn_encoder.forward(batch_representation)
+        rnn_outputs, lengths, targets = self.rnn_encoder.forward(
+            batch_representation)
 
         mask = self._create_mask(rnn_outputs, lengths)
-        loss, predictions = self.crf_layer.forward(rnn_outputs, lengths, targets, mask)
+        loss, predictions = self.crf_layer.forward(
+            rnn_outputs, lengths, targets, mask)
 
         return predictions, loss, targets, lengths
 
     @overrides
     def calculate_accuracies(
-        self,
-        batch: BatchRepresentation,
-        outputs,
-        output_characters=False) -> Dict[MetricType, float]:
+            self,
+            batch: BatchRepresentation,
+            outputs,
+            output_characters=False) -> Dict[MetricType, float]:
         output, _, targets, lengths = outputs
 
         predictions = output.cpu().detach().numpy()

@@ -7,6 +7,7 @@ from overrides import overrides
 import fasttext
 
 from entities.batch_representation import BatchRepresentation
+from entities.options.embedding_layer_options import EmbeddingLayerOptions
 
 from enums.embedding_type import EmbeddingType
 
@@ -18,68 +19,52 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class EmbeddingLayer(nn.Module):
-    def __init__(
-            self,
-            pretrained_representations_service: PretrainedRepresentationsService,
-            device: str,
-            learn_subword_embeddings: bool = False,
-            include_pretrained_model: bool = False,
-            merge_subword_embeddings: bool = False,
-            pretrained_model_size: int = None,
-            include_fasttext_model: bool = False,
-            fasttext_model_size: int = None,
-            vocabulary_size: int = None,
-            subword_embeddings_size: int = None,
-            learn_character_embeddings: int = False,
-            character_embeddings_size: int = None,
-            output_embedding_type: EmbeddingType = EmbeddingType.SubWord,
-            character_rnn_hidden_size: int = 64,
-            dropout: float = 0.0):
+    def __init__(self, embedding_layer_options: EmbeddingLayerOptions):
         super().__init__()
 
-        self._pretrained_representations_service = pretrained_representations_service
-        self._output_embedding_type = output_embedding_type
-        self._merge_subword_embeddings = merge_subword_embeddings
+        self._pretrained_representations_service = embedding_layer_options.pretrained_representations_service
+        self._output_embedding_type = embedding_layer_options.output_embedding_type
+        self._merge_subword_embeddings = embedding_layer_options.merge_subword_embeddings
 
-        self._include_pretrained = include_pretrained_model
-        self._include_fasttext_model = include_fasttext_model
+        self._include_pretrained = embedding_layer_options.include_pretrained_model
+        self._include_fasttext_model = embedding_layer_options.include_fasttext_model
 
         self.output_size = 0
         if self._include_pretrained:
-            self.output_size += pretrained_model_size
+            self.output_size += embedding_layer_options.pretrained_model_size
 
         if self._include_fasttext_model:
-            self.output_size += fasttext_model_size
+            self.output_size += embedding_layer_options.fasttext_model_size
 
-        self._learn_subword_embeddings = learn_subword_embeddings
+        self._learn_subword_embeddings = embedding_layer_options.learn_subword_embeddings
 
         if self._learn_subword_embeddings:
             self._token_embedding = nn.Embedding(
-                vocabulary_size,
-                subword_embeddings_size)
-            self._token_embedding_dropout = nn.Dropout(dropout)
-            self.output_size += subword_embeddings_size
+                embedding_layer_options.vocabulary_size,
+                embedding_layer_options.subword_embeddings_size)
+            self._token_embedding_dropout = nn.Dropout(embedding_layer_options.dropout)
+            self.output_size += embedding_layer_options.subword_embeddings_size
 
-        self._learn_character_embeddings = learn_character_embeddings
+        self._learn_character_embeddings = embedding_layer_options.learn_character_embeddings
         if self._learn_character_embeddings:
-            if output_embedding_type == EmbeddingType.Character:
+            if embedding_layer_options.output_embedding_type == EmbeddingType.Character:
                 self._character_embedding = nn.Embedding(
-                    vocabulary_size,
-                    character_embeddings_size)
-                self._character_embedding_dropout = nn.Dropout(dropout)
-                self.output_size += character_embeddings_size
+                    embedding_layer_options.vocabulary_size,
+                    embedding_layer_options.character_embeddings_size)
+                self._character_embedding_dropout = nn.Dropout(embedding_layer_options.dropout)
+                self.output_size += embedding_layer_options.character_embeddings_size
             else:
                 self._character_embedding = CharacterRNN(
-                    vocabulary_size=vocabulary_size,
-                    character_embedding_size=character_embeddings_size,
-                    hidden_size=character_rnn_hidden_size,
+                    vocabulary_size=embedding_layer_options.vocabulary_size,
+                    character_embedding_size=embedding_layer_options.character_embeddings_size,
+                    hidden_size=embedding_layer_options.character_rnn_hidden_size,
                     number_of_layers=1,
                     bidirectional_rnn=True,
                     dropout=0)
 
-                self.output_size += (character_rnn_hidden_size * 2)
+                self.output_size += (embedding_layer_options.character_rnn_hidden_size * 2)
 
-        self._device = device
+        self._device = embedding_layer_options.device
 
     @overrides
     def forward(
