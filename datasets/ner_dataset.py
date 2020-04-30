@@ -34,6 +34,7 @@ class NERDataset(DatasetBase):
         self._ner_process_service = ner_process_service
         self._pretrained_representations_service = pretrained_representations_service
         self._vocabulary_service = vocabulary_service
+        self._arguments_service = arguments_service
 
         self._device = arguments_service.device
         self._include_pretrained = arguments_service.include_pretrained_model
@@ -95,6 +96,11 @@ class NERDataset(DatasetBase):
             position_changes=position_changes,
             pad_idx=pad_idx)
 
-        lengths_tensor = torch.tensor(original_lengths, device=self._device)
-        batch_representation.sort_batch(lengths_tensor)
+        # if we are going to merge the subwords, then we should sort using the original lengths, not the expanded ones
+        if self._arguments_service.merge_subwords:
+            lengths_tensor = torch.tensor(original_lengths, device=self._device)
+            batch_representation.sort_batch(lengths_tensor)
+        else:
+            batch_representation.sort_batch()
+
         return batch_representation

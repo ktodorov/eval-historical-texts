@@ -52,7 +52,8 @@ class NELine:
     def tokenize_text(
         self,
         tokenize_service: BaseTokenizeService,
-        replace_all_numbers: bool = False):
+        replace_all_numbers: bool = False,
+        expand_targets: bool = True):
         if replace_all_numbers:
             self.tokens = [re.sub('(([0-9]+)|(([0-9]*)\.([0-9]*)))', '0', token) for token in self.tokens] # replace digit with 0
 
@@ -86,25 +87,26 @@ class NELine:
 
                 while corresponding_counter < len(encoded_tokens) and encoded_offsets[corresponding_counter][1] < offsets[i][1]:
 
-                    # we copy the value of the original token
-                    self._insert_entity_tag(
-                        new_misc, corresponding_counter+1, self.misc[i])
-                    self._insert_entity_tag(
-                        new_ne_coarse_lit, corresponding_counter+1, self.ne_coarse_lit[i])
-                    self._insert_entity_tag(
-                        new_ne_coarse_meto, corresponding_counter+1, self.ne_coarse_meto[i])
-                    self._insert_entity_tag(
-                        new_ne_fine_lit, corresponding_counter+1, self.ne_fine_lit[i])
-                    self._insert_entity_tag(
-                        new_ne_fine_meto, corresponding_counter+1, self.ne_fine_meto[i])
-                    self._insert_entity_tag(
-                        new_ne_fine_comp, corresponding_counter+1, self.ne_fine_comp[i])
-                    self._insert_entity_tag(
-                        new_ne_nested, corresponding_counter+1, self.ne_nested[i])
-                    self._insert_entity_tag(
-                        new_nel_lit, corresponding_counter+1, self.nel_lit[i])
-                    self._insert_entity_tag(
-                        new_nel_meto, corresponding_counter+1, self.nel_meto[i])
+                    if expand_targets:
+                        # we copy the value of the original token
+                        self._insert_entity_tag(
+                            new_misc, corresponding_counter+1, self.misc[i])
+                        self._insert_entity_tag(
+                            new_ne_coarse_lit, corresponding_counter+1, self.ne_coarse_lit[i])
+                        self._insert_entity_tag(
+                            new_ne_coarse_meto, corresponding_counter+1, self.ne_coarse_meto[i])
+                        self._insert_entity_tag(
+                            new_ne_fine_lit, corresponding_counter+1, self.ne_fine_lit[i])
+                        self._insert_entity_tag(
+                            new_ne_fine_meto, corresponding_counter+1, self.ne_fine_meto[i])
+                        self._insert_entity_tag(
+                            new_ne_fine_comp, corresponding_counter+1, self.ne_fine_comp[i])
+                        self._insert_entity_tag(
+                            new_ne_nested, corresponding_counter+1, self.ne_nested[i])
+                        self._insert_entity_tag(
+                            new_nel_lit, corresponding_counter+1, self.nel_lit[i])
+                        self._insert_entity_tag(
+                            new_nel_meto, corresponding_counter+1, self.nel_meto[i])
 
                     corresponding_counter += 1
                     position_changes[i].append(corresponding_counter)
@@ -125,7 +127,10 @@ class NELine:
         self.position_changes = position_changes
 
         assert len(token_ids) == len(encoded_tokens)
-        assert len(token_ids) == len(self.ne_coarse_lit)
+
+        if expand_targets:
+            assert len(token_ids) == len(self.ne_coarse_lit)
+
         self.tokens = encoded_tokens
 
         self.token_ids = token_ids

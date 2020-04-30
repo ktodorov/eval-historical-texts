@@ -143,13 +143,10 @@ class EmbeddingLayer(nn.Module):
                     (result_embeddings, fasttext_embeddings), dim=2)
 
             if self._merge_subword_embeddings and batch_representation.position_changes is not None:
-                (result_embeddings,
-                 batch_representation._subword_lengths,
-                 batch_representation._targets) = self._restore_position_changes(
+                result_embeddings, batch_representation._subword_lengths = self._restore_position_changes(
                     position_changes=batch_representation.position_changes,
                     embeddings=result_embeddings,
-                    lengths=batch_representation.subword_lengths,
-                    targets=batch_representation.targets)
+                    lengths=batch_representation.subword_lengths)
 
         return result_embeddings
 
@@ -193,8 +190,7 @@ class EmbeddingLayer(nn.Module):
             self,
             position_changes,
             embeddings,
-            lengths,
-            targets):
+            lengths):
         batch_size, sequence_length, embeddings_size = embeddings.shape
 
         new_max_sequence_length = max(
@@ -202,8 +198,6 @@ class EmbeddingLayer(nn.Module):
 
         new_embeddings = torch.zeros(
             (batch_size, new_max_sequence_length, embeddings_size), dtype=embeddings.dtype).to(self._device)
-        new_targets = torch.zeros(
-            (batch_size, new_max_sequence_length), dtype=targets.dtype).to(self._device)
         new_lengths = torch.zeros(
             (batch_size), dtype=lengths.dtype).to(self._device)
 
@@ -218,9 +212,7 @@ class EmbeddingLayer(nn.Module):
                     new_embeddings[i, old_position, :] = torch.mean(
                         embeddings[i, new_positions], dim=0)
 
-                new_targets[i, old_position] = targets[i, new_positions[0]]
-
-        return new_embeddings, new_lengths, new_targets
+        return new_embeddings, new_lengths
 
     def _add_character_to_subword_embeddings(
             self,
@@ -231,27 +223,7 @@ class EmbeddingLayer(nn.Module):
 
         subword_dimension = subword_embeddings.shape[2]
         concat_dimension = subword_dimension + character_embeddings.shape[2]
-        # result_embeddings = torch.zeros(
-        #     (batch_size, subword_embeddings.shape[1], concat_dimension), device=self._device)
-        # result_embeddings[:, :, :subword_dimension] = subword_embeddings
 
         result_embeddings = torch.cat([subword_embeddings, character_embeddings], dim=-1)
-
-        # for b in range(batch_size):
-        #     counter = 0
-        #     for index, characters_count in enumerate(subword_characters_count[b]):
-        #         characters_count = characters_count.item()
-        #         if characters_count == 0:
-        #             continue
-
-        #         character_indices = [
-        #             counter + i for i in range(characters_count)]
-        #         if len(character_indices) == 1:
-        #             result_embeddings[b, :,
-        #                               subword_dimension:] = character_embeddings[b, character_indices[0], :]
-        #         else:
-        #             result_embeddings[b, :, subword_dimension:] = torch.mean(character_embeddings[b, character_indices, :])
-
-        #         counter += characters_count
 
         return result_embeddings

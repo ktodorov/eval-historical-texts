@@ -90,14 +90,14 @@ class NERPredictor(ModelBase):
 
     @overrides
     def forward(self, batch_representation: BatchRepresentation):
-        rnn_outputs, lengths, targets = self.rnn_encoder.forward(
+        rnn_outputs, lengths = self.rnn_encoder.forward(
             batch_representation)
 
         mask = self._create_mask(rnn_outputs, lengths)
         loss, predictions = self.crf_layer.forward(
-            rnn_outputs, lengths, targets, mask)
+            rnn_outputs, lengths, batch_representation.targets, mask)
 
-        return predictions, loss, targets, lengths
+        return predictions, loss, lengths
 
     @overrides
     def calculate_accuracies(
@@ -105,7 +105,8 @@ class NERPredictor(ModelBase):
             batch: BatchRepresentation,
             outputs,
             output_characters=False) -> Dict[MetricType, float]:
-        output, _, targets, lengths = outputs
+        output, _, lengths = outputs
+        targets = batch.targets
 
         predictions = output.cpu().detach().numpy()
         targets = targets.cpu().detach().numpy()

@@ -83,7 +83,8 @@ class NERProcessService(ProcessServiceBase):
                 if 'EndOfLine' in row['MISC']:
                     current_sentence.tokenize_text(
                         self._tokenize_service,
-                        replace_all_numbers=self._arguments_service.replace_all_numbers)
+                        replace_all_numbers=self._arguments_service.replace_all_numbers,
+                        expand_targets=not self._arguments_service.merge_subwords)
 
                     collection.add_line(current_sentence)
                     current_sentence = NELine()

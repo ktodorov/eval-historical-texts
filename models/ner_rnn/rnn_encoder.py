@@ -107,11 +107,4 @@ class RNNEncoder(nn.Module):
             rnn_output = linear_combination * rnn_output
 
         output = self.hidden2tag.forward(rnn_output)
-        return output, batch_representation.subword_lengths, batch_representation.targets
-
-    def _sort_batch(self, embeddings, lengths, targets):
-        lengths, perm_idx = lengths.sort(descending=True)
-        embeddings = embeddings[perm_idx]
-        targets = targets[perm_idx]
-
-        return embeddings, lengths, targets
+        return output, batch_representation.subword_lengths
