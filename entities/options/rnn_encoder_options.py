@@ -1,3 +1,7 @@
+from typing import Dict
+
+from enums.entity_tag_type import EntityTagType
+
 from services.pretrained_representations_service import PretrainedRepresentationsService
 
 class RNNEncoderOptions:
@@ -5,7 +9,7 @@ class RNNEncoderOptions:
             self,
             pretrained_representations_service: PretrainedRepresentationsService,
             device: str,
-            number_of_tags: int,
+            number_of_tags: Dict[EntityTagType, int],
             use_attention: bool,
             include_pretrained_model: bool,
             pretrained_model_size: int,

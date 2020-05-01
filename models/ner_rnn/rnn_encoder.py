@@ -7,6 +7,8 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from typing import List, Dict
 
+from enums.entity_tag_type import EntityTagType
+
 from entities.batch_representation import BatchRepresentation
 from entities.options.rnn_encoder_options import RNNEncoderOptions
 from entities.options.embedding_layer_options import EmbeddingLayerOptions
@@ -68,8 +70,13 @@ class RNNEncoder(nn.Module):
             self.attention = RNNAttention(
                 attention_dimension, attention_dimension, attention_dimension)
 
-        self.hidden2tag = nn.Linear(
-            rnn_encoder_options.hidden_dimension * multiplier, rnn_encoder_options.number_of_tags)
+        self._output_layers = nn.ModuleList([
+            nn.Linear(rnn_encoder_options.hidden_dimension *
+                      multiplier, number_of_tags)
+            for number_of_tags in rnn_encoder_options.number_of_tags.values()
+        ])
+
+        self._entity_tag_types: List[EntityTagType] = list(rnn_encoder_options.number_of_tags.keys())
 
         self.bidirectional = rnn_encoder_options.bidirectional
 
@@ -82,7 +89,8 @@ class RNNEncoder(nn.Module):
 
         embedded = self._embedding_layer.forward(batch_representation)
 
-        x_packed = pack_padded_sequence(embedded, batch_representation.subword_lengths, batch_first=True)
+        x_packed = pack_padded_sequence(
+            embedded, batch_representation.subword_lengths, batch_first=True)
 
         packed_output, hidden = self.rnn.forward(x_packed)
 
@@ -106,5 +114,9 @@ class RNNEncoder(nn.Module):
             linear_combination = linear_combination.expand_as(rnn_output)
             rnn_output = linear_combination * rnn_output
 
-        output = self.hidden2tag.forward(rnn_output)
-        return output, batch_representation.subword_lengths
+        outputs: Dict[EntityTagType, torch.Tensor] = {}
+        for i, entity_tag_type in enumerate(self._entity_tag_types):
+            output = self._output_layers[i].forward(rnn_output)
+            outputs[entity_tag_type] = output
+
+        return outputs, batch_representation.subword_lengths

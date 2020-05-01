@@ -7,8 +7,10 @@ from models.model_base import ModelBase
 from optimizers.optimizer_base import OptimizerBase
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 
+from transformers import AdamW
 
-class AdamWOptimizer(OptimizerBase):
+
+class AdamWTransformerOptimizer(OptimizerBase):
     def __init__(
             self,
             arguments_service: ArgumentsServiceBase,
@@ -16,10 +18,7 @@ class AdamWOptimizer(OptimizerBase):
         super().__init__(arguments_service, model)
 
     def _init_optimizer(self) -> Optimizer:
-        optimizer = optim.AdamW(
-            self._model.parameters(),
-            lr=self._learning_rate)
-
+        optimizer = AdamW(self._model.parameters(), lr=self._learning_rate)
         return optimizer
 
     @overrides

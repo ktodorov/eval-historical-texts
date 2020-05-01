@@ -7,7 +7,7 @@ from overrides import overrides
 import torch
 
 from enums.evaluation_type import EvaluationType
-from enums.ner_type import NERType
+from enums.entity_tag_type import EntityTagType
 
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.file_service import FileService
@@ -70,7 +70,7 @@ class NEREvaluationService(BaseEvaluationService):
         dev_word_amount = len([x for x in tokens if not x.startswith('#')])
         assert len(predictions) == dev_word_amount
 
-        output_column = 'NE-COARSE-LIT' if self._arguments_service.label_type == NERType.Coarse else 'NE-FINE-LIT'
+        output_column = 'NE-COARSE-LIT' if EntityTagType.LiteralCoarse in self._arguments_service.entity_tag_types else 'NE-FINE-LIT'
 
         checkpoints_path = self._file_service.get_checkpoints_path()
         file_path = os.path.join(

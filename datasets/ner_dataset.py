@@ -13,7 +13,6 @@ from entities.batch_representation import BatchRepresentation
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
 from enums.language import Language
-from enums.ner_type import NERType
 
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.pretrained_representations_service import PretrainedRepresentationsService
@@ -84,7 +83,7 @@ class NERDataset(DatasetBase):
 
         sequences, targets, tokens, position_changes, original_lengths, character_sequences, token_characters_count = batch_split
 
-        pad_idx = self._ner_process_service.get_entity_label(self._ner_process_service.PAD_TOKEN)
+        pad_idx = self._ner_process_service.pad_idx
         batch_representation = BatchRepresentation(
             device=self._device,
             batch_size=batch_size,

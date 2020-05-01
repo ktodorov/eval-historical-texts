@@ -1,10 +1,11 @@
+from typing import List
 from overrides import overrides
 
 import argparse
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
-from enums.ner_type import NERType
+from enums.entity_tag_type import EntityTagType
 
 
 class NERArgumentsService(PretrainedArgumentsService):
@@ -14,7 +15,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @overrides
     def get_configuration_name(self) -> str:
         result = f'ner-{str(self.language)[:2]}'
-        result += f'-{str(self.label_type)[:1]}'
+        result += f'-{len(self.entity_tag_types)}h'
 
         if self.include_pretrained_model:
             result += '-pr'
@@ -42,8 +43,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help='Dropout probability')
         parser.add_argument('--number-of-layers', type=int, default=1,
                             help='Number of layers used for the RNN')
-        parser.add_argument('--label-type', type=NERType, choices=list(NERType), default=NERType.Coarse,
-                            help='Label type that will be used for classification. Default is Coarse')
+        parser.add_argument('--entity-tag-types', type=EntityTagType, choices=list(EntityTagType), default=EntityTagType.LiteralCoarse, nargs='*',
+                            help='Entity tag types that will be used for classification. Default is only to use Literal coarse')
         parser.add_argument("--no-attention", action='store_true',
                             help="whether to skip the attention layer")
         parser.add_argument("--bidirectional-rnn", action='store_true',
@@ -74,8 +75,8 @@ class NERArgumentsService(PretrainedArgumentsService):
         return self._get_argument('number_of_layers')
 
     @property
-    def label_type(self) -> NERType:
-        return self._get_argument('label_type')
+    def entity_tag_types(self) -> List[EntityTagType]:
+        return self._get_argument('entity_tag_types')
 
     @property
     def use_attention(self) -> bool:

@@ -29,7 +29,21 @@ class BatchRepresentation:
         self._subword_sequences, self._subword_lengths = self._pad_and_convert_to_tensor(subword_sequences, pad_idx)
         self._word_sequences, self._word_lengths = self._pad_and_convert_to_tensor(word_sequences, pad_idx)
 
-        self._targets, self._target_lengths = self._pad_and_convert_to_tensor(targets, pad_idx)
+        # If we have multi-task learning we have different targets for the same sequence
+        self._multi_task_learning = isinstance(targets[0], dict)
+        if self._multi_task_learning:
+            self._targets = {}
+            self._target_lengths = {}
+
+            target_keys = targets[0].keys()
+            converted_targets = {}
+            for target_key in target_keys:
+                converted_targets[target_key] = [target[target_key] for target in targets]
+
+            for key, value in converted_targets.items():
+                self._targets[key], self._target_lengths[key] = self._pad_and_convert_to_tensor(value, pad_idx)
+        else:
+            self._targets, self._target_lengths = self._pad_and_convert_to_tensor(targets, pad_idx)
 
         self._subword_characters_count, _ = self._pad_and_convert_to_tensor(subword_characters_count, pad_idx)#subword_characters_count
         self._word_characters_count = word_characters_count
@@ -55,8 +69,12 @@ class BatchRepresentation:
         self._word_sequences = self._sort_tensor(self._word_sequences, perm_idx)
         self._word_lengths = self._sort_tensor(self._word_lengths, perm_idx)
 
-        self._targets = self._sort_tensor(self._targets, perm_idx)
-        self._target_lengths = self._sort_tensor(self._target_lengths, perm_idx)
+        if self._multi_task_learning:
+            self._targets = { key: self._sort_tensor(value, perm_idx) for key, value in self._targets.items() }
+            self._target_lengths = { key: self._sort_tensor(value, perm_idx) for key, value in self._target_lengths.items() }
+        else:
+            self._targets = self._sort_tensor(self._targets, perm_idx)
+            self._target_lengths = self._sort_tensor(self._target_lengths, perm_idx)
 
         self._subword_characters_count = self._sort_tensor(self._subword_characters_count, perm_idx)
 

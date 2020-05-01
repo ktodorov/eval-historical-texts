@@ -2,6 +2,7 @@ from typing import Dict, List
 from copy import deepcopy
 import re
 
+from enums.entity_tag_type import EntityTagType
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
@@ -48,6 +49,20 @@ class NELine:
             tag_to_insert = f'I-{tag[2:]}'
 
         list_to_modify.insert(position, tag_to_insert)
+
+    def get_entity_tags(self, entity_tag_type: EntityTagType):
+        if entity_tag_type == EntityTagType.Component:
+            return self.ne_fine_comp
+        elif entity_tag_type == EntityTagType.LiteralCoarse:
+            return self.ne_coarse_lit
+        elif entity_tag_type == EntityTagType.LiteralFine:
+            return self.ne_fine_lit
+        elif entity_tag_type == EntityTagType.MetonymicCoarse:
+            return self.ne_coarse_meto
+        elif entity_tag_type == EntityTagType.MetonymicFine:
+            return self.ne_fine_meto
+        elif entity_tag_type == EntityTagType.Nested:
+            return self.ne_nested
 
     def tokenize_text(
         self,

@@ -10,7 +10,7 @@ from services.arguments.arguments_service_base import ArgumentsServiceBase
 from transformers import AdamW
 
 
-class JointAdamWOptimizer(OptimizerBase):
+class JointAdamWTransformerOptimizer(OptimizerBase):
     def __init__(
             self,
             arguments_service: ArgumentsServiceBase,

@@ -23,5 +23,5 @@ class NERLoss(LossBase):
         return loss.item()
 
     def _calculate_inner_loss(self, model_output):
-        _, loss, _ = model_output
-        return loss
+        _, losses, _ = model_output
+        return torch.stack(list(losses.values())).sum()

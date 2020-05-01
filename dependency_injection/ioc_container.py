@@ -30,9 +30,10 @@ from models.rnn_char_to_char.char_to_char_model import CharToCharModel
 
 from optimizers.optimizer_base import OptimizerBase
 from optimizers.adam_optimizer import AdamOptimizer
-from optimizers.sgd_optimizer import SGDOptimizer
 from optimizers.adamw_optimizer import AdamWOptimizer
-from optimizers.joint_adamw_optimizer import JointAdamWOptimizer
+from optimizers.sgd_optimizer import SGDOptimizer
+from optimizers.adamw_transformer_optimizer import AdamWTransformerOptimizer
+from optimizers.joint_adamw_transformer_optimizer import JointAdamWTransformerOptimizer
 
 from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.arguments.postocr_characters_arguments_service import PostOCRCharactersArgumentsService
@@ -116,7 +117,7 @@ def register_optimizer(
     if not joint_model:
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
             optimizer = providers.Singleton(
-                AdamWOptimizer,
+                AdamWTransformerOptimizer,
                 arguments_service=arguments_service,
                 model=model
             )
@@ -132,14 +133,14 @@ def register_optimizer(
             )
         elif configuration == Configuration.RNNSimple:
             optimizer = providers.Singleton(
-                AdamOptimizer,
+                AdamWOptimizer,
                 arguments_service=arguments_service,
                 model=model
             )
     else:
         if configuration == Configuration.KBert or configuration == Configuration.XLNet:
             optimizer = providers.Singleton(
-                JointAdamWOptimizer,
+                JointAdamWTransformerOptimizer,
                 arguments_service=arguments_service,
                 model=model
             )

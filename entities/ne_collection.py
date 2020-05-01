@@ -1,5 +1,7 @@
 from typing import List
 
+from enums.entity_tag_type import EntityTagType
+
 from entities.ne_line import NELine
 
 class NECollection:
@@ -9,19 +11,10 @@ class NECollection:
     def add_line(self, line: NELine):
         self.lines.append(line)
 
-    def get_unique_coarse_entities(self):
+    def get_unique_entity_tags(self, entity_tag_type: EntityTagType):
         entities = []
         for line in self.lines:
-            for coarse_entity in line.ne_coarse_lit:
-                if coarse_entity not in entities:
-                    entities.append(coarse_entity)
-
-        return entities
-
-    def get_unique_fine_entities(self):
-        entities = []
-        for line in self.lines:
-            for coarse_entity in line.ne_fine_lit:
+            for coarse_entity in line.get_entity_tags(entity_tag_type):
                 if coarse_entity not in entities:
                     entities.append(coarse_entity)
 
