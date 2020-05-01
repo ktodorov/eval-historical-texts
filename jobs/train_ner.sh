@@ -46,8 +46,10 @@ if [ $ENTITYTAGS == "all" ]
 then
     ENTITYTAGTYPES="--entity-tag-types literal-fine literal-coarse metonymic-fine metonymic-coarse component nested "
 elif [ $ENTITYTAGS == "fine" ]
+then
     ENTITYTAGTYPES="--entity-tag-types literal-fine metonymic-fine component nested "
 elif [ $ENTITYTAGS == "coarse" ]
+then
     ENTITYTAGTYPES="--entity-tag-types literal-coarse metonymic-coarse "
 fi
 
