@@ -32,12 +32,25 @@ class VocabularyService:
         self._int2char: Dict[int, str] = vocabulary_data['int2char']
         self._char2int: Dict[str, int] = vocabulary_data['char2int']
 
-    def string_to_ids(self, input: str) -> List[int]:
-        result = [self._char2int[x] for x in input]
+    def string_to_ids(self, input) -> List[int]:
+        result = [self.string_to_id(x) for x in input]
         return result
 
-    def ids_to_string(self, input: List[int], exclude_pad_tokens: bool = True) -> str:
-        result = ''.join([self._int2char[x] for x in input])
+    def string_to_id(self, input: str) -> int:
+        if input in self._char2int.keys():
+            return self._char2int[input]
+
+        return self.unk_token
+
+    def ids_to_string(
+        self,
+        input: List[int],
+        exclude_pad_tokens: bool = True,
+        join_str: str = '') -> str:
+        if join_str is None:
+            raise Exception('`join_str` must be a valid string')
+
+        result = join_str.join([self._int2char[x] for x in input])
 
         if exclude_pad_tokens:
             result = result.replace('[PAD]', '')

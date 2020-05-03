@@ -32,6 +32,11 @@ class SemanticArgumentsService(PretrainedArgumentsService):
                             choices=list(ThresholdCalculation), default=ThresholdCalculation.Mean,
                             help='Calculation of the threshold in case a constant value is not given')
 
+        parser.add_argument('--word-embeddings-size', type=int, default=128,
+                            help='The size for the word embeddings layer')
+        parser.add_argument('--rnn-hidden-size', type=int, default=256,
+                            help='The size for the word embeddings layer')
+
     @property
     def word_distance_threshold(self) -> float:
         return self._get_argument('word_distance_threshold')
@@ -47,3 +52,11 @@ class SemanticArgumentsService(PretrainedArgumentsService):
     @property
     def word_distance_threshold_calculation(self) -> ThresholdCalculation:
         return self._get_argument('word_distance_threshold_calculation')
+
+    @property
+    def word_embeddings_size(self) -> int:
+        return self._get_argument('word_embeddings_size')
+
+    @property
+    def rnn_hidden_size(self) -> int:
+        return self._get_argument('rnn_hidden_size')

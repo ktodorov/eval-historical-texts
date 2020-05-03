@@ -20,7 +20,8 @@ class BatchRepresentation:
             tokens: list = None,
             position_changes: Dict[int, Tuple] = None,
             offset_lists: List[Tuple] = None,
-            pad_idx: int = 0):
+            pad_idx: int = 0,
+            additional_information: object = None):
 
         self._batch_size = batch_size
         self._device = device
@@ -30,7 +31,7 @@ class BatchRepresentation:
         self._word_sequences, self._word_lengths = self._pad_and_convert_to_tensor(word_sequences, pad_idx)
 
         # If we have multi-task learning we have different targets for the same sequence
-        self._multi_task_learning = isinstance(targets[0], dict)
+        self._multi_task_learning = targets is not None and len(targets) > 0 and isinstance(targets[0], dict)
         if self._multi_task_learning:
             self._targets = {}
             self._target_lengths = {}
@@ -45,18 +46,23 @@ class BatchRepresentation:
         else:
             self._targets, self._target_lengths = self._pad_and_convert_to_tensor(targets, pad_idx)
 
-        self._subword_characters_count, _ = self._pad_and_convert_to_tensor(subword_characters_count, pad_idx)#subword_characters_count
+        self._subword_characters_count, _ = self._pad_and_convert_to_tensor(subword_characters_count, pad_idx)
         self._word_characters_count = word_characters_count
 
         self._tokens = tokens
         self._offset_lists = offset_lists
         self._position_changes = position_changes
+        self._additional_information = additional_information
 
     def sort_batch(
         self,
         sort_tensor: torch.Tensor = None):
         if sort_tensor is None:
             sort_tensor = self._character_lengths
+            if sort_tensor is None:
+                sort_tensor = self._subword_lengths
+                if sort_tensor is None:
+                    sort_tensor = self._word_lengths
 
         _, perm_idx = sort_tensor.sort(descending=True)
 
@@ -107,6 +113,15 @@ class BatchRepresentation:
             return (None, None)
 
         batch_size = len(list_to_modify)
+
+        use_2d_padding = isinstance(list_to_modify[0], list)
+        if not use_2d_padding:
+            if return_tensor:
+                result_tensor = torch.tensor(list_to_modify, dtype=torch.int64, device=self._device)
+                lengths_tensor = torch.ones((batch_size), dtype=torch.long, device=self._device)
+                return (result_tensor, lengths_tensor)
+            else:
+                return (list_to_modify, np.ones((batch_size), dtype=np.long))
 
         use_3d_padding = isinstance(list_to_modify[0][0], list)
         lengths = np.array([len(x) for x in list_to_modify])
@@ -191,3 +206,7 @@ class BatchRepresentation:
     @property
     def word_characters_count(self) -> List[List[int]]:
         return self._word_characters_count
+
+    @property
+    def additional_information(self) -> object:
+        return self._additional_information

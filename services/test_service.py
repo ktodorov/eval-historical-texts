@@ -42,21 +42,20 @@ class TestService:
         evaluation: Dict[EvaluationType, List] = {}
         dataloader_length = len(self._dataloader)
 
-        # targets = []
         for i, batch in enumerate(self._dataloader):
             print(f'{i}/{dataloader_length}         \r', end='')
 
-            # targets.append(target[0])
             outputs = self._model.forward(batch)
 
             batch_evaluation = self._evaluation_service.evaluate_batch(
                 outputs,
+                batch,
                 self._arguments_service.evaluation_type,
                 i)
 
             update_dictionaries(evaluation, batch_evaluation)
 
-        self._evaluation_service.save_results(evaluation, None)  # , targets)
+        self._evaluation_service.save_results(evaluation)
         return True
 
     def _load_model(self) -> ModelCheckpoint:

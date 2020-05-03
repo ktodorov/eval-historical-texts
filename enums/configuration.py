@@ -9,3 +9,4 @@ class Configuration(ArgumentEnum):
     RNNSimple = 'rnn-simple'
     CharacterToCharacter = 'char-to-char'
     CharacterToCharacterEncoderDecoder = 'char-to-char-encoder-decoder'
+    CBOW = 'cbow'

@@ -3,6 +3,7 @@ from enums.run_type import RunType
 
 from datasets.dataset_base import DatasetBase
 from datasets.semantic_change_dataset import SemanticChangeDataset
+from datasets.cbow_dataset import CBOWDataset
 from datasets.joint_dataset import JointDataset
 from datasets.newseye_dataset import NewsEyeDataset
 from datasets.ocr_dataset import OCRDataset
@@ -63,19 +64,21 @@ class DatasetService:
         configuration: Configuration = self._arguments_service.configuration
 
         if run_type == RunType.Test:
-            if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+            if (configuration == Configuration.KBert or
+                configuration == Configuration.XLNet or
+                configuration == Configuration.CBOW):
                 return SemEvalTestDataset(
                     language,
                     self._arguments_service,
                     self._tokenize_service,
-                    self._file_service)
+                    self._file_service,
+                    self._vocabulary_service)
             elif configuration == Configuration.RNNSimple:
                 return NERDataset(
                     self._arguments_service,
                     self._pretrained_representations_service,
                     self._process_service,
                     RunType.Validation)
-
         if not joint_model:
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
                 result = SemanticChangeDataset(
@@ -85,7 +88,11 @@ class DatasetService:
                     self._file_service,
                     self._tokenize_service,
                     self._log_service)
-
+            elif configuration == Configuration.CBOW:
+                result = CBOWDataset(
+                    self._arguments_service,
+                    self._log_service,
+                    self._process_service)
             elif configuration == Configuration.MultiFit:
                 result = OCRDataset(
                     self._arguments_service,
@@ -140,7 +147,7 @@ class DatasetService:
         configuration = self._arguments_service.configuration
 
         result = []
-        if configuration == Configuration.KBert or configuration == Configuration.XLNet:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet or configuration==Configuration.CBOW:
             result = [SemanticChangeDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenize_service, self._log_service, corpus_id=i+1)
                       for i in range(number_of_datasets)]
         else:

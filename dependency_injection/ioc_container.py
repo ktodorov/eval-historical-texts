@@ -17,11 +17,13 @@ from losses.loss_base import LossBase
 from losses.kbert_loss import KBertLoss
 from losses.joint_loss import JointLoss
 from losses.ner_loss import NERLoss
+from losses.cbow_loss import CBOWLoss
 
 from models.model_base import ModelBase
 from models.transformer_fine_tune.kbert_model import KBertModel
 from models.transformer_fine_tune.kxlnet_model import KXLNetModel
 from models.multifit.multifit_model import MultiFitModel
+from models.word2vec.cbow_model import CBOWModel
 from models.rnn_encoder_decoder.sequence_model import SequenceModel
 from models.transformer_encoder_decoder.transformer_model import TransformerModel
 from models.joint_model import JointModel
@@ -45,6 +47,7 @@ from services.arguments.pretrained_arguments_service import PretrainedArgumentsS
 
 from services.process.process_service_base import ProcessServiceBase
 from services.process.ner_process_service import NERProcessService
+from services.process.cbow_process_service import CBOWProcessService
 
 from services.evaluation.base_evaluation_service import BaseEvaluationService
 from services.evaluation.semantic_change_evaluation_service import SemanticChangeEvaluationService
@@ -121,6 +124,12 @@ def register_optimizer(
                 arguments_service=arguments_service,
                 model=model
             )
+        elif configuration == Configuration.CBOW:
+            optimizer = providers.Singleton(
+                AdamWOptimizer,
+                arguments_service=arguments_service,
+                model=model
+            )
         elif (configuration == Configuration.MultiFit or
               configuration == Configuration.SequenceToCharacter or
               configuration == Configuration.TransformerSequence or
@@ -166,6 +175,8 @@ def register_loss(
             loss_function = providers.Singleton(TransformerSequenceLoss)
         elif configuration == Configuration.RNNSimple:
             loss_function = providers.Singleton(NERLoss)
+        elif configuration == Configuration.CBOW:
+            loss_function = providers.Singleton(CBOWLoss)
     elif configuration == Configuration.KBert or configuration == Configuration.XLNet:
         loss_function = providers.Singleton(JointLoss)
 
@@ -182,7 +193,7 @@ def register_evaluation_service(
         configuration: Configuration):
     evaluation_service = None
 
-    if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
+    if (configuration == Configuration.KBert or configuration == Configuration.XLNet or configuration == Configuration.CBOW):
         evaluation_service = providers.Factory(
             SemanticChangeEvaluationService,
             arguments_service=arguments_service,
@@ -232,6 +243,13 @@ def register_model(
                 arguments_service=arguments_service,
                 data_service=data_service
             )
+        elif configuration == Configuration.CBOW:
+            model = providers.Singleton(
+                CBOWModel,
+                arguments_service=arguments_service,
+                vocabulary_service=vocabulary_service,
+                data_service=data_service,
+                process_service=process_service)
         elif (configuration == Configuration.MultiFit or
               configuration == Configuration.SequenceToCharacter or
               configuration == Configuration.TransformerSequence or
@@ -298,6 +316,7 @@ def register_model(
 
 def register_process_service(
         challenge: Challenge,
+        configuration: Configuration,
         arguments_service: ArgumentsServiceBase,
         file_service: FileService,
         tokenize_service: BaseTokenizeService,
@@ -310,6 +329,12 @@ def register_process_service(
             vocabulary_service=vocabulary_service,
             file_service=file_service,
             tokenize_service=tokenize_service)
+    elif challenge == Challenge.SemanticChange and configuration == Configuration.CBOW:
+        process_service = providers.Singleton(
+            CBOWProcessService,
+            arguments_service=arguments_service,
+            vocabulary_service=vocabulary_service,
+            file_service=file_service)
 
     return process_service
 
@@ -404,6 +429,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     process_service = register_process_service(
         challenge,
+        configuration,
         arguments_service=arguments_service,
         file_service=file_service,
         tokenize_service=tokenize_service,
@@ -426,14 +452,14 @@ class IocContainer(containers.DeclarativeContainer):
     dataloader_service = providers.Factory(
         DataLoaderService,
         arguments_service=arguments_service,
-        dataset_service=dataset_service
-    )
+        dataset_service=dataset_service)
 
     model_service = providers.Factory(
         ModelService,
         arguments_service=arguments_service,
-        data_service=data_service
-    )
+        data_service=data_service,
+        vocabulary_service=vocabulary_service,
+        process_service=process_service)
 
     decoding_service = providers.Factory(
         DecodingService,

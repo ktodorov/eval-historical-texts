@@ -25,10 +25,13 @@ echo copying finished
 cd "$TMPDIR"/eval-historical-texts
 
 FT=""
+FTMODELARG=""
 if [ ! -z "$FASTTEXT" ]
 then
     FT="-ft"
+    FTMODELARG="--fasttext-model $FASTTEXTMODEL"
 fi
+
 
 PRETR=""
 if [ ! -z "$INCLUDEPRETR" ]
@@ -53,7 +56,21 @@ then
     ENTITYTAGTYPES="--entity-tag-types literal-coarse metonymic-coarse "
 fi
 
-srun python3 -u run.py --device cuda --eval-freq 100 --seed 13 --patience 50 --epochs 3000 --configuration rnn-simple --learning-rate 1e-2 --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --hidden-dimension 256 --embeddings-size 64 --dropout 0.5 --number-of-layers 1 $ENTITYTAGTYPES --reset-training-on-early-stop --training-reset-epoch-limit 5 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512 --learn-new-embeddings --checkpoint-name $LANGUAGE-$LABELTYPE$FT-$PRETRAINEDMODEL$PRETR --no-attention --bidirectional-rnn $FASTTEXT --fasttext-model $FASTTEXTMODEL --fasttext-model-size 300 --max-training-minutes 4300 --merge-subwords --learn-character-embeddings --character-embeddings-size 32 --replace-all-numbers --pretrained-model $PRETRAINEDMODEL
+CHARACTEREMBEDDINGS=""
+CHARCHECKPOINT=""
+if [ ! -z "$CHARSIZE" ]
+then
+    CHARACTEREMBEDDINGS="--learn-character-embeddings --character-embeddings-size $CHARSIZE"
+    CHARCHECKPOINT="-ce"
+fi
+
+CHECKPOINTNAME=""
+if [ -z "$CHECKPOINT" ]
+then
+    CHECKPOINTNAME="$LANGUAGE-$ENTITYTAGS-$FT-$PRETRAINEDMODEL$PRETR$CHARCHECKPOINT"
+fi
+
+srun python3 -u run.py --device cuda --eval-freq 100 --seed 13 --patience 50 --epochs 3000 --configuration rnn-simple --learning-rate 1e-2 --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --hidden-dimension 512 --embeddings-size 128 --dropout 0.3 --number-of-layers 1 $ENTITYTAGTYPES --reset-training-on-early-stop --training-reset-epoch-limit 5 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512 --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME --no-attention --bidirectional-rnn $FASTTEXT $FTMODELARG --fasttext-model-size 300 --max-training-minutes 4300 --merge-subwords $CHARACTEREMBEDDINGS --replace-all-numbers --pretrained-model $PRETRAINEDMODEL
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/

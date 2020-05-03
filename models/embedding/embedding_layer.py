@@ -29,21 +29,22 @@ class EmbeddingLayer(nn.Module):
         self._include_pretrained = embedding_layer_options.include_pretrained_model
         self._include_fasttext_model = embedding_layer_options.include_fasttext_model
 
-        self.output_size = 0
+        self._output_size = 0
         if self._include_pretrained:
-            self.output_size += embedding_layer_options.pretrained_model_size
+            self._output_size += embedding_layer_options.pretrained_model_size
 
         if self._include_fasttext_model:
-            self.output_size += embedding_layer_options.fasttext_model_size
+            self._output_size += embedding_layer_options.fasttext_model_size
 
         self._learn_subword_embeddings = embedding_layer_options.learn_subword_embeddings
 
         if self._learn_subword_embeddings:
-            self._token_embedding = nn.Embedding(
+            self._subword_embedding = nn.Embedding(
                 embedding_layer_options.vocabulary_size,
                 embedding_layer_options.subword_embeddings_size)
-            self._token_embedding_dropout = nn.Dropout(embedding_layer_options.dropout)
-            self.output_size += embedding_layer_options.subword_embeddings_size
+            self._subword_embedding_dropout = nn.Dropout(
+                embedding_layer_options.dropout)
+            self._output_size += embedding_layer_options.subword_embeddings_size
 
         self._learn_character_embeddings = embedding_layer_options.learn_character_embeddings
         if self._learn_character_embeddings:
@@ -51,8 +52,9 @@ class EmbeddingLayer(nn.Module):
                 self._character_embedding = nn.Embedding(
                     embedding_layer_options.vocabulary_size,
                     embedding_layer_options.character_embeddings_size)
-                self._character_embedding_dropout = nn.Dropout(embedding_layer_options.dropout)
-                self.output_size += embedding_layer_options.character_embeddings_size
+                self._character_embedding_dropout = nn.Dropout(
+                    embedding_layer_options.dropout)
+                self._output_size += embedding_layer_options.character_embeddings_size
             else:
                 self._character_embedding = CharacterRNN(
                     vocabulary_size=embedding_layer_options.vocabulary_size,
@@ -62,19 +64,33 @@ class EmbeddingLayer(nn.Module):
                     bidirectional_rnn=True,
                     dropout=0)
 
-                self.output_size += (embedding_layer_options.character_rnn_hidden_size * 2)
+                self._output_size += (
+                    embedding_layer_options.character_rnn_hidden_size * 2)
+
+        self._learn_word_embeddings = embedding_layer_options.learn_word_embeddings
+        if self._learn_word_embeddings:
+            self._word_embedding = nn.Embedding(
+                embedding_layer_options.vocabulary_size,
+                embedding_layer_options.word_embeddings_size)
+
+            self._word_embedding_dropout = nn.Dropout(
+                embedding_layer_options.dropout)
+            self._output_size += embedding_layer_options.word_embeddings_size
 
         self._device = embedding_layer_options.device
 
     @overrides
-    def forward(
-            self,
-            batch_representation: BatchRepresentation):
+    def forward(self, batch_representation: BatchRepresentation):
+        if self._learn_word_embeddings:
+            word_embeddings = self._word_embedding.forward(
+                batch_representation.word_sequences)
+            word_embeddings = self._word_embedding_dropout.forward(
+                word_embeddings)
 
         if self._learn_subword_embeddings:
-            subword_embeddings = self._token_embedding.forward(
+            subword_embeddings = self._subword_embedding.forward(
                 batch_representation.subword_sequences)
-            subword_embeddings = self._token_embedding_dropout.forward(
+            subword_embeddings = self._subword_embedding_dropout.forward(
                 subword_embeddings)
 
         if self._learn_character_embeddings:
@@ -147,6 +163,9 @@ class EmbeddingLayer(nn.Module):
                     position_changes=batch_representation.position_changes,
                     embeddings=result_embeddings,
                     lengths=batch_representation.subword_lengths)
+
+        elif self._output_embedding_type == EmbeddingType.Word:
+            result_embeddings = word_embeddings
 
         return result_embeddings
 
@@ -224,6 +243,11 @@ class EmbeddingLayer(nn.Module):
         subword_dimension = subword_embeddings.shape[2]
         concat_dimension = subword_dimension + character_embeddings.shape[2]
 
-        result_embeddings = torch.cat([subword_embeddings, character_embeddings], dim=-1)
+        result_embeddings = torch.cat(
+            [subword_embeddings, character_embeddings], dim=-1)
 
         return result_embeddings
+
+    @property
+    def output_size(self) -> int:
+        return self._output_size

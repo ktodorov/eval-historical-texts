@@ -5,13 +5,15 @@ import torch
 from overrides import overrides
 
 from typing import List
+from entities.batch_representation import BatchRepresentation
 
 from enums.language import Language
 
 from datasets.dataset_base import DatasetBase
-from services.arguments.arguments_service_base import ArgumentsServiceBase
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
+from services.vocabulary_service import VocabularyService
 
 from utils import path_utils
 
@@ -20,9 +22,10 @@ class SemEvalTestDataset(DatasetBase):
     def __init__(
             self,
             language: Language,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: PretrainedArgumentsService,
             tokenize_service: BaseTokenizeService,
             file_service: FileService,
+            vocabulary_service: VocabularyService,
             **kwargs):
         super(SemEvalTestDataset, self).__init__()
 
@@ -41,8 +44,11 @@ class SemEvalTestDataset(DatasetBase):
         else:
             target_words = self._target_words
 
-        encodings = tokenize_service.encode_sequences(target_words)
-        self._target_word_ids = [x[0] for x in encodings]
+        if arguments_service.include_pretrained_model:
+            encodings = tokenize_service.encode_sequences(target_words)
+            self._target_word_ids = [x[0] for x in encodings]
+        else:
+            self._target_word_ids = [vocabulary_service.string_to_ids(target_word) for target_word in target_words]
 
     @overrides
     def __len__(self):
@@ -50,4 +56,21 @@ class SemEvalTestDataset(DatasetBase):
 
     @overrides
     def __getitem__(self, idx):
-        return (torch.tensor(self._target_word_ids[idx]).to(self._arguments_service.device), self._target_words[idx])
+        return self._target_word_ids[idx], self._target_words[idx]
+
+    @overrides
+    def use_collate_function(self) -> bool:
+        return True
+
+    @overrides
+    def collate_function(self, DataLoaderBatch):
+        batch_split = list(zip(*DataLoaderBatch))
+        char_ids, word = batch_split
+
+        batch_representation = BatchRepresentation(
+            device=self._arguments_service.device,
+            batch_size=1,
+            character_sequences=char_ids,
+            additional_information=word[0])
+
+        return batch_representation
