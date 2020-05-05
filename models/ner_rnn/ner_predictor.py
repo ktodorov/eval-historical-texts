@@ -137,11 +137,16 @@ class NERPredictor(ModelBase):
 
             predictions = output[entity_tag_type].cpu().detach().numpy()
             current_targets = targets[entity_tag_type].cpu().detach().numpy()
+            none_idx = self._process_service.get_entity_label('O', entity_tag_type)
 
-            mask = np.array((current_targets != self._pad_idx), dtype=bool)
+            mask = np.where(((current_targets != self._pad_idx) & (current_targets != none_idx)), True, False)
+
+            # if current batch has no targets other than O, we calculate the F1 score on those instead
+            if mask.sum() == 0:
+                mask = np.where((current_targets != self._pad_idx), True, False)
+
             predicted_labels = predictions[mask]
             target_labels = current_targets[mask]
-
 
             for tag_measure_averaging in self.tag_measure_averages:
                 for tag_measure_type in self.tag_measure_types:
