@@ -24,7 +24,8 @@ class RNNEncoderOptions:
             number_of_layers: int,
             merge_subword_embeddings: bool,
             learn_character_embeddings: bool,
-            character_embeddings_size: int):
+            character_embeddings_size: int,
+            character_hidden_size: int):
 
         self.pretrained_representations_service = pretrained_representations_service
         self.device = device
@@ -44,3 +45,4 @@ class RNNEncoderOptions:
         self.merge_subword_embeddings = merge_subword_embeddings
         self.learn_character_embeddings = learn_character_embeddings
         self.character_embeddings_size = character_embeddings_size
+        self.character_hidden_size = character_hidden_size

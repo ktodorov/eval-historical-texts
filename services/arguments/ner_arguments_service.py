@@ -53,8 +53,10 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help="whether to merge the subword embeddings before passing through the RNN")
         parser.add_argument("--learn-character-embeddings", action='store_true',
                             help="whether to learn character embeddings next to the default subword ones")
-        parser.add_argument('--character-embeddings-size', type=int, default=32,
+        parser.add_argument('--character-embeddings-size', type=int, default=None,
                             help='The size used for generating character embeddings')
+        parser.add_argument('--character-hidden-size', type=int, default=None,
+                            help='The hidden size used for the character embeddings RNN')
         parser.add_argument("--replace-all-numbers", action='store_true',
                             help="If all numbers should be replaced by a hard-coded fixed string")
 
@@ -97,6 +99,10 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def character_embeddings_size(self) -> int:
         return self._get_argument('character_embeddings_size')
+
+    @property
+    def character_hidden_size(self) -> int:
+        return self._get_argument('character_hidden_size')
 
     @property
     def replace_all_numbers(self) -> int:

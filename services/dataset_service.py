@@ -77,6 +77,7 @@ class DatasetService:
                 return NERDataset(
                     self._arguments_service,
                     self._pretrained_representations_service,
+                    self._vocabulary_service,
                     self._process_service,
                     RunType.Validation)
         if not joint_model:

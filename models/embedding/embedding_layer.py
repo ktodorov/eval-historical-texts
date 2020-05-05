@@ -39,10 +39,10 @@ class EmbeddingLayer(nn.Module):
         self._learn_subword_embeddings = embedding_layer_options.learn_subword_embeddings
 
         if self._learn_subword_embeddings:
-            self._subword_embedding = nn.Embedding(
+            self._token_embedding = nn.Embedding(
                 embedding_layer_options.vocabulary_size,
                 embedding_layer_options.subword_embeddings_size)
-            self._subword_embedding_dropout = nn.Dropout(
+            self._token_embedding_dropout = nn.Dropout(
                 embedding_layer_options.dropout)
             self._output_size += embedding_layer_options.subword_embeddings_size
 
@@ -81,6 +81,10 @@ class EmbeddingLayer(nn.Module):
 
     @overrides
     def forward(self, batch_representation: BatchRepresentation):
+        subword_embeddings = None
+        word_embeddings = None
+        character_embeddings = None
+
         if self._learn_word_embeddings:
             word_embeddings = self._word_embedding.forward(
                 batch_representation.word_sequences)
@@ -88,9 +92,9 @@ class EmbeddingLayer(nn.Module):
                 word_embeddings)
 
         if self._learn_subword_embeddings:
-            subword_embeddings = self._subword_embedding.forward(
+            subword_embeddings = self._token_embedding.forward(
                 batch_representation.subword_sequences)
-            subword_embeddings = self._subword_embedding_dropout.forward(
+            subword_embeddings = self._token_embedding_dropout.forward(
                 subword_embeddings)
 
         if self._learn_character_embeddings:
@@ -138,7 +142,9 @@ class EmbeddingLayer(nn.Module):
                     batch_representation.offset_lists)
 
         elif self._output_embedding_type == EmbeddingType.SubWord:
-            result_embeddings = subword_embeddings
+            result_embeddings = None
+            if subword_embeddings is not None:
+                result_embeddings = subword_embeddings
 
             if result_embeddings is None and not self._include_pretrained and not self._include_fasttext_model:
                 raise Exception('Invalid configuration')
@@ -151,12 +157,18 @@ class EmbeddingLayer(nn.Module):
                     batch_representation.subword_characters_count)
 
             if self._include_pretrained:
-                result_embeddings = torch.cat(
-                    (result_embeddings, pretrained_embeddings), dim=2)
+                if result_embeddings is None:
+                    result_embeddings = pretrained_embeddings
+                else:
+                    result_embeddings = torch.cat(
+                        (result_embeddings, pretrained_embeddings), dim=2)
 
             if self._include_fasttext_model:
-                result_embeddings = torch.cat(
-                    (result_embeddings, fasttext_embeddings), dim=2)
+                if result_embeddings is None:
+                    result_embeddings = fasttext_embeddings
+                else:
+                    result_embeddings = torch.cat(
+                        (result_embeddings, fasttext_embeddings), dim=2)
 
             if self._merge_subword_embeddings and batch_representation.position_changes is not None:
                 result_embeddings, batch_representation._subword_lengths = self._restore_position_changes(
@@ -239,6 +251,9 @@ class EmbeddingLayer(nn.Module):
             subword_embeddings: torch.Tensor,
             character_embeddings: torch.Tensor,
             subword_characters_count: List[List[int]]):
+
+        if subword_embeddings is None:
+            return character_embeddings
 
         subword_dimension = subword_embeddings.shape[2]
         concat_dimension = subword_dimension + character_embeddings.shape[2]

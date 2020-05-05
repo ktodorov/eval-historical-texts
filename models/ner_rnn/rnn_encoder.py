@@ -49,6 +49,7 @@ class RNNEncoder(nn.Module):
             merge_subword_embeddings=rnn_encoder_options.merge_subword_embeddings,
             learn_character_embeddings=rnn_encoder_options.learn_character_embeddings,
             character_embeddings_size=rnn_encoder_options.character_embeddings_size,
+            character_rnn_hidden_size=rnn_encoder_options.character_hidden_size,
             dropout=rnn_encoder_options.dropout)
 
         self._embedding_layer = EmbeddingLayer(embedding_layer_options)

@@ -68,7 +68,8 @@ class NERPredictor(ModelBase):
             number_of_layers=arguments_service.number_of_layers,
             merge_subword_embeddings=arguments_service.merge_subwords,
             learn_character_embeddings=arguments_service.learn_character_embeddings,
-            character_embeddings_size=arguments_service.character_embeddings_size)
+            character_embeddings_size=arguments_service.character_embeddings_size,
+            character_hidden_size=arguments_service.character_hidden_size)
 
         self.rnn_encoder = RNNEncoder(rnn_encoder_options)
 
