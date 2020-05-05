@@ -48,10 +48,10 @@ class EmbeddingLayer(ModelBase):
         self._learn_subword_embeddings = embedding_layer_options.learn_subword_embeddings
 
         if self._learn_subword_embeddings:
-            self._token_embedding = nn.Embedding(
+            self._subword_embedding = nn.Embedding(
                 embedding_layer_options.vocabulary_size,
                 embedding_layer_options.subword_embeddings_size)
-            self._token_embedding_dropout = nn.Dropout(
+            self._subword_embedding_dropout = nn.Dropout(
                 embedding_layer_options.dropout)
             self._output_size += embedding_layer_options.subword_embeddings_size
 
@@ -101,9 +101,9 @@ class EmbeddingLayer(ModelBase):
                 word_embeddings)
 
         if self._learn_subword_embeddings:
-            subword_embeddings = self._token_embedding.forward(
+            subword_embeddings = self._subword_embedding.forward(
                 batch_representation.subword_sequences)
-            subword_embeddings = self._token_embedding_dropout.forward(
+            subword_embeddings = self._subword_embedding_dropout.forward(
                 subword_embeddings)
 
         if self._learn_character_embeddings:
