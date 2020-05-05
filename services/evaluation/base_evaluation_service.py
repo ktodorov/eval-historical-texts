@@ -3,6 +3,8 @@ from typing import List, Dict
 import torch
 from scipy import spatial
 
+from entities.batch_representation import BatchRepresentation
+
 from enums.evaluation_type import EvaluationType
 
 
@@ -11,6 +13,7 @@ class BaseEvaluationService:
     def evaluate_batch(
             self,
             output: torch.Tensor,
+            batch_input: BatchRepresentation,
             evaluation_types: List[EvaluationType],
             batch_index: int) -> Dict[EvaluationType, List]:
         """Evaluates the generated output based on the chosen evaluation types

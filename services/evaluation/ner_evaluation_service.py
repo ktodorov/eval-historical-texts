@@ -6,6 +6,8 @@ from overrides import overrides
 
 import torch
 
+from entities.batch_representation import BatchRepresentation
+
 from enums.evaluation_type import EvaluationType
 from enums.entity_tag_type import EntityTagType
 
@@ -35,23 +37,26 @@ class NEREvaluationService(BaseEvaluationService):
     def evaluate_batch(
             self,
             output: torch.Tensor,
+            batch_input: BatchRepresentation,
             evaluation_types: List[EvaluationType],
             batch_index: int) -> Dict[EvaluationType, List]:
-        predictions = output[0][0]
-        position_changes = self._process_service.get_position_changes(
-            batch_index)
+        predictions = output[0]
+        position_changes = batch_input.position_changes
 
         result = []
-        for prediction in predictions:
-            predicted_entity = self._process_service.get_entity_by_label(
-                prediction)
-            result.append(predicted_entity)
+        for entity_tag_type, type_predictions in predictions.items():
+            for i, prediction in enumerate(type_predictions.squeeze(0).cpu().detach().tolist()):
+                predicted_entity = self._process_service.get_entity_by_label(prediction, entity_tag_type)
+                if len(result) <= i:
+                    result.append({})
+
+                result[i][entity_tag_type] = predicted_entity
 
         evaluation = {EvaluationType.NamedEntityRecognitionMatch: result}
         return evaluation
 
     @overrides
-    def save_results(self, evaluation: Dict[EvaluationType, List], targets: List[str]):
+    def save_results(self, evaluation: Dict[EvaluationType, List]):
         data_path = self._file_service.get_data_path()
         language_suffix = self._process_service.get_language_suffix(
             self._arguments_service.language)
@@ -70,7 +75,14 @@ class NEREvaluationService(BaseEvaluationService):
         dev_word_amount = len([x for x in tokens if not x.startswith('#')])
         assert len(predictions) == dev_word_amount
 
-        output_column = 'NE-COARSE-LIT' if EntityTagType.LiteralCoarse in self._arguments_service.entity_tag_types else 'NE-FINE-LIT'
+        column_mapping = {
+            EntityTagType.Component: 'NE-FINE-COMP',
+            EntityTagType.LiteralCoarse: 'NE-COARSE-LIT',
+            EntityTagType.LiteralFine: 'NE-FINE-LIT',
+            EntityTagType.MetonymicCoarse: 'NE-COARSE-METO',
+            EntityTagType.MetonymicFine: 'NE-FINE-METO',
+            EntityTagType.Nested: 'NE-NESTED',
+        }
 
         checkpoints_path = self._file_service.get_checkpoints_path()
         file_path = os.path.join(
@@ -85,7 +97,8 @@ class NEREvaluationService(BaseEvaluationService):
                 if token.startswith('#'):
                     writer.writerow({'TOKEN': token})
                 else:
-                    writer.writerow(
-                        {'TOKEN': token, output_column: predictions[counter]})
+                    row_dict = { column_mapping[entity_tag_type]: prediction for entity_tag_type, prediction in predictions[counter].items() }
+                    row_dict['TOKEN'] = token
+                    writer.writerow(row_dict)
 
                     counter += 1
