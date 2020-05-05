@@ -35,6 +35,8 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
                             help='The hidden size dimension of the fasttext model. Default is 300')
         parser.add_argument("--pretrained-model", type=PretrainedModel, choices=list(PretrainedModel), default=PretrainedModel.BERT,
                             help="Pretrained model that will be used to tokenize strings and generate embeddings")
+        parser.add_argument('--fine-tune-pretrained', action='store_true',
+                            help='If true, the loaded pre-trained model will be fine-tuned instead of being frozen. Default is `false`')
 
     @property
     def pretrained_weights(self) -> str:
@@ -71,4 +73,8 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
     @property
     def pretrained_model(self) -> PretrainedModel:
         return self._get_argument('pretrained_model')
+
+    @property
+    def fine_tune_pretrained(self) -> bool:
+        return self._get_argument('fine_tune_pretrained')
 

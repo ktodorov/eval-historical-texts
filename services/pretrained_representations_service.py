@@ -33,7 +33,10 @@ class PretrainedRepresentationsService:
                 self._pretrained_model = CamembertModel.from_pretrained(
                     arguments_service.pretrained_weights).to(arguments_service.device)
 
-            self._pretrained_model.eval()
+            if arguments_service.fine_tune_pretrained:
+                self._pretrained_model.train()
+            else:
+                self._pretrained_model.eval()
 
             for param in self._pretrained_model.parameters():
                 param.requires_grad = False
