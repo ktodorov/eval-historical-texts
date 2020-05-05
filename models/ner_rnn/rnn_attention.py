@@ -4,8 +4,9 @@ from torch import nn
 from torch.functional import F
 
 from overrides import overrides
+from models.model_base import ModelBase
 
-class RNNAttention(nn.Module):
+class RNNAttention(ModelBase):
   def __init__(self, query_dim, key_dim, value_dim):
     super().__init__()
     self.scale = 1. / math.sqrt(query_dim)

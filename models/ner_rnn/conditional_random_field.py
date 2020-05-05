@@ -5,9 +5,10 @@ import torch.nn.functional as F
 
 from typing import Tuple
 from overrides import overrides
+from models.model_base import ModelBase
 
 
-class ConditionalRandomField(nn.Module):
+class ConditionalRandomField(ModelBase):
     def __init__(
             self,
             num_of_tags: int,

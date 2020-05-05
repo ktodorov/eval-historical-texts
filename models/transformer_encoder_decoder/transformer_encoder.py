@@ -2,9 +2,10 @@ import torch
 from torch import nn
 
 from models.transformer_encoder_decoder.transformer_encoder_layer import TransformerEncoderLayer
+from models.model_base import ModelBase
 
 
-class TransformerEncoder(nn.Module):
+class TransformerEncoder(ModelBase):
     def __init__(self,
                  input_dim,
                  hid_dim,

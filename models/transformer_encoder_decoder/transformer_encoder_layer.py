@@ -3,8 +3,9 @@ from torch import nn
 
 from models.transformer_encoder_decoder.multi_head_attention_layer import MultiHeadAttentionLayer
 from models.transformer_encoder_decoder.positionwise_feedforward_layer import PositionwiseFeedforwardLayer
+from models.model_base import ModelBase
 
-class TransformerEncoderLayer(nn.Module):
+class TransformerEncoderLayer(ModelBase):
     def __init__(self,
                  hid_dim,
                  n_heads,

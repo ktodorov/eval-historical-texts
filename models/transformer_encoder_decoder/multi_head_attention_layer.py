@@ -1,8 +1,9 @@
 import torch
 from torch import nn
 
+from models.model_base import ModelBase
 
-class MultiHeadAttentionLayer(nn.Module):
+class MultiHeadAttentionLayer(ModelBase):
     def __init__(
             self,
             hid_dim,

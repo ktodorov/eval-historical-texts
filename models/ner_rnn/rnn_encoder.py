@@ -21,9 +21,10 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
 
 from overrides import overrides
+from models.model_base import ModelBase
 
 
-class RNNEncoder(nn.Module):
+class RNNEncoder(ModelBase):
     def __init__(
             self,
             file_service: FileService,

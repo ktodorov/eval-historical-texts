@@ -2,8 +2,9 @@ import torch
 from torch import nn
 from torch.functional import F
 from overrides import overrides
+from models.model_base import ModelBase
 
-class SequenceAttention(nn.Module):
+class SequenceAttention(ModelBase):
     def __init__(
             self,
             encoder_hidden_dimension: int,

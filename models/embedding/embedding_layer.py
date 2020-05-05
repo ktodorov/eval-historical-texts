@@ -13,12 +13,13 @@ from enums.embedding_type import EmbeddingType
 
 from models.embedding.character_rnn import CharacterRNN
 from models.pretrained.pretrained_representations_layer import PretrainedRepresentationsLayer
+from models.model_base import ModelBase
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
 
-class EmbeddingLayer(nn.Module):
+class EmbeddingLayer(ModelBase):
     def __init__(
             self,
             file_service: FileService,

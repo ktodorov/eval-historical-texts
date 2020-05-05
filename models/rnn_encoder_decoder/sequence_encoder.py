@@ -13,8 +13,9 @@ from entities.options.pretrained_representations_options import PretrainedRepres
 from models.embedding.embedding_layer import EmbeddingLayer
 
 from services.file_service import FileService
+from models.model_base import ModelBase
 
-class SequenceEncoder(nn.Module):
+class SequenceEncoder(ModelBase):
     def __init__(
             self,
             file_service: FileService,

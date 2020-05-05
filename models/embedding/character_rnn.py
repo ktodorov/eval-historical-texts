@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from overrides import overrides
+from models.model_base import ModelBase
 
 
-class CharacterRNN(nn.Module):
+class CharacterRNN(ModelBase):
 
     def __init__(
         self,

@@ -1,7 +1,8 @@
 import torch
 from torch import nn
+from models.model_base import ModelBase
 
-class PositionwiseFeedforwardLayer(nn.Module):
+class PositionwiseFeedforwardLayer(ModelBase):
     def __init__(self, hid_dim, pf_dim, dropout):
         super().__init__()
 

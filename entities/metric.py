@@ -54,7 +54,7 @@ class Metric:
         self._accuracies = {}
         accuracies = metric._accuracies
         for key, value in accuracies.items():
-            self._accuracies[key] = self._accuracies[key][-self._amount_limit:]
+            self._accuracies[key] = value[-self._amount_limit:]
 
     @property
     def is_new(self) -> bool:

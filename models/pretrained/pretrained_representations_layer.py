@@ -13,7 +13,9 @@ from entities.options.pretrained_representations_options import PretrainedRepres
 
 from enums.pretrained_model import PretrainedModel
 
-class PretrainedRepresentationsLayer(nn.Module):
+from models.model_base import ModelBase
+
+class PretrainedRepresentationsLayer(ModelBase):
     def __init__(
             self,
             file_service: FileService,
@@ -22,6 +24,7 @@ class PretrainedRepresentationsLayer(nn.Module):
         super().__init__()
 
         self._device = device
+        self.do_not_save: bool = not pretrained_representations_options.fine_tune_pretrained
 
         self._include_pretrained = pretrained_representations_options.include_pretrained_model
         self._pretrained_model_size = pretrained_representations_options.pretrained_model_size
@@ -53,9 +56,10 @@ class PretrainedRepresentationsLayer(nn.Module):
             assert pretrained_representations_options.fasttext_model is not None, 'fast text model is not supplied when include-fasttext-model is set to true'
 
             data_path = file_service.get_data_path()
-            fasttext_path = os.path.join(data_path, 'fasttext', pretrained_representations_options.fasttext_model)
-            assert os.path.exists(fasttext_path), f'fast text model not found in {fasttext_path}'
-
+            fasttext_path = os.path.join(
+                data_path, 'fasttext', pretrained_representations_options.fasttext_model)
+            assert os.path.exists(
+                fasttext_path), f'fast text model not found in {fasttext_path}'
 
             self._fasttext_dimension = pretrained_representations_options.fasttext_model_size
             self._fasttext_model = fasttext.load_model(fasttext_path)
@@ -81,8 +85,10 @@ class PretrainedRepresentationsLayer(nn.Module):
                 if token.startswith('##'):
                     token = token[2:]
 
-                fasttext_representation = self._fasttext_model.get_word_vector(token)
-                fasttext_tensor[b, i, :] = torch.Tensor(fasttext_representation).to(self._device)
+                fasttext_representation = self._fasttext_model.get_word_vector(
+                    token)
+                fasttext_tensor[b, i, :] = torch.Tensor(
+                    fasttext_representation).to(self._device)
 
         return fasttext_tensor
 

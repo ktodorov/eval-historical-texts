@@ -7,6 +7,8 @@ from datetime import datetime
 
 from typing import Dict, List, Tuple
 
+from overrides import overrides
+
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
 from entities.batch_representation import BatchRepresentation
@@ -19,12 +21,13 @@ from services.arguments.arguments_service_base import ArgumentsServiceBase
 class ModelBase(nn.Module):
     def __init__(
             self,
-            data_service: DataService,
-            arguments_service: ArgumentsServiceBase):
+            data_service: DataService = None,
+            arguments_service: ArgumentsServiceBase = None):
         super(ModelBase, self).__init__()
 
         self._data_service = data_service
         self._arguments_service = arguments_service
+        self.do_not_save: bool = False
 
     def forward(self, batch_representation: BatchRepresentation):
         return None
@@ -51,6 +54,9 @@ class ModelBase(nn.Module):
             resets_left: int,
             name_prefix: str = None,
             save_model_dict: bool = True) -> bool:
+        assert self._data_service is not None
+        assert self._arguments_service is not None
+
         model_checkpoint = ModelCheckpoint(
             model_dict=self.state_dict() if save_model_dict else {},
             epoch=epoch,
@@ -70,6 +76,9 @@ class ModelBase(nn.Module):
             name_prefix: str = None,
             load_model_dict: bool = True,
             load_model_only: bool = False) -> ModelCheckpoint:
+        assert self._data_service is not None
+        assert self._arguments_service is not None
+
         checkpoint_name = self._get_model_name(name_prefix)
 
         if load_model_only or not self._data_service.python_obj_exists(path, checkpoint_name):
@@ -82,7 +91,15 @@ class ModelBase(nn.Module):
             raise Exception('Model checkpoint not found')
 
         if load_model_dict:
-            self.load_state_dict(model_checkpoint.model_dict)
+            ignored_parameters = []
+            model_dict = model_checkpoint.model_dict
+
+            for module_name, module in self.named_modules():
+                if isinstance(module, ModelBase) and module.do_not_save:
+                    for parameter_name, parameter_value in module.named_parameters():
+                        model_dict[f'{module_name}.{parameter_name}'] = parameter_value
+
+            self.load_state_dict(model_dict)
 
         return model_checkpoint
 
@@ -93,5 +110,17 @@ class ModelBase(nn.Module):
 
         if name_prefix:
             result = f'{name_prefix}_{result}'
+
+        return result
+
+    @overrides
+    def state_dict(self, destination=None, prefix='', keep_vars=False):
+        if self.do_not_save:
+            return None
+
+        result = super().state_dict(
+            destination=destination,
+            prefix=prefix,
+            keep_vars=keep_vars)
 
         return result
