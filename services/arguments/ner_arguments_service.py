@@ -59,6 +59,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help='The hidden size used for the character embeddings RNN')
         parser.add_argument("--replace-all-numbers", action='store_true',
                             help="If all numbers should be replaced by a hard-coded fixed string")
+        parser.add_argument("--use-weighted-loss", action='store_true',
+                            help="If set to true, CRF layer will use weighted loss which focuses more on non-empty tags")
 
     @property
     def embeddings_size(self) -> int:
@@ -107,3 +109,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def replace_all_numbers(self) -> int:
         return self._get_argument('replace_all_numbers')
+
+    @property
+    def use_weighted_loss(self) -> int:
+        return self._get_argument('use_weighted_loss')

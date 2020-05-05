@@ -94,8 +94,10 @@ class NERPredictor(ModelBase):
                 context_emb=arguments_service.hidden_dimension,
                 start_token_id=start_token_id,
                 stop_token_id=stop_token_id,
-                pad_token_id=self._pad_idx)
-            for i, number_of_tags in enumerate(self.number_of_tags.values())
+                pad_token_id=self._pad_idx,
+                none_id=self._process_service.get_entity_label('O', entity_tag_type),
+                use_weighted_loss=arguments_service.use_weighted_loss)
+            for i, (entity_tag_type, number_of_tags) in enumerate(self.number_of_tags.items())
         ])
 
         self.tag_measure_averages = [

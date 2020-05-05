@@ -16,7 +16,9 @@ class ConditionalRandomField(ModelBase):
             context_emb: int,
             start_token_id: int,
             stop_token_id: int,
-            pad_token_id: int):
+            pad_token_id: int,
+            none_id: int,
+            use_weighted_loss: bool):
         super().__init__()
 
         self._number_of_tags = num_of_tags
@@ -27,6 +29,9 @@ class ConditionalRandomField(ModelBase):
         self.start_idx = start_token_id
         self.end_idx = stop_token_id
         self.pad_idx = pad_token_id
+        self.none_idx = none_id
+
+        self.use_weighted_loss = use_weighted_loss
 
         # initialize the following transition (anything never -> start. end never -> anything. Same thing for the padding label)
         init_transition = torch.randn(
@@ -53,7 +58,7 @@ class ConditionalRandomField(ModelBase):
         :param mask:
         :return:
         """
-        all_scores = self.calculate_all_scores(rnn_features=rnn_features)
+        all_scores = self.calculate_all_scores(rnn_features=rnn_features, targets=targets)
 
         unlabed_score = self.forward_unlabeled(all_scores, lengths)
         labeled_score = self.forward_labeled(
@@ -152,7 +157,8 @@ class ConditionalRandomField(ModelBase):
 
     def calculate_all_scores(
             self,
-            rnn_features: torch.Tensor) -> torch.Tensor:
+            rnn_features: torch.Tensor,
+            targets: torch.Tensor) -> torch.Tensor:
         """
         Calculate all scores by adding up the transition scores and emissions (from lstm).
         Basically, compute the scores for each edges between labels at adjacent positions.
@@ -178,7 +184,15 @@ class ConditionalRandomField(ModelBase):
             self._number_of_tags,
             self._number_of_tags)
 
-        all_scores = expanded_transition_matrix + expanded_rnn_features
+        all_scores = (expanded_transition_matrix + expanded_rnn_features)
+
+        if self.use_weighted_loss:
+            ones = torch.ones(targets.shape, device=targets.device)
+            non_ones = torch.ones(targets.shape, device=targets.device).fill_(1.5)
+            none_mask = torch.where((targets != self.none_idx) & (targets != self.pad_idx) & (targets != self.start_idx) & (targets != self.end_idx), non_ones, ones)
+            expanded_none_mask = none_mask.unsqueeze(-1).unsqueeze(-1).expand(batch_size, max_length, self._number_of_tags, self._number_of_tags)
+            all_scores = all_scores * expanded_none_mask
+
         return all_scores
 
     def decode(
