@@ -18,33 +18,25 @@ from models.embedding.embedding_layer import EmbeddingLayer
 
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
-from services.pretrained_representations_service import PretrainedRepresentationsService
+from services.file_service import FileService
 
 from overrides import overrides
 
 
 class RNNEncoder(nn.Module):
-    def __init__(self, rnn_encoder_options: RNNEncoderOptions):
+    def __init__(
+            self,
+            file_service: FileService,
+            rnn_encoder_options: RNNEncoderOptions):
         super().__init__()
-
-        self._include_pretrained = rnn_encoder_options.include_pretrained_model
-        additional_size = rnn_encoder_options.pretrained_model_size if self._include_pretrained else 0
-        self._learn_embeddings = rnn_encoder_options.learn_new_embeddings
-
-        # maps each token to an embedding_dim vector
-        rnn_input_size = additional_size
 
         self.device = rnn_encoder_options.device
 
         embedding_layer_options = EmbeddingLayerOptions(
-            pretrained_representations_service=rnn_encoder_options.pretrained_representations_service,
             device=rnn_encoder_options.device,
+            pretrained_representations_options=rnn_encoder_options.pretrained_representations_options,
             learn_subword_embeddings=rnn_encoder_options.learn_new_embeddings,
             subword_embeddings_size=rnn_encoder_options.embeddings_size,
-            include_pretrained_model=rnn_encoder_options.include_pretrained_model,
-            pretrained_model_size=rnn_encoder_options.pretrained_model_size,
-            include_fasttext_model=rnn_encoder_options.include_fasttext_model,
-            fasttext_model_size=rnn_encoder_options.fasttext_model_size,
             vocabulary_size=rnn_encoder_options.vocabulary_size,
             merge_subword_embeddings=rnn_encoder_options.merge_subword_embeddings,
             learn_character_embeddings=rnn_encoder_options.learn_character_embeddings,
@@ -52,7 +44,9 @@ class RNNEncoder(nn.Module):
             character_rnn_hidden_size=rnn_encoder_options.character_hidden_size,
             dropout=rnn_encoder_options.dropout)
 
-        self._embedding_layer = EmbeddingLayer(embedding_layer_options)
+        self._embedding_layer = EmbeddingLayer(
+            file_service,
+            embedding_layer_options)
 
         # the LSTM takes embedded sentence
         self.rnn = nn.LSTM(
@@ -77,7 +71,8 @@ class RNNEncoder(nn.Module):
             for number_of_tags in rnn_encoder_options.number_of_tags.values()
         ])
 
-        self._entity_tag_types: List[EntityTagType] = list(rnn_encoder_options.number_of_tags.keys())
+        self._entity_tag_types: List[EntityTagType] = list(
+            rnn_encoder_options.number_of_tags.keys())
 
         self.bidirectional = rnn_encoder_options.bidirectional
 

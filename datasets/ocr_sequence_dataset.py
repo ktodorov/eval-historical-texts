@@ -15,7 +15,6 @@ from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.log_service import LogService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
@@ -35,7 +34,6 @@ class OCRSequenceDataset(OCRDataset):
             vocabulary_service: VocabularyService,
             metrics_service: MetricsService,
             log_service: LogService,
-            pretrained_representations_service: PretrainedRepresentationsService,
             data_service: DataService,
             run_type: RunType,
             **kwargs):
@@ -46,7 +44,6 @@ class OCRSequenceDataset(OCRDataset):
             vocabulary_service,
             metrics_service,
             log_service,
-            pretrained_representations_service,
             data_service,
             run_type,
             **kwargs)

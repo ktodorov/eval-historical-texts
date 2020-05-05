@@ -11,6 +11,7 @@ from entities.metric import Metric
 from entities.data_output_log import DataOutputLog
 from entities.batch_representation import BatchRepresentation
 from entities.options.rnn_encoder_options import RNNEncoderOptions
+from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 
 from enums.metric_type import MetricType
 from enums.tag_measure_averaging import TagMeasureAveraging
@@ -24,8 +25,8 @@ from models.model_base import ModelBase
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
+from services.file_service import FileService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.process.ner_process_service import NERProcessService
 
 
@@ -34,11 +35,11 @@ class NERPredictor(ModelBase):
     def __init__(
             self,
             arguments_service: NERArgumentsService,
-            pretrained_representations_service: PretrainedRepresentationsService,
             data_service: DataService,
             metrics_service: MetricsService,
             process_service: NERProcessService,
-            tokenize_service: BaseTokenizeService):
+            tokenize_service: BaseTokenizeService,
+            file_service: FileService):
         super().__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
@@ -50,15 +51,22 @@ class NERPredictor(ModelBase):
 
         self._entity_tag_types = arguments_service.entity_tag_types
 
-        rnn_encoder_options = RNNEncoderOptions(
-            pretrained_representations_service=pretrained_representations_service,
-            device=self.device,
-            number_of_tags=self.number_of_tags,
-            use_attention=arguments_service.use_attention,
+        pretrained_options = PretrainedRepresentationsOptions(
             include_pretrained_model=arguments_service.include_pretrained_model,
             pretrained_model_size=arguments_service.pretrained_model_size,
+            pretrained_weights=arguments_service.pretrained_weights,
+            pretrained_max_length=arguments_service.pretrained_max_length,
+            pretrained_model=arguments_service.pretrained_model,
+            fine_tune_pretrained=arguments_service.fine_tune_pretrained,
             include_fasttext_model=arguments_service.include_fasttext_model,
-            fasttext_model_size=arguments_service.fasttext_model_size,
+            fasttext_model=arguments_service.fasttext_model,
+            fasttext_model_size=arguments_service.fasttext_model_size)
+
+        rnn_encoder_options = RNNEncoderOptions(
+            device=self.device,
+            pretrained_representations_options=pretrained_options,
+            number_of_tags=self.number_of_tags,
+            use_attention=arguments_service.use_attention,
             learn_new_embeddings=arguments_service.learn_new_embeddings,
             vocabulary_size=tokenize_service.vocabulary_size,
             embeddings_size=arguments_service.embeddings_size,
@@ -71,7 +79,9 @@ class NERPredictor(ModelBase):
             character_embeddings_size=arguments_service.character_embeddings_size,
             character_hidden_size=arguments_service.character_hidden_size)
 
-        self.rnn_encoder = RNNEncoder(rnn_encoder_options)
+        self.rnn_encoder = RNNEncoder(
+            file_service,
+            rnn_encoder_options)
 
         self._pad_idx = self._process_service.pad_idx
         start_token_id = self._process_service.start_idx

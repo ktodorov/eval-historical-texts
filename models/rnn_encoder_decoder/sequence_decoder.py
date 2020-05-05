@@ -6,12 +6,17 @@ from overrides import overrides
 
 from enums.embedding_type import EmbeddingType
 from entities.batch_representation import BatchRepresentation
+from entities.options.embedding_layer_options import EmbeddingLayerOptions
+from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 
 from models.embedding.embedding_layer import EmbeddingLayer
+
+from services.file_service import FileService
 
 class SequenceDecoder(nn.Module):
     def __init__(
             self,
+            file_service: FileService,
             device: str,
             embedding_size: int,
             hidden_dimension: int,
@@ -31,14 +36,17 @@ class SequenceDecoder(nn.Module):
             self._embedding_layer = shared_embedding_layer
         else:
             self._embedding_layer = EmbeddingLayer(
-                pretrained_representations_service=None,
-                device=device,
-                learn_character_embeddings=True,
-                include_pretrained_model=False,
-                vocabulary_size=output_dimension,
-                character_embeddings_size=embedding_size,
-                dropout=dropout,
-                output_embedding_type=EmbeddingType.Character)
+                file_service,
+                EmbeddingLayerOptions(
+                    device=device,
+                    pretrained_representations_options=PretrainedRepresentationsOptions(
+                        include_pretrained_model=False),
+                    learn_character_embeddings=True,
+                    include_pretrained_model=False,
+                    vocabulary_size=output_dimension,
+                    character_embeddings_size=embedding_size,
+                    dropout=dropout,
+                    output_embedding_type=EmbeddingType.Character))
 
         self.rnn = nn.GRU(embedding_size + hidden_dimension,
                           hidden_dimension, number_of_layers, batch_first=True)

@@ -8,6 +8,8 @@ from overrides import overrides
 from entities.model_checkpoint import ModelCheckpoint
 from entities.metric import Metric
 from entities.batch_representation import BatchRepresentation
+from entities.options.embedding_layer_options import EmbeddingLayerOptions
+from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 
 from enums.metric_type import MetricType
 from enums.embedding_type import EmbeddingType
@@ -20,8 +22,8 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.decoding_service import DecodingService
+from services.file_service import FileService
 
 from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
 from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
@@ -38,8 +40,8 @@ class SequenceModel(ModelBase):
             data_service: DataService,
             metrics_service: MetricsService,
             vocabulary_service: VocabularyService,
-            pretrained_representations_service: PretrainedRepresentationsService,
-            decoding_service: DecodingService):
+            decoding_service: DecodingService,
+            file_service: FileService):
         super(SequenceModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
@@ -49,32 +51,42 @@ class SequenceModel(ModelBase):
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
 
+        pretrained_options = PretrainedRepresentationsOptions(
+            include_pretrained_model=arguments_service.include_pretrained_model,
+            pretrained_max_length=arguments_service.pretrained_max_length,
+            pretrained_model_size=arguments_service.pretrained_model_size,
+            pretrained_weights=arguments_service.pretrained_weights,
+            pretrained_model=arguments_service.pretrained_model,
+            fine_tune_pretrained=arguments_service.fine_tune_pretrained)
+
         self._shared_embedding_layer = None
         if self._arguments_service.share_embedding_layer:
-            self._shared_embedding_layer = EmbeddingLayer(
-                pretrained_representations_service,
+            embedding_layer_options = EmbeddingLayerOptions(
                 device=self._device,
+                pretrained_representations_options=pretrained_options,
                 learn_character_embeddings=arguments_service.learn_new_embeddings,
-                include_pretrained_model=arguments_service.include_pretrained_model,
-                pretrained_model_size=arguments_service.pretrained_model_size,
                 vocabulary_size=vocabulary_service.vocabulary_size(),
                 character_embeddings_size=arguments_service.encoder_embedding_size,
                 dropout=arguments_service.dropout,
                 output_embedding_type=EmbeddingType.Character)
 
+            self._shared_embedding_layer = EmbeddingLayer(
+                file_service,
+                embedding_layer_options)
+
         self._encoder = SequenceEncoder(
-            pretrained_representations_service=pretrained_representations_service,
+            file_service=file_service,
             device=self._device,
+            pretrained_representations_options=pretrained_options,
             embedding_size=arguments_service.encoder_embedding_size,
             input_size=vocabulary_service.vocabulary_size(),
             hidden_dimension=arguments_service.hidden_dimension,
             number_of_layers=arguments_service.number_of_layers,
             dropout=arguments_service.dropout,
-            include_pretrained=arguments_service.include_pretrained_model,
-            pretrained_hidden_size=arguments_service.pretrained_model_size,
             learn_embeddings=arguments_service.learn_new_embeddings,
             bidirectional=arguments_service.bidirectional,
-            use_own_embeddings=(not self._arguments_service.share_embedding_layer),
+            use_own_embeddings=(
+                not self._arguments_service.share_embedding_layer),
             shared_embedding_layer=self._shared_embedding_layer)
 
         self._attention = SequenceAttention(
@@ -82,6 +94,7 @@ class SequenceModel(ModelBase):
             decoder_hidden_dimension=arguments_service.hidden_dimension)
 
         self._decoder = SequenceDecoder(
+            file_service=file_service,
             device=self._device,
             embedding_size=arguments_service.decoder_embedding_size,
             output_dimension=vocabulary_service.vocabulary_size(),
@@ -107,8 +120,6 @@ class SequenceModel(ModelBase):
 
     @overrides
     def forward(self, input_batch: BatchRepresentation, debug=False, **kwargs):
-        # source, targets, lengths, pretrained_representations, offset_lists = input_batch
-
         # last hidden state of the encoder is used as the initial hidden state of the decoder
         encoder_context = self._encoder.forward(input_batch)
 

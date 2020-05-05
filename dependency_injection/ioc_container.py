@@ -61,7 +61,6 @@ from services.log_service import LogService
 from services.mask_service import MaskService
 from services.metrics_service import MetricsService
 from services.model_service import ModelService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.test_service import TestService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.tokenize.bert_tokenize_service import BERTTokenizeService
@@ -231,7 +230,6 @@ def register_model(
         vocabulary_service: VocabularyService,
         model_service: ModelService,
         process_service: ProcessServiceBase,
-        pretrained_representations_service: PretrainedRepresentationsService,
         decoding_service: DecodingService,
         joint_model: bool,
         configuration: Configuration):
@@ -249,7 +247,8 @@ def register_model(
                 arguments_service=arguments_service,
                 vocabulary_service=vocabulary_service,
                 data_service=data_service,
-                process_service=process_service)
+                process_service=process_service,
+                file_service=file_service)
         elif (configuration == Configuration.MultiFit or
               configuration == Configuration.SequenceToCharacter or
               configuration == Configuration.TransformerSequence or
@@ -272,8 +271,8 @@ def register_model(
                     data_service=data_service,
                     metrics_service=metrics_service,
                     vocabulary_service=vocabulary_service,
-                    pretrained_representations_service=pretrained_representations_service,
-                    decoding_service=decoding_service)
+                    decoding_service=decoding_service,
+                    file_service=file_service)
             elif configuration == Configuration.TransformerSequence:
                 model = providers.Singleton(
                     TransformerModel,
@@ -291,17 +290,16 @@ def register_model(
                     vocabulary_service=vocabulary_service,
                     data_service=data_service,
                     metrics_service=metrics_service,
-                    pretrained_representations_service=pretrained_representations_service)
+                    file_service=file_service)
         elif configuration == Configuration.RNNSimple:
             model = providers.Singleton(
                 NERPredictor,
                 arguments_service=arguments_service,
-                pretrained_representations_service=pretrained_representations_service,
                 data_service=data_service,
                 metrics_service=metrics_service,
                 process_service=process_service,
-                tokenize_service=tokenize_service
-            )
+                tokenize_service=tokenize_service,
+                file_service=file_service)
 
     elif joint_model:
         model = providers.Singleton(
@@ -420,13 +418,6 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service,
         file_service=file_service
     )
-
-    pretrained_representations_service = providers.Singleton(
-        PretrainedRepresentationsService,
-        arguments_service=arguments_service,
-        file_service=file_service
-    )
-
     process_service = register_process_service(
         challenge,
         configuration,
@@ -442,7 +433,6 @@ class IocContainer(containers.DeclarativeContainer):
         tokenize_service=tokenize_service,
         file_service=file_service,
         log_service=log_service,
-        pretrained_representations_service=pretrained_representations_service,
         vocabulary_service=vocabulary_service,
         metrics_service=metrics_service,
         data_service=data_service,
@@ -477,7 +467,6 @@ class IocContainer(containers.DeclarativeContainer):
         vocabulary_service=vocabulary_service,
         model_service=model_service,
         process_service=process_service,
-        pretrained_representations_service=pretrained_representations_service,
         decoding_service=decoding_service,
         joint_model=joint_model,
         configuration=configuration)

@@ -17,7 +17,6 @@ from services.file_service import FileService
 from services.mask_service import MaskService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.log_service import LogService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
@@ -33,7 +32,6 @@ class DatasetService:
             file_service: FileService,
             log_service: LogService,
             metrics_service: MetricsService,
-            pretrained_representations_service: PretrainedRepresentationsService,
             vocabulary_service: VocabularyService,
             data_service: DataService,
             process_service: ProcessServiceBase):
@@ -43,7 +41,6 @@ class DatasetService:
         self._tokenize_service = tokenize_service
         self._file_service = file_service
         self._log_service = log_service
-        self._pretrained_representations_service = pretrained_representations_service
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
         self._data_service = data_service
@@ -76,7 +73,6 @@ class DatasetService:
             elif configuration == Configuration.RNNSimple:
                 return NERDataset(
                     self._arguments_service,
-                    self._pretrained_representations_service,
                     self._vocabulary_service,
                     self._process_service,
                     RunType.Validation)
@@ -102,7 +98,6 @@ class DatasetService:
                     self._vocabulary_service,
                     self._metrics_service,
                     self._log_service,
-                    self._pretrained_representations_service,
                     self._data_service,
                     run_type)
             elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
@@ -113,7 +108,6 @@ class DatasetService:
                     self._vocabulary_service,
                     self._metrics_service,
                     self._log_service,
-                    self._pretrained_representations_service,
                     self._data_service,
                     run_type)
             elif configuration == Configuration.CharacterToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder:
@@ -124,13 +118,11 @@ class DatasetService:
                     self._vocabulary_service,
                     self._metrics_service,
                     self._log_service,
-                    self._pretrained_representations_service,
                     self._data_service,
                     run_type)
             elif configuration == Configuration.RNNSimple:
                 result = NERDataset(
                     self._arguments_service,
-                    self._pretrained_representations_service,
                     self._vocabulary_service,
                     self._process_service,
                     run_type)

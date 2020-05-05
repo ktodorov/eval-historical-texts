@@ -1,20 +1,15 @@
 from typing import Dict
 
 from enums.entity_tag_type import EntityTagType
-
-from services.pretrained_representations_service import PretrainedRepresentationsService
+from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 
 class RNNEncoderOptions:
     def __init__(
             self,
-            pretrained_representations_service: PretrainedRepresentationsService,
             device: str,
+            pretrained_representations_options: PretrainedRepresentationsOptions,
             number_of_tags: Dict[EntityTagType, int],
             use_attention: bool,
-            include_pretrained_model: bool,
-            pretrained_model_size: int,
-            include_fasttext_model: bool,
-            fasttext_model_size: int,
             learn_new_embeddings: bool,
             vocabulary_size: int,
             embeddings_size: int,
@@ -27,14 +22,10 @@ class RNNEncoderOptions:
             character_embeddings_size: int,
             character_hidden_size: int):
 
-        self.pretrained_representations_service = pretrained_representations_service
         self.device = device
         self.number_of_tags = number_of_tags
         self.use_attention = use_attention
-        self.include_pretrained_model = include_pretrained_model
-        self.pretrained_model_size = pretrained_model_size
-        self.include_fasttext_model = include_fasttext_model
-        self.fasttext_model_size = fasttext_model_size
+        self.pretrained_representations_options = pretrained_representations_options
         self.learn_new_embeddings = learn_new_embeddings
         self.vocabulary_size = vocabulary_size
         self.embeddings_size = embeddings_size

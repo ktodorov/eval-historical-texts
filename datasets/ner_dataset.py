@@ -15,7 +15,6 @@ from enums.run_type import RunType
 from enums.language import Language
 
 from services.arguments.ner_arguments_service import NERArgumentsService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
 from services.process.ner_process_service import NERProcessService
 
@@ -24,21 +23,17 @@ class NERDataset(DatasetBase):
     def __init__(
             self,
             arguments_service: NERArgumentsService,
-            pretrained_representations_service: PretrainedRepresentationsService,
             vocabulary_service: VocabularyService,
             ner_process_service: NERProcessService,
             run_type: RunType):
         super().__init__()
 
         self._ner_process_service = ner_process_service
-        self._pretrained_representations_service = pretrained_representations_service
         self._vocabulary_service = vocabulary_service
         self._arguments_service = arguments_service
 
         self._device = arguments_service.device
         self._include_pretrained = arguments_service.include_pretrained_model
-        self._pretrained_model_size = self._pretrained_representations_service.get_pretrained_model_size()
-        self._max_length = self._pretrained_representations_service.get_pretrained_max_length()
 
         self.ne_collection = ner_process_service.get_processed_data(run_type)
 

@@ -12,29 +12,37 @@ from entities.options.embedding_layer_options import EmbeddingLayerOptions
 from enums.embedding_type import EmbeddingType
 
 from models.embedding.character_rnn import CharacterRNN
+from models.pretrained.pretrained_representations_layer import PretrainedRepresentationsLayer
 
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
-
+from services.file_service import FileService
 
 class EmbeddingLayer(nn.Module):
-    def __init__(self, embedding_layer_options: EmbeddingLayerOptions):
+    def __init__(
+            self,
+            file_service: FileService,
+            embedding_layer_options: EmbeddingLayerOptions):
         super().__init__()
 
-        self._pretrained_representations_service = embedding_layer_options.pretrained_representations_service
         self._output_embedding_type = embedding_layer_options.output_embedding_type
         self._merge_subword_embeddings = embedding_layer_options.merge_subword_embeddings
 
-        self._include_pretrained = embedding_layer_options.include_pretrained_model
-        self._include_fasttext_model = embedding_layer_options.include_fasttext_model
+        self._include_pretrained = embedding_layer_options.pretrained_representations_options.include_pretrained_model
+        self._include_fasttext_model = embedding_layer_options.pretrained_representations_options.include_fasttext_model
 
         self._output_size = 0
-        if self._include_pretrained:
-            self._output_size += embedding_layer_options.pretrained_model_size
+        if self._include_pretrained or self._include_fasttext_model:
+            self._pretrained_layer = PretrainedRepresentationsLayer(
+                file_service=file_service,
+                device=embedding_layer_options.device,
+                pretrained_representations_options=embedding_layer_options.pretrained_representations_options)
 
-        if self._include_fasttext_model:
-            self._output_size += embedding_layer_options.fasttext_model_size
+            if self._include_pretrained:
+                self._output_size += embedding_layer_options.pretrained_representations_options.pretrained_model_size
+
+            if self._include_fasttext_model:
+                self._output_size += embedding_layer_options.pretrained_representations_options.fasttext_model_size
 
         self._learn_subword_embeddings = embedding_layer_options.learn_subword_embeddings
 
@@ -111,11 +119,11 @@ class EmbeddingLayer(nn.Module):
                     batch_representation.subword_characters_count)
 
         if self._include_pretrained:
-            pretrained_embeddings = self._pretrained_representations_service.get_pretrained_representation(
+            pretrained_embeddings = self._pretrained_layer.get_pretrained_representation(
                 batch_representation.subword_sequences)
 
         if self._include_fasttext_model:
-            fasttext_embeddings = self._pretrained_representations_service.get_fasttext_representation(
+            fasttext_embeddings = self._pretrained_layer.get_fasttext_representation(
                 batch_representation.tokens)
 
         result_embeddings = None

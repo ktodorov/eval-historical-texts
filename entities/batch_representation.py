@@ -3,9 +3,6 @@ import torch
 
 from typing import Tuple, List, Dict
 
-from services.pretrained_representations_service import PretrainedRepresentationsService
-
-
 class BatchRepresentation:
     def __init__(
             self,

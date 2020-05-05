@@ -9,16 +9,22 @@ from typing import Dict
 from overrides import overrides
 
 from enums.metric_type import MetricType
+from enums.embedding_type import EmbeddingType
 
 from entities.metric import Metric
+from entities.options.embedding_layer_options import EmbeddingLayerOptions
+from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
+from entities.batch_representation import BatchRepresentation
 
 from models.model_base import ModelBase
+from models.embedding.embedding_layer import EmbeddingLayer
 
 from services.arguments.postocr_characters_arguments_service import PostOCRCharactersArgumentsService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 from services.vocabulary_service import VocabularyService
-from services.pretrained_representations_service import PretrainedRepresentationsService
+from services.file_service import FileService
+
 
 class CharToCharModel(ModelBase):
     def __init__(
@@ -27,76 +33,67 @@ class CharToCharModel(ModelBase):
             vocabulary_service: VocabularyService,
             data_service: DataService,
             metrics_service: MetricsService,
-            pretrained_representations_service: PretrainedRepresentationsService):
+            file_service: FileService):
         super().__init__(data_service, arguments_service)
 
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
         self._arguments_service = arguments_service
-        self._pretrained_representations_service = pretrained_representations_service
 
-        self._include_pretrained = arguments_service.include_pretrained_model
-        self._learn_embeddings = arguments_service.learn_new_embeddings
+        embedding_layer_options = EmbeddingLayerOptions(
+            pretrained_representations_options=PretrainedRepresentationsOptions(
+                include_pretrained_model=arguments_service.include_pretrained_model,
+                pretrained_model_size=arguments_service.pretrained_model_size,
+                pretrained_weights=arguments_service.pretrained_weights,
+                pretrained_max_length=arguments_service.pretrained_max_length,
+                pretrained_model=arguments_service.pretrained_model,
+                fine_tune_pretrained=arguments_service.fine_tune_pretrained,
+                include_fasttext_model=False),
+            learn_character_embeddings=arguments_service.learn_new_embeddings,
+            output_embedding_type=EmbeddingType.Character,
+            character_embeddings_size=arguments_service.embeddings_size,
+            dropout=arguments_service.dropout
+        )
+
+        self._embedding_layer = EmbeddingLayer(file_service, embedding_layer_options)
 
         self._metric_types = arguments_service.metric_types
 
-        # maps each token to an embedding_dim vector
-        additional_size = arguments_service.pretrained_model_size if self._include_pretrained else 0
-        lstm_input_size = additional_size
-        if self._learn_embeddings:
-            self.embedding = nn.Embedding(
-                vocabulary_service.vocabulary_size(), arguments_service.embeddings_size)
-            self.dropout = nn.Dropout(arguments_service.dropout)
-            lstm_input_size += arguments_service.embeddings_size
-
         # the LSTM takens embedded sentence
         self.lstm = nn.LSTM(
-            lstm_input_size, arguments_service.hidden_dimension, batch_first=True, bidirectional=arguments_service.bidirectional)
+            self._embedding_layer.output_size,
+            arguments_service.hidden_dimension,
+            batch_first=True,
+            bidirectional=arguments_service.bidirectional)
 
         multiplication_factor = 2 if arguments_service.bidirectional else 1
-        self.fc = nn.Linear(arguments_service.hidden_dimension *
-                            multiplication_factor, vocabulary_service.vocabulary_size())
+        self._output_layer = nn.Linear(arguments_service.hidden_dimension *
+                                       multiplication_factor, vocabulary_service.vocabulary_size())
 
     @overrides
-    def forward(self, input_batch, debug=False, **kwargs):
-        sequences, targets, lengths, pretrained_representations, offset_lists = input_batch
+    def forward(self, input_batch: BatchRepresentation, debug=False, **kwargs):
 
-        # apply the embedding layer that maps each token to its embedding
-        # dim: batch_size x batch_max_len x embedding_dim
-        if self._learn_embeddings:
-            embedded = self.dropout(self.embedding(sequences))
+        embedded = self._embedding_layer.forward(input_batch)
 
-            if self._include_pretrained:
-                embedded = self._pretrained_representations_service.add_pretrained_representations_to_character_embeddings(
-                    embedded, pretrained_representations, offset_lists)
-        else:
-            embedded = pretrained_representations
+        x_packed = pack_padded_sequence(
+            embedded, input_batch.character_lengths, batch_first=True)
 
-        x_packed = pack_padded_sequence(embedded, lengths, batch_first=True)
-
-        # run the LSTM along the sentences of length batch_max_len
-        # dim: batch_size x batch_max_len x lstm_hidden_dim
         packed_output, _ = self.lstm.forward(x_packed)
 
         rnn_output, _ = pad_packed_sequence(packed_output, batch_first=True)
 
-        # # reshape the Variable so that each row contains one token
-        # # dim: batch_size*batch_max_len x lstm_hidden_dim
-        # rnn_output = rnn_output.reshape(-1, rnn_output.shape[2])
+        output = self._output_layer.forward(rnn_output)
 
-        output = self.fc.forward(rnn_output)
-
-        # dim: batch_size*batch_max_len x num_tags
-
-        if output.shape[1] < targets.shape[1]:
-            padded_output = torch.zeros((output.shape[0], targets.shape[1], output.shape[2])).to(
+        if output.shape[1] < input_batch.targets.shape[1]:
+            padded_output = torch.zeros((output.shape[0], input_batch.targets.shape[1], output.shape[2])).to(
                 self._arguments_service.device)
             padded_output[:, :output.shape[1], :] = output
             output = padded_output
-        elif output.shape[1] > targets.shape[1]:
-            padded_targets = torch.zeros((targets.shape[0], output.shape[1]), dtype=torch.int64).to(
+        elif output.shape[1] > input_batch.targets.shape[1]:
+            padded_targets = torch.zeros((input_batch.targets.shape[0], output.shape[1]), dtype=torch.int64).to(
                 self._arguments_service.device)
-            padded_targets[:, :targets.shape[1]] = targets
+            padded_targets[:, :input_batch.targets.shape[1]
+                           ] = input_batch.targets
             targets = padded_targets
 
         return output, targets

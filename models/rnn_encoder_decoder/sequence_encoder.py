@@ -7,36 +7,30 @@ from transformers import BertModel
 
 from enums.embedding_type import EmbeddingType
 from entities.batch_representation import BatchRepresentation
+from entities.options.embedding_layer_options import EmbeddingLayerOptions
+from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 
 from models.embedding.embedding_layer import EmbeddingLayer
 
-from services.pretrained_representations_service import PretrainedRepresentationsService
-
+from services.file_service import FileService
 
 class SequenceEncoder(nn.Module):
     def __init__(
             self,
-            pretrained_representations_service: PretrainedRepresentationsService,
+            file_service: FileService,
             device: str,
+            pretrained_representations_options: PretrainedRepresentationsOptions,
             embedding_size: int,
             input_size: int,
             hidden_dimension: int,
             number_of_layers: int,
             dropout: float = 0,
-            include_pretrained: bool = False,
-            pretrained_hidden_size: int = None,
             learn_embeddings: bool = True,
             bidirectional: bool = False,
             use_own_embeddings: bool = True,
             shared_embedding_layer: EmbeddingLayer = None):
         super().__init__()
 
-        assert learn_embeddings or include_pretrained
-
-        self._pretrained_representations_service = pretrained_representations_service
-        self._include_pretrained = include_pretrained
-        additional_size = pretrained_hidden_size if self._include_pretrained else 0
-        self._learn_embeddings = learn_embeddings
         self._bidirectional = bidirectional
         self._use_own_embeddings = use_own_embeddings
         if not self._use_own_embeddings:
@@ -45,22 +39,16 @@ class SequenceEncoder(nn.Module):
 
             self._embedding_layer = shared_embedding_layer
         else:
-            self._embedding_layer = EmbeddingLayer(
-                pretrained_representations_service,
+            embedding_layer_options = EmbeddingLayerOptions(
                 device=device,
+                pretrained_representations_options=pretrained_representations_options,
                 learn_character_embeddings=learn_embeddings,
-                include_pretrained_model=include_pretrained,
-                pretrained_model_size=pretrained_hidden_size,
                 vocabulary_size=input_size,
                 character_embeddings_size=embedding_size,
                 dropout=dropout,
                 output_embedding_type=EmbeddingType.Character)
-            # lstm_input_size = additional_size
-            # if learn_embeddings:
-            #     if self._use_own_embeddings:
-            #         self.embedding = nn.Embedding(input_size, embedding_size)
 
-            #     lstm_input_size += embedding_size
+            self._embedding_layer = EmbeddingLayer(file_service, embedding_layer_options)
 
         self.rnn = nn.GRU(self._embedding_layer.output_size, hidden_dimension,
                           number_of_layers, batch_first=True, bidirectional=bidirectional)
@@ -69,21 +57,9 @@ class SequenceEncoder(nn.Module):
     @overrides
     def forward(self, input_batch: BatchRepresentation, debug: bool = False, **kwargs):
         embeddings = self._embedding_layer.forward(input_batch)
-        # if self._learn_embeddings:
-        #     if self._use_own_embeddings:
-        #         embedded = self.embedding(input_batch)
-        #     else:
-        #         embedded = self._shared_embeddings(input_batch)
 
-        #     embedded = self.dropout(embedded)
-
-        #     if self._include_pretrained:
-        #         embedded = self._pretrained_representations_service.add_pretrained_representations_to_character_embeddings(
-        #             embedded, pretrained_representations, offset_lists)
-        # else:
-        #     embedded = pretrained_representations
-
-        x_packed = pack_padded_sequence(embeddings, input_batch.lengths, batch_first=True)
+        x_packed = pack_padded_sequence(
+            embeddings, input_batch.lengths, batch_first=True)
 
         _, hidden = self.rnn.forward(x_packed)
 

@@ -10,6 +10,7 @@ from overrides import overrides
 from entities.metric import Metric
 from entities.batch_representation import BatchRepresentation
 from entities.options.embedding_layer_options import EmbeddingLayerOptions
+from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 
 from enums.embedding_type import EmbeddingType
 
@@ -19,6 +20,7 @@ from models.embedding.embedding_layer import EmbeddingLayer
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.vocabulary_service import VocabularyService
 from services.data_service import DataService
+from services.file_service import FileService
 from services.process.cbow_process_service import CBOWProcessService
 
 
@@ -28,7 +30,8 @@ class CBOWModel(ModelBase):
             arguments_service: SemanticArgumentsService,
             vocabulary_service: VocabularyService,
             data_service: DataService,
-            process_service: CBOWProcessService):
+            process_service: CBOWProcessService,
+            file_service: FileService):
         super().__init__(data_service, arguments_service)
 
         self._arguments_service = arguments_service
@@ -36,12 +39,14 @@ class CBOWModel(ModelBase):
 
         embedding_layer_options = EmbeddingLayerOptions(
             device=arguments_service.device,
+            pretrained_representations_options=PretrainedRepresentationsOptions(
+                include_pretrained_model=False),
             vocabulary_size=vocabulary_service.vocabulary_size(),
             learn_character_embeddings=True,
             character_embeddings_size=arguments_service.word_embeddings_size,
             output_embedding_type=EmbeddingType.Character)
 
-        self._embedding_layer = EmbeddingLayer(embedding_layer_options)
+        self._embedding_layer = EmbeddingLayer(file_service, embedding_layer_options)
 
         self._rnn_layer = nn.LSTM(
             input_size=self._embedding_layer.output_size,
@@ -67,9 +72,11 @@ class CBOWModel(ModelBase):
 
         output_result = self._output_layer.forward(rnn_output)
 
-        mask_indices = torch.where(input_batch.character_sequences == self._mask_token_idx)[1]
+        mask_indices = torch.where(
+            input_batch.character_sequences == self._mask_token_idx)[1]
         if mask_indices.shape[0] > 0:
-            mask_indices = mask_indices.unsqueeze(-1).repeat(1, output_result.shape[2]).unsqueeze(1)
+            mask_indices = mask_indices.unsqueeze(-1).repeat(
+                1, output_result.shape[2]).unsqueeze(1)
             gathered_result = output_result.gather(1, mask_indices).squeeze()
         else:
             gathered_result = output_result

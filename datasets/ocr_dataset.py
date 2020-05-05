@@ -15,7 +15,6 @@ from services.arguments.postocr_arguments_service import PostOCRArgumentsService
 from services.file_service import FileService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.log_service import LogService
-from services.pretrained_representations_service import PretrainedRepresentationsService
 from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
@@ -34,7 +33,6 @@ class OCRDataset(DatasetBase):
             vocabulary_service: VocabularyService,
             metrics_service: MetricsService,
             log_service: LogService,
-            pretrained_representations_service: PretrainedRepresentationsService,
             data_service: DataService,
             run_type: RunType):
         super(OCRDataset, self).__init__()
@@ -45,10 +43,7 @@ class OCRDataset(DatasetBase):
         self._data_service = data_service
 
         self._device = arguments_service.device
-        self._pretrained_representations_service = pretrained_representations_service
         self._include_pretrained = arguments_service.include_pretrained_model
-        self._pretrained_model_size = self._pretrained_representations_service.get_pretrained_model_size()
-        self._max_length = self._pretrained_representations_service.get_pretrained_max_length()
 
         language_data_path = self._get_language_data_path(
             file_service,
@@ -117,25 +112,6 @@ class OCRDataset(DatasetBase):
         _, ocr_aligned, gs_aligned, _, _ = result
 
         return ocr_aligned, gs_aligned
-
-    def _get_pretrained_representations(
-            self,
-            ocr_token_lists: List[List[int]]):
-        if not self._include_pretrained:
-            return []
-
-        batch_size = len(ocr_token_lists)
-        lengths = [len(x) for x in ocr_token_lists]
-        max_length = max(lengths)
-        padded_tokens = np.zeros((batch_size, max_length), dtype=np.int64)
-
-        for i, ocr_token_list in enumerate(ocr_token_lists):
-            padded_tokens[i][:lengths[i]] = ocr_token_list
-
-        padded_tokens_tensor = torch.tensor(padded_tokens).to(self._device)
-        pretrained_representations = self._pretrained_representations_service.get_pretrained_representation(
-            padded_tokens_tensor)
-        return pretrained_representations
 
     @overrides
     def use_collate_function(self) -> bool:
