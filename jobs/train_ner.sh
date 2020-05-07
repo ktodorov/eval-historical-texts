@@ -85,7 +85,7 @@ fi
 LEARNINGRATE="$LR"
 if [ -z "$LR" ]
 then
-    LEARNINGRATE="1e-4"
+    LEARNINGRATE="1e-3"
 fi
 
 HIDDENSIZE="$HIDDEN"
@@ -108,7 +108,7 @@ fi
 
 BIDIRECTIONAL="--bidirectional-rnn"
 BIARG="-bi"
-if [ -z "$UNI" ]
+if [ ! -z "$UNI" ]
 then
     BIDIRECTIONAL=""
     BIARG=""
@@ -120,13 +120,29 @@ then
     DROPOUT="0.3"
 fi
 
+FINETUNEARG=""
+FTP=""
+if [ ! -z "$FINETUNE" ]
+then
+    FINETUNEARG="--fine-tune-pretrained"
+    FTP="-tune"
+fi
+
+WEIGHTEDLOSSARG=""
+WL=""
+if [ ! -z "$WEIGHTED" ]
+then
+    WEIGHTEDLOSSARG="--use-weighted-loss"
+    WL="-wl"
+fi
+
 CHECKPOINTNAME=""
 if [ -z "$CHECKPOINT" ]
 then
-    CHECKPOINTNAME="$LANGUAGE-$ENTITYTAGS-$FT-$PRETRAINEDMODEL$PRETR$CHARCHECKPOINT-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR"
+    CHECKPOINTNAME="$LANGUAGE-$ENTITYTAGS-$FT-$PRETRAINEDMODEL$PRETR$CHARCHECKPOINT-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR$FTP$WL"
 fi
 
-srun python3 -u run.py --device cuda --eval-freq 100 --seed 13 --patience 25 --epochs 500 --configuration rnn-simple --learning-rate $LEARNINGRATE --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --hidden-dimension $HIDDENSIZE --embeddings-size $EMBEDDINGSSIZE --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $ENTITYTAGTYPES --reset-training-on-early-stop --training-reset-epoch-limit 5 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512 --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME --no-attention $BIDIRECTIONAL $FASTTEXT $FTMODELARG --fasttext-model-size 300 --max-training-minutes 760 --merge-subwords $CHARACTEREMBEDDINGS --replace-all-numbers --pretrained-model $PRETRAINEDMODEL
+srun python3 -u run.py --device cuda --eval-freq 50 --seed 13 --patience 30 --epochs 500 --configuration rnn-simple --learning-rate $LEARNINGRATE --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --hidden-dimension $HIDDENSIZE --embeddings-size $EMBEDDINGSSIZE --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $ENTITYTAGTYPES --reset-training-on-early-stop --training-reset-epoch-limit 5 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512 --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME --no-attention $BIDIRECTIONAL $FASTTEXT $FTMODELARG --fasttext-model-size 300 --max-training-minutes 760 --merge-subwords $CHARACTEREMBEDDINGS --replace-all-numbers --pretrained-model $PRETRAINEDMODEL $FINETUNEARG $WEIGHTEDLOSSARG
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/
