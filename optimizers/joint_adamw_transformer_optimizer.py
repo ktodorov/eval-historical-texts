@@ -16,11 +16,12 @@ class JointAdamWTransformerOptimizer(OptimizerBase):
             arguments_service: ArgumentsServiceBase,
             model: ModelBase):
         super().__init__(arguments_service, model)
+        self._weight_decay = arguments_service.weight_decay
 
     def _init_optimizer(self) -> Optimizer:
         model1_parameters, model2_parameters = self._model.parameters()
-        optimizer1 = AdamW(model1_parameters, lr=self._learning_rate)
-        optimizer2 = AdamW(model2_parameters, lr=self._learning_rate)
+        optimizer1 = AdamW(model1_parameters, lr=self._learning_rate, weight_decay=self._weight_decay)
+        optimizer2 = AdamW(model2_parameters, lr=self._learning_rate, weight_decay=self._weight_decay)
         return (optimizer1, optimizer2)
 
     @overrides

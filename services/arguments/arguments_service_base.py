@@ -67,6 +67,10 @@ class ArgumentsServiceBase:
                             help="shuffle datasets while training")
         parser.add_argument("--learning-rate", type=float, default=1e-5,
                             help="learning rate for training models")
+        parser.add_argument("--weight-decay", type=float, default=1e-8,
+                            help="weight decay for optimizer. Default is `1e-8`")
+        parser.add_argument("--momentum", type=float, default=0,
+                            help="momentum for optimizer. Default is `0`")
         parser.add_argument("--checkpoint-name", type=str, default=None,
                             help="name that can be used to distinguish checkpoints")
         parser.add_argument("--resume-training", action='store_true',
@@ -170,6 +174,14 @@ class ArgumentsServiceBase:
     @property
     def learning_rate(self) -> float:
         return self._get_argument('learning_rate')
+
+    @property
+    def momentum(self) -> float:
+        return self._get_argument('momentum')
+
+    @property
+    def weight_decay(self) -> float:
+        return self._get_argument('weight_decay')
 
     @property
     def checkpoint_name(self) -> str:

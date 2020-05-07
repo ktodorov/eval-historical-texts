@@ -15,9 +15,14 @@ class SGDOptimizer(OptimizerBase):
             model: ModelBase):
         super().__init__(arguments_service, model)
 
+        self._momentum = arguments_service.momentum
+        self._weight_decay = arguments_service.weight_decay
+
     def _init_optimizer(self) -> Optimizer:
         optimizer = optim.SGD(
             self._model.parameters(),
+            momentum=self._momentum,
+            weight_decay=self._weight_decay,
             lr=self._learning_rate)
 
         return optimizer
