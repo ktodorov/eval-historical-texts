@@ -3,12 +3,14 @@ from copy import deepcopy
 import re
 
 from enums.entity_tag_type import EntityTagType
+from enums.word_feature import WordFeature
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class NELine:
     def __init__(self):
         self.tokens: List[str] = []
+        self.tokens_features: List[List[int]] = []
         self.misc = []
         self.ne_coarse_lit = []
         self.ne_coarse_meto = []
@@ -23,7 +25,8 @@ class NELine:
         self.position_changes: Dict[int, List[int]] = None
 
     def add_data(self, csv_row: dict):
-        self._add_entity_if_available(csv_row, 'TOKEN', self.tokens)
+        token = self._add_entity_if_available(csv_row, 'TOKEN', self.tokens)
+        self.tokens_features.append(self._get_token_features(token))
         self._add_entity_if_available(
             csv_row, 'MISC', self.misc, use_none_if_empty=True)
         self._add_entity_if_available(
@@ -42,6 +45,25 @@ class NELine:
             csv_row, 'NEL-LIT', self.nel_lit, use_none_if_empty=True)
         self._add_entity_if_available(
             csv_row, 'NEL-METO', self.nel_meto, use_none_if_empty=True)
+
+    def _get_token_features(self, token: str) -> Dict[WordFeature, bool]:
+        result = {
+            WordFeature.AllLower: self._get_feature_value(token.islower(), WordFeature.AllLower),
+            WordFeature.AllUpper: self._get_feature_value(token.isupper(), WordFeature.AllUpper),
+            WordFeature.IsTitle: self._get_feature_value(token.istitle(), WordFeature.IsTitle),
+            WordFeature.FirstLetterUpper: self._get_feature_value(token[0].isupper(), WordFeature.FirstLetterUpper),
+            WordFeature.FirstLetterNotUpper: self._get_feature_value(not token[0].isupper(), WordFeature.FirstLetterNotUpper),
+            WordFeature.Numeric: self._get_feature_value(token.isdigit(), WordFeature.Numeric),
+            WordFeature.NoAlphaNumeric: self._get_feature_value(not token.isalnum(), WordFeature.NoAlphaNumeric),
+        }
+
+        return result
+
+    def _get_feature_value(self, feature: bool, feature_type: WordFeature):
+        if feature:
+            return feature_type.value
+        else:
+            return feature_type.value + len(WordFeature)
 
     def _insert_entity_tag(self, list_to_modify: list, position: int, tag: str):
         tag_to_insert = tag
@@ -65,12 +87,13 @@ class NELine:
             return self.ne_nested
 
     def tokenize_text(
-        self,
-        tokenize_service: BaseTokenizeService,
-        replace_all_numbers: bool = False,
-        expand_targets: bool = True):
+            self,
+            tokenize_service: BaseTokenizeService,
+            replace_all_numbers: bool = False,
+            expand_targets: bool = True):
         if replace_all_numbers:
-            self.tokens = [re.sub('(([0-9]+)|(([0-9]*)\.([0-9]*)))', '0', token) for token in self.tokens] # replace digit with 0
+            self.tokens = [re.sub('(([0-9]+)|(([0-9]*)\.([0-9]*)))', '0', token)
+                           for token in self.tokens]  # replace digit with 0
 
         self.original_length = len(self.tokens)
         text = self.get_text()
@@ -84,6 +107,7 @@ class NELine:
         position_changes = {i: [i] for i in range(len(self.tokens))}
         if len(encoded_tokens) > len(self.tokens):
             new_misc = deepcopy(self.misc)
+            new_tokens_features = deepcopy(self.tokens_features)
             new_ne_coarse_lit = deepcopy(self.ne_coarse_lit)
             new_ne_coarse_meto = deepcopy(self.ne_coarse_meto)
             new_ne_fine_lit = deepcopy(self.ne_fine_lit)
@@ -102,6 +126,8 @@ class NELine:
 
                 while corresponding_counter < len(encoded_tokens) and encoded_offsets[corresponding_counter][1] < offsets[i][1]:
 
+                    new_tokens_features.insert(
+                        corresponding_counter+1, self.tokens_features[i])
                     if expand_targets:
                         # we copy the value of the original token
                         self._insert_entity_tag(
@@ -128,6 +154,7 @@ class NELine:
 
                 corresponding_counter += 1
 
+            self.tokens_features = new_tokens_features
             self.misc = new_misc
             self.ne_coarse_lit = new_ne_coarse_lit
             self.ne_coarse_meto = new_ne_coarse_meto
@@ -197,8 +224,16 @@ class NELine:
         ]
 
     def _add_entity_if_available(self, csv_row: dict, key: str, obj: list, use_none_if_empty: bool = False):
-        if key in csv_row.keys():
-            if csv_row[key] == '' and use_none_if_empty:
-                obj.append(None)
-            else:
-                obj.append(csv_row[key])
+        if key not in csv_row.keys():
+            return None
+
+        result = None
+        if csv_row[key] == '':
+            result = None
+        else:
+            result = csv_row[key]
+
+        if result is not None or use_none_if_empty:
+            obj.append(result)
+
+        return result

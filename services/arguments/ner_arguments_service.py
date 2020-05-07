@@ -61,6 +61,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help="If all numbers should be replaced by a hard-coded fixed string")
         parser.add_argument("--use-weighted-loss", action='store_true',
                             help="If set to true, CRF layer will use weighted loss which focuses more on non-empty tags")
+        parser.add_argument("--use-manual-features", action='store_true',
+                            help="If set to true, manual features representations will be learned and added to general embeddings")
 
     @property
     def embeddings_size(self) -> int:
@@ -113,3 +115,7 @@ class NERArgumentsService(PretrainedArgumentsService):
     @property
     def use_weighted_loss(self) -> int:
         return self._get_argument('use_weighted_loss')
+
+    @property
+    def use_manual_features(self) -> bool:
+        return self._get_argument('use_manual_features')

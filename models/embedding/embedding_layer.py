@@ -19,6 +19,7 @@ from services.arguments.pretrained_arguments_service import PretrainedArgumentsS
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
 
+
 class EmbeddingLayer(ModelBase):
     def __init__(
             self,
@@ -86,6 +87,14 @@ class EmbeddingLayer(ModelBase):
                 embedding_layer_options.dropout)
             self._output_size += embedding_layer_options.word_embeddings_size
 
+        self._learn_manual_features = embedding_layer_options.learn_manual_features
+        if self._learn_manual_features:
+            self._manual_features_layer = nn.Embedding(
+                num_embeddings=(embedding_layer_options.manual_features_count * 2) + 1,
+                embedding_dim=1)
+
+            self._output_size += embedding_layer_options.manual_features_count
+
         self._device = embedding_layer_options.device
 
     @overrides
@@ -126,6 +135,12 @@ class EmbeddingLayer(ModelBase):
         if self._include_fasttext_model:
             fasttext_embeddings = self._pretrained_layer.get_fasttext_representation(
                 batch_representation.tokens)
+
+        if self._learn_manual_features:
+            manual_feature_embeddings = self._manual_features_layer.forward(
+                batch_representation.manual_features)
+
+            manual_feature_embeddings = manual_feature_embeddings.squeeze(-1)
 
         result_embeddings = None
         if self._output_embedding_type == EmbeddingType.Character:
@@ -178,6 +193,13 @@ class EmbeddingLayer(ModelBase):
                 else:
                     result_embeddings = torch.cat(
                         (result_embeddings, fasttext_embeddings), dim=2)
+
+            if self._learn_manual_features:
+                if result_embeddings is None:
+                    result_embeddings = manual_feature_embeddings
+                else:
+                    result_embeddings = torch.cat(
+                        (result_embeddings, manual_feature_embeddings), dim=2)
 
             if self._merge_subword_embeddings and batch_representation.position_changes is not None:
                 result_embeddings, batch_representation._subword_lengths = self._restore_position_changes(

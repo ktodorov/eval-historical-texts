@@ -18,7 +18,8 @@ class BatchRepresentation:
             position_changes: Dict[int, Tuple] = None,
             offset_lists: List[Tuple] = None,
             pad_idx: int = 0,
-            additional_information: object = None):
+            additional_information: object = None,
+            manual_features: list = []):
 
         self._batch_size = batch_size
         self._device = device
@@ -45,6 +46,8 @@ class BatchRepresentation:
 
         self._subword_characters_count, _ = self._pad_and_convert_to_tensor(subword_characters_count, pad_idx)
         self._word_characters_count = word_characters_count
+
+        self._manual_features, _ = self._pad_and_convert_to_tensor(manual_features, pad_idx)
 
         self._tokens = tokens
         self._offset_lists = offset_lists
@@ -86,6 +89,8 @@ class BatchRepresentation:
         self._position_changes = self._sort_list(self._position_changes, perm_idx)
 
         self._word_characters_count = self._sort_list(self._word_characters_count, perm_idx)
+
+        self._manual_features = self._sort_tensor(self._manual_features, perm_idx)
 
         return perm_idx
 
@@ -183,6 +188,10 @@ class BatchRepresentation:
     @property
     def target_lengths(self) -> torch.Tensor:
         return self._target_lengths
+
+    @property
+    def manual_features(self) -> torch.Tensor:
+        return self._manual_features
 
     @property
     def tokens(self) -> list:

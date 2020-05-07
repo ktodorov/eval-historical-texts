@@ -2,6 +2,7 @@ from enums.embedding_type import EmbeddingType
 
 from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 
+
 class EmbeddingLayerOptions:
     def __init__(
             self,
@@ -18,19 +19,30 @@ class EmbeddingLayerOptions:
             word_embeddings_size: int = None,
             output_embedding_type: EmbeddingType = EmbeddingType.SubWord,
             character_rnn_hidden_size: int = 64,
-            dropout: float = 0.0):
+            dropout: float = 0.0,
+            learn_manual_features: bool = False,
+            manual_features_count: int = None):
 
         self.device = device
-        self.learn_subword_embeddings = learn_subword_embeddings
+
         self.include_pretrained_model = include_pretrained_model
-        self.merge_subword_embeddings = merge_subword_embeddings
         self.pretrained_representations_options = pretrained_representations_options
+
         self.vocabulary_size = vocabulary_size
+
+        self.learn_subword_embeddings = learn_subword_embeddings
+        self.merge_subword_embeddings = merge_subword_embeddings
         self.subword_embeddings_size = subword_embeddings_size
+
         self.learn_character_embeddings = learn_character_embeddings
         self.character_embeddings_size = character_embeddings_size
+        self.character_rnn_hidden_size = character_rnn_hidden_size
+
         self.learn_word_embeddings = learn_word_embeddings
         self.word_embeddings_size = word_embeddings_size
+
         self.output_embedding_type = output_embedding_type
-        self.character_rnn_hidden_size = character_rnn_hidden_size
         self.dropout = dropout
+
+        self.learn_manual_features = learn_manual_features
+        self.manual_features_count = manual_features_count

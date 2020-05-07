@@ -51,8 +51,14 @@ class NERDataset(DatasetBase):
 
         filtered_tokens = [token.replace('#', '') for token in item.tokens]
 
-        character_sequence = [self._vocabulary_service.string_to_ids(token) for token in filtered_tokens]
+        character_sequence = [self._vocabulary_service.string_to_ids(
+            token) for token in filtered_tokens]
         token_characters = [len(x) for x in character_sequence]
+
+        features = [
+            [x + 1 for x in list(feature_set.values())]
+            for feature_set in item.tokens_features
+        ]
 
         return (
             item.token_ids,
@@ -61,8 +67,8 @@ class NERDataset(DatasetBase):
             item.position_changes,
             item.original_length,
             character_sequence,
-            token_characters
-        )
+            token_characters,
+            features)
 
     @overrides
     def use_collate_function(self) -> bool:
@@ -76,7 +82,14 @@ class NERDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        sequences, targets, tokens, position_changes, original_lengths, character_sequences, token_characters_count = batch_split
+        (sequences,
+         targets,
+         tokens,
+         position_changes,
+         original_lengths,
+         character_sequences,
+         token_characters_count,
+         feature_set) = batch_split
 
         pad_idx = self._ner_process_service.pad_idx
         batch_representation = BatchRepresentation(
@@ -88,11 +101,13 @@ class NERDataset(DatasetBase):
             targets=targets,
             tokens=tokens,
             position_changes=position_changes,
+            manual_features=feature_set,
             pad_idx=pad_idx)
 
         # if we are going to merge the subwords, then we should sort using the original lengths, not the expanded ones
         if self._arguments_service.merge_subwords:
-            lengths_tensor = torch.tensor(original_lengths, device=self._device)
+            lengths_tensor = torch.tensor(
+                original_lengths, device=self._device)
             batch_representation.sort_batch(lengths_tensor)
         else:
             batch_representation.sort_batch()

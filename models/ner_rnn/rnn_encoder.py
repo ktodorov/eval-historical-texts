@@ -43,7 +43,9 @@ class RNNEncoder(ModelBase):
             learn_character_embeddings=rnn_encoder_options.learn_character_embeddings,
             character_embeddings_size=rnn_encoder_options.character_embeddings_size,
             character_rnn_hidden_size=rnn_encoder_options.character_hidden_size,
-            dropout=rnn_encoder_options.dropout)
+            dropout=rnn_encoder_options.dropout,
+            learn_manual_features=rnn_encoder_options.learn_manual_features,
+            manual_features_count=rnn_encoder_options.manual_features_count)
 
         self._embedding_layer = EmbeddingLayer(
             file_service,

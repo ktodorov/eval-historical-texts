@@ -17,6 +17,7 @@ from enums.metric_type import MetricType
 from enums.tag_measure_averaging import TagMeasureAveraging
 from enums.tag_measure_type import TagMeasureType
 from enums.entity_tag_type import EntityTagType
+from enums.word_feature import WordFeature
 
 from models.ner_rnn.rnn_encoder import RNNEncoder
 from models.ner_rnn.conditional_random_field import ConditionalRandomField
@@ -77,7 +78,9 @@ class NERPredictor(ModelBase):
             merge_subword_embeddings=arguments_service.merge_subwords,
             learn_character_embeddings=arguments_service.learn_character_embeddings,
             character_embeddings_size=arguments_service.character_embeddings_size,
-            character_hidden_size=arguments_service.character_hidden_size)
+            character_hidden_size=arguments_service.character_hidden_size,
+            learn_manual_features=arguments_service.use_manual_features,
+            manual_features_count=len(WordFeature))
 
         self.rnn_encoder = RNNEncoder(
             file_service,

@@ -20,7 +20,9 @@ class RNNEncoderOptions:
             merge_subword_embeddings: bool,
             learn_character_embeddings: bool,
             character_embeddings_size: int,
-            character_hidden_size: int):
+            character_hidden_size: int,
+            learn_manual_features: bool = False,
+            manual_features_count: int = None):
 
         self.device = device
         self.number_of_tags = number_of_tags
@@ -37,3 +39,6 @@ class RNNEncoderOptions:
         self.learn_character_embeddings = learn_character_embeddings
         self.character_embeddings_size = character_embeddings_size
         self.character_hidden_size = character_hidden_size
+
+        self.learn_manual_features = learn_manual_features
+        self.manual_features_count = manual_features_count
