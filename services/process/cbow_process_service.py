@@ -66,7 +66,7 @@ class CBOWProcessService(ProcessServiceBase):
 
             return vocab
 
-    def load_corpus_data(self, limit_size: int = None):
+    def load_corpus_data(self, limit_size: int = None) -> list:
         corpus_data_path = os.path.join(
             self._full_data_path, f'corpus-{self._corpus_id}-data.pickle')
         if not os.path.exists(corpus_data_path):
@@ -93,8 +93,16 @@ class CBOWProcessService(ProcessServiceBase):
         language_folder = os.path.join(semeval_data_path, language.value)
         corpus_ids = [1, 2]
 
-        # characters_counter = Counter()
-        # threshold = 5
+        words_counter = Counter()
+        threshold = 10
+
+        targets_path = os.path.join(language_folder, 'targets.txt')
+        with open(targets_path, 'r', encoding='utf-8') as targets_file:
+            target_words = targets_file.readlines()
+
+            # remove the POS tags if we are working with English
+            if language == Language.English:
+                target_words = [x[:-4] for x in target_words]
 
         for corpus_id in corpus_ids:
             corpus_path = os.path.join(
@@ -110,13 +118,20 @@ class CBOWProcessService(ProcessServiceBase):
                 file_path = os.path.join(corpus_path, text_filename)
                 with open(file_path, 'r', encoding='utf-8') as textfile:
                     file_text = textfile.read()
-                    characters = set(self._preprocess_text(
-                        file_text))
-                    # characters_counter = Counter(current_file_characters)
+                    preprocessed_text = self._preprocess_text(file_text)
+                    current_words = preprocessed_text.split(' ')
+                    current_words_counter = Counter(current_words)
+                    words_counter.update(current_words_counter)
 
-        # characters = list(
-        #     [word for word, count in characters_counter.items()])
-        vocabulary = {character: i+5 for i, character in enumerate(characters)}
+        words = list(
+            [word for word, count in words_counter.items() if count > threshold])
+
+        # if any of the target words is now missing in the vocabulary, we make sure to add it back
+        for target_word in target_words:
+            if target_word not in words:
+                words.append(target_word)
+
+        vocabulary = {word: i+5 for i, word in enumerate(words)}
 
         vocabulary['[PAD]'] = self._pad_idx
         vocabulary['[UNK]'] = self._unk_idx
@@ -150,8 +165,6 @@ class CBOWProcessService(ProcessServiceBase):
             os.listdir(corpus_path)))
 
         cbow_entries: List[List[int]] = []
-        file_counter = -1
-        save_interval = 300000
 
         for text_filename in text_filenames:
             file_path = os.path.join(corpus_path, text_filename)
@@ -159,9 +172,6 @@ class CBOWProcessService(ProcessServiceBase):
                 file_text_lines = textfile.readlines()
                 file_text_lines = [self._preprocess_file_text_line(
                     file_text_line) for file_text_line in file_text_lines]
-
-                # file_text_lines = list(
-                #     filter(lambda x: x is not None, file_text_lines))
 
                 text_lines = len(file_text_lines)
 
@@ -175,10 +185,7 @@ class CBOWProcessService(ProcessServiceBase):
     def _preprocess_file_text_line(
             self,
             file_text_line: str):
-        # if len(file_text_line) < (self._window_size * 2) + 1:
-        #     return None
-
-        return list(self._preprocess_text(file_text_line))
+        return self._preprocess_text(file_text_line).split(' ')
 
     def _get_cbow_entry(
             self,

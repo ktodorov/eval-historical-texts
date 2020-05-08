@@ -60,12 +60,12 @@ class CBOWDataset(DatasetBase):
         batch_representation = BatchRepresentation(
             device=self._device,
             batch_size=batch_size,
-            character_sequences=context_word_ids,
+            word_sequences=context_word_ids,
             targets=list(targets),
             pad_idx=self._cbow_process_service._pad_idx)
 
         for b in range(batch_representation.batch_size):
-            batch_representation.character_sequences[b, masked_indices[b]] = self._cbow_process_service._mask_idx
+            batch_representation.word_sequences[b, masked_indices[b]] = self._cbow_process_service._mask_idx
 
         batch_representation.sort_batch()
 

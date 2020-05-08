@@ -32,7 +32,7 @@ class VocabularyService:
         self._int2char: Dict[int, str] = vocabulary_data['int2char']
         self._char2int: Dict[str, int] = vocabulary_data['char2int']
 
-    def string_to_ids(self, input) -> List[int]:
+    def string_to_ids(self, input: List[str]) -> List[int]:
         result = [self.string_to_id(x) for x in input]
         return result
 

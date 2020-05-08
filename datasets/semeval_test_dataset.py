@@ -48,7 +48,7 @@ class SemEvalTestDataset(DatasetBase):
             encodings = tokenize_service.encode_sequences(target_words)
             self._target_word_ids = [x[0] for x in encodings]
         else:
-            self._target_word_ids = [vocabulary_service.string_to_ids(target_word) for target_word in target_words]
+            self._target_word_ids = [vocabulary_service.string_to_id(target_word) for target_word in target_words]
 
     @overrides
     def __len__(self):
@@ -65,12 +65,12 @@ class SemEvalTestDataset(DatasetBase):
     @overrides
     def collate_function(self, DataLoaderBatch):
         batch_split = list(zip(*DataLoaderBatch))
-        char_ids, word = batch_split
+        word_id, word = batch_split
 
         batch_representation = BatchRepresentation(
             device=self._arguments_service.device,
             batch_size=1,
-            character_sequences=char_ids,
+            word_sequences=[word_id],
             additional_information=word[0])
 
         return batch_representation

@@ -42,9 +42,9 @@ class CBOWModel(ModelBase):
             pretrained_representations_options=PretrainedRepresentationsOptions(
                 include_pretrained_model=False),
             vocabulary_size=vocabulary_service.vocabulary_size(),
-            learn_character_embeddings=True,
-            character_embeddings_size=arguments_service.word_embeddings_size,
-            output_embedding_type=EmbeddingType.Character)
+            learn_word_embeddings=True,
+            word_embeddings_size=arguments_service.word_embeddings_size,
+            output_embedding_type=EmbeddingType.Word)
 
         self._embedding_layer = EmbeddingLayer(file_service, embedding_layer_options)
 
@@ -64,7 +64,7 @@ class CBOWModel(ModelBase):
         embeddings = self._embedding_layer.forward(input_batch)
 
         x_packed = pack_padded_sequence(
-            embeddings, input_batch.character_lengths, batch_first=True)
+            embeddings, input_batch.word_lengths, batch_first=True)
 
         packed_output, hidden = self._rnn_layer.forward(x_packed)
 
@@ -73,7 +73,7 @@ class CBOWModel(ModelBase):
         output_result = self._output_layer.forward(rnn_output)
 
         mask_indices = torch.where(
-            input_batch.character_sequences == self._mask_token_idx)[1]
+            input_batch.word_sequences == self._mask_token_idx)[1]
         if mask_indices.shape[0] > 0:
             mask_indices = mask_indices.unsqueeze(-1).repeat(
                 1, output_result.shape[2]).unsqueeze(1)
