@@ -152,13 +152,19 @@ then
     NEWEMB="-nonew"
 fi
 
+PATIENCEARG="$PATIENCE"
+if [ -z "$PATIENCE" ]
+then
+    PATIENCEARG="10"
+fi
+
 CHECKPOINTNAME=""
 if [ -z "$CHECKPOINT" ]
 then
     CHECKPOINTNAME="$LANGUAGE-$ENTITYTAGS-$FT-$PRETRAINEDMODEL$PRETR$CHARCHECKPOINT-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR$FTP$WL$MANFEAT$NEWEMB"
 fi
 
-srun python3 -u run.py --device cuda --eval-freq 50 --seed 13 --patience 10 --epochs 500 --configuration rnn-simple --learning-rate $LEARNINGRATE --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --hidden-dimension $HIDDENSIZE --embeddings-size $EMBEDDINGSSIZE --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $ENTITYTAGTYPES --reset-training-on-early-stop --training-reset-epoch-limit 5 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512 $NEWEMBEDDINGSARG --checkpoint-name $CHECKPOINTNAME --no-attention $BIDIRECTIONAL $FASTTEXT $FTMODELARG --fasttext-model-size 300 --max-training-minutes 760 --merge-subwords $CHARACTEREMBEDDINGS --replace-all-numbers --pretrained-model $PRETRAINEDMODEL $FINETUNEARG $WEIGHTEDLOSSARG $MANUALFEATURESARG
+srun python3 -u run.py --device cuda --eval-freq 50 --seed 13 --patience $PATIENCEARG --epochs 500 --configuration rnn-simple --learning-rate $LEARNINGRATE --metric-types f1-score precision-score recall-score --language $LANGUAGE --challenge named-entity-recognition --batch-size 128 --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --hidden-dimension $HIDDENSIZE --embeddings-size $EMBEDDINGSSIZE --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $ENTITYTAGTYPES --reset-training-on-early-stop --training-reset-epoch-limit 5 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512 $NEWEMBEDDINGSARG --checkpoint-name $CHECKPOINTNAME --no-attention $BIDIRECTIONAL $FASTTEXT $FTMODELARG --fasttext-model-size 300 --max-training-minutes 760 --merge-subwords $CHARACTEREMBEDDINGS --replace-all-numbers --pretrained-model $PRETRAINEDMODEL $FINETUNEARG $WEIGHTEDLOSSARG $MANUALFEATURESARG
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/

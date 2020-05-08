@@ -188,7 +188,7 @@ class ConditionalRandomField(ModelBase):
 
         if self.use_weighted_loss:
             ones = torch.ones(targets.shape, device=targets.device)
-            non_ones = torch.ones(targets.shape, device=targets.device).fill_(1.5)
+            non_ones = torch.ones(targets.shape, device=targets.device).fill_(2.5)
             none_mask = torch.where((targets != self.none_idx) & (targets != self.pad_idx) & (targets != self.start_idx) & (targets != self.end_idx), non_ones, ones)
             expanded_none_mask = none_mask.unsqueeze(-1).unsqueeze(-1).expand(batch_size, max_length, self._number_of_tags, self._number_of_tags)
             all_scores = all_scores * expanded_none_mask
