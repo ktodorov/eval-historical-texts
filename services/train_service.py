@@ -71,7 +71,7 @@ class TrainService:
 
             if self._arguments_service.resume_training:
                 model_checkpoint = self._load_model()
-                if model_checkpoint:
+                if model_checkpoint and not self._arguments_service.skip_best_metrics_on_resume:
                     best_metrics = model_checkpoint.best_metrics
                     start_epoch = model_checkpoint.epoch
                     start_iteration = model_checkpoint.iteration

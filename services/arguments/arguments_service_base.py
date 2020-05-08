@@ -75,6 +75,10 @@ class ArgumentsServiceBase:
                             help="name that can be used to distinguish checkpoints")
         parser.add_argument("--resume-training", action='store_true',
                             help="resume training using saved checkpoints")
+        parser.add_argument("--resume-checkpoint-name", type=str, default=None,
+                            help="Checkpoint name that will be used to resume training from. If None is given, then current checkpoint name will be used. Default is `None`")
+        parser.add_argument("--skip-best-metrics-on-resume", action='store_true',
+                            help="Whether to skip loading saved metrics and continuing from last best checkpoint. Default is `False`")
         parser.add_argument("--data-folder", type=str, default='data',
                             help='folder where data will be taken from')
         parser.add_argument("--output-folder", type=str, default='results',
@@ -190,6 +194,14 @@ class ArgumentsServiceBase:
     @property
     def resume_training(self) -> bool:
         return self._get_argument('resume_training')
+
+    @property
+    def resume_checkpoint_name(self) -> str:
+        return self._get_argument('resume_checkpoint_name')
+
+    @property
+    def skip_best_metrics_on_resume(self) -> bool:
+        return self._get_argument('skip_best_metrics_on_resume')
 
     @property
     def data_folder(self) -> str:

@@ -79,7 +79,9 @@ class ModelBase(nn.Module):
         assert self._data_service is not None
         assert self._arguments_service is not None
 
-        checkpoint_name = self._get_model_name(name_prefix)
+        checkpoint_name = self._arguments_service.resume_checkpoint_name
+        if checkpoint_name is None:
+            checkpoint_name = self._get_model_name(name_prefix)
 
         if load_model_only or not self._data_service.python_obj_exists(path, checkpoint_name):
             return None

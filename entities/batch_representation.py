@@ -153,6 +153,15 @@ class BatchRepresentation:
         else:
             return (padded_list, lengths)
 
+    def __str__(self):
+        return f'batch-representation (size: {self._batch_size}, device: {self._device})'
+
+    def __repr__(self):
+        return str(self)
+
+    def __unicode__(self):
+        return str(self)
+
     @property
     def batch_size(self) -> int:
         return self._batch_size
