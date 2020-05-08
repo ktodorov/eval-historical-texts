@@ -87,7 +87,7 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         with open(words1path, 'rb') as words1file:
             words1 = pickle.load(words1file)
 
-        with open(words1path, 'rb') as words2file:
+        with open(words2path, 'rb') as words2file:
             words2 = pickle.load(words2file)
 
         evaluation = { et: [] for et in self._evaluation_types }
