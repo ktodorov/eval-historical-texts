@@ -93,9 +93,10 @@ class OCRCharacterDataset(OCRDataset):
 
         return ocr_aligned, ocr_text, gs_text, ocr_offsets
 
-    def _pad_and_sort_batch(self, DataLoaderBatch):
-        batch_size = len(DataLoaderBatch)
-        batch_split = list(zip(*DataLoaderBatch))
+    @overrides
+    def collate_function(self, batch_input):
+        batch_size = len(batch_input)
+        batch_split = list(zip(*batch_input))
 
         sequences, ocr_texts, gs_texts, offset_lists = batch_split
 
@@ -109,39 +110,3 @@ class OCRCharacterDataset(OCRDataset):
 
         batch_representation.sort_batch()
         return batch_representation
-
-
-        # pretrained_representations = self._get_pretrained_representations(
-        #     sequences)
-
-        # lengths = np.array([[len(ocr_texts[i]), len(gs_texts[i])]
-        #                     for i in range(batch_size)])
-
-        # max_length = lengths.max(axis=0)
-
-        # padded_sequences = np.zeros(
-        #     (batch_size, max_length[0]), dtype=np.int64)
-        # padded_targets = np.zeros(
-        #     (batch_size, max_length[1]), dtype=np.int64) * self._vocabulary_service.pad_token
-
-        # for i, (sequence_length, target_length) in enumerate(lengths):
-        #     padded_sequences[i][0:sequence_length] = ocr_texts[i][0:sequence_length]
-        #     padded_targets[i][0:target_length] = gs_texts[i][0:target_length]
-
-        # return self._sort_batch(
-        #     torch.from_numpy(padded_sequences).to(self._device),
-        #     torch.from_numpy(padded_targets).to(self._device),
-        #     torch.tensor(lengths, device=self._device),
-        #     pretrained_representations,
-        #     offset_lists)
-
-    # def _sort_batch(self, batch, targets, lengths, pretrained_embeddings, offset_lists):
-    #     seq_lengths, perm_idx = lengths[:, 0].sort(0, descending=True)
-    #     seq_tensor = batch[perm_idx]
-    #     targets_tensor = targets[perm_idx]
-
-    #     if self._include_pretrained:
-    #         pretrained_embeddings = pretrained_embeddings[perm_idx]
-    #         offset_lists = [offset_lists[i] for i in perm_idx]
-
-    #     return seq_tensor, targets_tensor, seq_lengths, pretrained_embeddings, offset_lists

@@ -208,7 +208,7 @@ class BatchRepresentation:
 
     @property
     def offset_lists(self) -> list:
-        return self.offset_lists
+        return self._offset_lists
 
     @property
     def position_changes(self) -> list:

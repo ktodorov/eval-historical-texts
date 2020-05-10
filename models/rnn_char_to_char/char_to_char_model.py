@@ -15,6 +15,7 @@ from entities.metric import Metric
 from entities.options.embedding_layer_options import EmbeddingLayerOptions
 from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
 from entities.batch_representation import BatchRepresentation
+from entities.data_output_log import DataOutputLog
 
 from models.model_base import ModelBase
 from models.embedding.embedding_layer import EmbeddingLayer
@@ -41,6 +42,7 @@ class CharToCharModel(ModelBase):
         self._arguments_service = arguments_service
 
         embedding_layer_options = EmbeddingLayerOptions(
+            device=arguments_service.device,
             pretrained_representations_options=PretrainedRepresentationsOptions(
                 include_pretrained_model=arguments_service.include_pretrained_model,
                 pretrained_model_size=arguments_service.pretrained_model_size,
@@ -52,6 +54,7 @@ class CharToCharModel(ModelBase):
             learn_character_embeddings=arguments_service.learn_new_embeddings,
             output_embedding_type=EmbeddingType.Character,
             character_embeddings_size=arguments_service.embeddings_size,
+            vocabulary_size=vocabulary_service.vocabulary_size(),
             dropout=arguments_service.dropout
         )
 
@@ -94,12 +97,12 @@ class CharToCharModel(ModelBase):
                 self._arguments_service.device)
             padded_targets[:, :input_batch.targets.shape[1]
                            ] = input_batch.targets
-            targets = padded_targets
+            input_batch.targets = padded_targets
 
-        return output, targets
+        return output, input_batch.targets
 
     @overrides
-    def calculate_accuracies(self, batch, outputs, output_characters=False) -> Dict[MetricType, float]:
+    def calculate_accuracies(self, batch: BatchRepresentation, outputs, output_characters=False) -> Dict[MetricType, float]:
         output, targets = outputs
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()
@@ -126,7 +129,7 @@ class CharToCharModel(ModelBase):
 
             metrics[MetricType.JaccardSimilarity] = jaccard_score
 
-        character_results = None
+        output_log = None
         if MetricType.LevenshteinDistance in self._metric_types:
             predicted_strings = [self._vocabulary_service.ids_to_string(
                 x) for x in predicted_characters]
@@ -139,17 +142,18 @@ class CharToCharModel(ModelBase):
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
 
             if output_characters:
-                character_results = []
-                ocr_texts_tensor, _, lengths, _, _ = batch
-                ocr_texts = ocr_texts_tensor.cpu().detach().tolist()
+                output_log = DataOutputLog()
+                ocr_texts = batch.character_sequences.cpu().detach().tolist()
                 for i in range(len(ocr_texts)):
                     input_string = self._vocabulary_service.ids_to_string(
                         ocr_texts[i])
 
-                    character_results.append(
-                        [input_string, predicted_strings[i], target_strings[i]])
+                    output_log.add_new_data(
+                        input_data=input_string,
+                        output_data=predicted_strings[i],
+                        true_data=target_strings[i])
 
-        return metrics, character_results
+        return metrics, output_log
 
     @overrides
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:

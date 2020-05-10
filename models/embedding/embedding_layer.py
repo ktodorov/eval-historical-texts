@@ -221,7 +221,7 @@ class EmbeddingLayer(ModelBase):
         pretrained_embedding_size = subword_embeddings.shape[2]
 
         new_character_embeddings = torch.zeros(
-            (batch_size, character_embeddings.shape[1], character_embeddings.shape[2] + subword_embeddings.shape[2])).to(self._arguments_service.device)
+            (batch_size, character_embeddings.shape[1], character_embeddings.shape[2] + subword_embeddings.shape[2])).to(self._device)
 
         new_character_embeddings[:, :,
                                  :character_embeddings.shape[2]] = character_embeddings
