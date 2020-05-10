@@ -10,6 +10,7 @@ class PretrainedRepresentationsOptions:
             pretrained_max_length: int = None,
             pretrained_model: PretrainedModel = PretrainedModel.BERT,
             fine_tune_pretrained: bool = False,
+            fine_tune_after_convergence: bool = False,
             fasttext_model: str = None,
             fasttext_model_size: int = None):
         self.include_pretrained_model = include_pretrained_model
@@ -18,6 +19,7 @@ class PretrainedRepresentationsOptions:
         self.pretrained_max_length = pretrained_max_length
         self.pretrained_model = pretrained_model
         self.fine_tune_pretrained = fine_tune_pretrained
+        self.fine_tune_after_convergence = fine_tune_after_convergence
         self.include_fasttext_model = include_fasttext_model
         self.fasttext_model = fasttext_model
         self.fasttext_model_size = fasttext_model_size

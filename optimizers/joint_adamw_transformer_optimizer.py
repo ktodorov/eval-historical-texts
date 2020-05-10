@@ -19,7 +19,7 @@ class JointAdamWTransformerOptimizer(OptimizerBase):
         self._weight_decay = arguments_service.weight_decay
 
     def _init_optimizer(self) -> Optimizer:
-        model1_parameters, model2_parameters = self._model.parameters()
+        model1_parameters, model2_parameters = self._model.optimizer_parameters()
         optimizer1 = AdamW(model1_parameters, lr=self._learning_rate, weight_decay=self._weight_decay)
         optimizer2 = AdamW(model2_parameters, lr=self._learning_rate, weight_decay=self._weight_decay)
         return (optimizer1, optimizer2)

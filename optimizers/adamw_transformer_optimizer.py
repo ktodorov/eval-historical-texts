@@ -19,7 +19,7 @@ class AdamWTransformerOptimizer(OptimizerBase):
         self._weight_decay = arguments_service.weight_decay
 
     def _init_optimizer(self) -> Optimizer:
-        optimizer = AdamW(self._model.parameters(), lr=self._learning_rate, weight_decay=self._weight_decay)
+        optimizer = AdamW(self._model.optimizer_parameters(), lr=self._learning_rate, weight_decay=self._weight_decay)
         return optimizer
 
     @overrides

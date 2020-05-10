@@ -45,6 +45,7 @@ class NERPredictor(ModelBase):
 
         self._metrics_service = metrics_service
         self._process_service = process_service
+        self._arguments_service = arguments_service
 
         self.device = arguments_service.device
         self.number_of_tags = process_service.get_labels_amount()
@@ -59,6 +60,7 @@ class NERPredictor(ModelBase):
             pretrained_max_length=arguments_service.pretrained_max_length,
             pretrained_model=arguments_service.pretrained_model,
             fine_tune_pretrained=arguments_service.fine_tune_pretrained,
+            fine_tune_after_convergence=arguments_service.fine_tune_after_convergence,
             include_fasttext_model=arguments_service.include_fasttext_model,
             fasttext_model=arguments_service.fasttext_model,
             fasttext_model_size=arguments_service.fasttext_model_size)
@@ -98,7 +100,8 @@ class NERPredictor(ModelBase):
                 start_token_id=start_token_id,
                 stop_token_id=stop_token_id,
                 pad_token_id=self._pad_idx,
-                none_id=self._process_service.get_entity_label('O', entity_tag_type),
+                none_id=self._process_service.get_entity_label(
+                    'O', entity_tag_type),
                 use_weighted_loss=arguments_service.use_weighted_loss)
             for i, (entity_tag_type, number_of_tags) in enumerate(self.number_of_tags.items())
         ])
@@ -117,7 +120,8 @@ class NERPredictor(ModelBase):
 
         for i, entity_tag_type in enumerate(self._entity_tag_types):
             mask = self._create_mask(rnn_outputs[entity_tag_type], lengths)
-            loss, prediction = self._crf_layers[i].forward(rnn_outputs[entity_tag_type], lengths, batch_representation.targets[entity_tag_type], mask)
+            loss, prediction = self._crf_layers[i].forward(
+                rnn_outputs[entity_tag_type], lengths, batch_representation.targets[entity_tag_type], mask)
             losses[entity_tag_type] = loss
             predictions[entity_tag_type] = prediction
 
@@ -142,13 +146,16 @@ class NERPredictor(ModelBase):
 
             predictions = output[entity_tag_type].cpu().detach().numpy()
             current_targets = targets[entity_tag_type].cpu().detach().numpy()
-            none_idx = self._process_service.get_entity_label('O', entity_tag_type)
+            none_idx = self._process_service.get_entity_label(
+                'O', entity_tag_type)
 
-            mask = np.where(((current_targets != self._pad_idx) & (current_targets != none_idx)), True, False)
+            mask = np.where(((current_targets != self._pad_idx) & (
+                current_targets != none_idx)), True, False)
 
             # if current batch has no targets other than O, we calculate the F1 score on those instead
             if mask.sum() == 0:
-                mask = np.where((current_targets != self._pad_idx), True, False)
+                mask = np.where(
+                    (current_targets != self._pad_idx), True, False)
 
             predicted_labels = predictions[mask]
             target_labels = current_targets[mask]
@@ -181,7 +188,7 @@ class NERPredictor(ModelBase):
                     predicted_string = ','.join(
                         [self._process_service.get_entity_by_label(predicted_label, entity_tag_type) for predicted_label in predictions[i][:lengths[i]]])
                     target_string = ','.join([self._process_service.get_entity_by_label(target_label, entity_tag_type)
-                                            for target_label in current_targets[i][:lengths[i]]])
+                                              for target_label in current_targets[i][:lengths[i]]])
 
                     output_log.add_new_data(
                         output_data=predicted_string,
@@ -230,3 +237,27 @@ class NERPredictor(ModelBase):
         mask = torch.le(maskTemp, lengths.view(batch_size, 1).expand(
             batch_size, sent_len)).to(self.device)
         return mask
+
+    @overrides
+    def optimizer_parameters(self):
+        if not self._arguments_service.fine_tune_learning_rate:
+            return self.parameters()
+
+        pretrained_layer_parameters = self.rnn_encoder._embedding_layer._pretrained_layer.parameters()
+        model_parameters = [
+            param
+            for param in self.parameters()
+            if param not in pretrained_layer_parameters
+        ]
+
+        result = [
+            {
+                'params': model_parameters
+            },
+            {
+                'params': pretrained_layer_parameters,
+                'lr': self._arguments_service.fine_tune_learning_rate
+            }
+        ]
+
+        return result

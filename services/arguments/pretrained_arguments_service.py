@@ -39,6 +39,8 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
                             help='If true, the loaded pre-trained model will be fine-tuned instead of being frozen. Default is `false`')
         parser.add_argument('--fine-tune-after-convergence', action='store_true',
                             help='If true, the loaded pre-trained model will be fine-tuned but only once the full model has converged. Default is `false`')
+        parser.add_argument("--fine-tune-learning-rate", type=float, default=None,
+                            help="Different learning rate to use for pre-trained model. If None is given, then the global learning rate will be used. Default is `None`.")
 
     @property
     def pretrained_weights(self) -> str:
@@ -84,3 +86,6 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
     def fine_tune_after_convergence(self) -> bool:
         return self._get_argument('fine_tune_after_convergence')
 
+    @property
+    def fine_tune_learning_rate(self) -> float:
+        return self._get_argument('fine_tune_learning_rate')

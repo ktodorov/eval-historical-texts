@@ -20,7 +20,7 @@ class SGDOptimizer(OptimizerBase):
 
     def _init_optimizer(self) -> Optimizer:
         optimizer = optim.SGD(
-            self._model.parameters(),
+            self._model.optimizer_parameters(),
             momentum=self._momentum,
             weight_decay=self._weight_decay,
             lr=self._learning_rate)

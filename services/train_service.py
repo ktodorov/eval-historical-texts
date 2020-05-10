@@ -51,6 +51,13 @@ class TrainService:
         self.data_loader_train: DataLoader = None
         self.data_loader_validation: DataLoader = None
 
+        self._initial_patience = self._arguments_service.patience
+        # if we are going to fine-tune after initial convergence
+        # then we set a low patience first and use the real one in
+        # the second training iteration set
+        if self._arguments_service.fine_tune_after_convergence:
+            self._initial_patience = 5
+
     def train(self) -> bool:
         """
          main training function
@@ -61,13 +68,7 @@ class TrainService:
             self._log_service.initialize_evaluation()
 
             best_metrics = Metric(amount_limit=None)
-            patience = self._arguments_service.patience
-
-            # if we are going to fine-tune after initial convergence
-            # then we set a low patience first and use the real one in
-            # the second training iteration set
-            if self._arguments_service.fine_tune_after_convergence:
-                patience = 5
+            patience = self._initial_patience
 
             metric = Metric(amount_limit=self._arguments_service.eval_freq)
 
@@ -105,8 +106,22 @@ class TrainService:
                 sys.stdout.flush()
 
                 if patience == 0:
-                    if (self._arguments_service.reset_training_on_early_stop and resets_left > 0 and reset_epoch_limit > epoch):
-                        patience = self._arguments_service.patience
+                    # we only prompt the model for changes on convergence once
+                    should_start_again = not model_has_converged and self._model.on_convergence()
+                    if should_start_again:
+                        model_checkpoint = self._load_model()
+                        if model_checkpoint is not None:
+                            best_metrics = model_checkpoint.best_metrics
+                            start_epoch = model_checkpoint.epoch
+                            start_iteration = model_checkpoint.iteration
+                            resets_left = model_checkpoint.resets_left
+                            metric.initialize(best_metrics)
+
+                        self._initial_patience = self._arguments_service.patience
+                        patience = self._initial_patience
+                        epoch += 1
+                    elif (self._arguments_service.reset_training_on_early_stop and resets_left > 0 and reset_epoch_limit > epoch):
+                        patience = self._initial_patience
                         resets_left -= 1
                         self._log_service.log_summary(
                             key='Resets left', value=resets_left)
@@ -114,14 +129,8 @@ class TrainService:
                         print(
                             f'Resetting training due to early stop activated. Resets left: {resets_left}')
                     else:
-                        # we only prompt the model for changes on convergence once
-                        should_start_again = not model_has_converged and self._model.on_convergence()
-                        if should_start_again:
-                            patience = self._arguments_service.patience
-                            epoch += 1
-                        else:
-                            print('Stopping training due to depleted patience')
-                            break
+                        print('Stopping training due to depleted patience')
+                        break
                 else:
                     epoch += 1
 
@@ -338,6 +347,6 @@ class TrainService:
 
         self._log_service.log_summary(
             key='Best loss', value=best_metrics.get_current_loss())
-        patience = self._arguments_service.patience
+        patience = self._initial_patience
 
         return best_metrics, patience

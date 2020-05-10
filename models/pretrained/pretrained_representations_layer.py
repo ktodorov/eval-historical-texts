@@ -1,5 +1,5 @@
 import os
-from transformers import BertModel, CamembertModel
+from transformers import PreTrainedModel, BertModel, CamembertModel
 import fasttext
 
 import torch
@@ -15,6 +15,7 @@ from enums.pretrained_model import PretrainedModel
 
 from models.model_base import ModelBase
 
+
 class PretrainedRepresentationsLayer(ModelBase):
     def __init__(
             self,
@@ -24,13 +25,14 @@ class PretrainedRepresentationsLayer(ModelBase):
         super().__init__()
 
         self._device = device
-        self.do_not_save: bool = not pretrained_representations_options.fine_tune_pretrained
+        self.do_not_save: bool = (not pretrained_representations_options.fine_tune_pretrained and
+                                  not pretrained_representations_options.fine_tune_after_convergence)
 
         self._include_pretrained = pretrained_representations_options.include_pretrained_model
         self._pretrained_model_size = pretrained_representations_options.pretrained_model_size
         self._pretrained_weights = pretrained_representations_options.pretrained_weights
         self._pretrained_max_length = pretrained_representations_options.pretrained_max_length
-        self._pretrained_model = None
+        self._pretrained_model: PreTrainedModel = None
 
         self._fine_tune_pretrained = pretrained_representations_options.fine_tune_pretrained
 
@@ -48,9 +50,6 @@ class PretrainedRepresentationsLayer(ModelBase):
                 self._pretrained_model.train()
             else:
                 self._pretrained_model.eval()
-
-            for param in self._pretrained_model.parameters():
-                param.requires_grad = False
 
         if self._include_fasttext_model:
             assert pretrained_representations_options.fasttext_model is not None, 'fast text model is not supplied when include-fasttext-model is set to true'
@@ -92,14 +91,7 @@ class PretrainedRepresentationsLayer(ModelBase):
 
         return fasttext_tensor
 
+    @property
     @overrides
-    def train(self, mode=True):
-        # If fine-tuning is disabled, we don't set the module to train mode
-        if mode and not self._fine_tune_pretrained:
-            return
-
-        super().train(mode)
-
-    @overrides
-    def eval(self):
-        super().eval()
+    def keep_frozen(self) -> bool:
+        return not self._fine_tune_pretrained

@@ -126,6 +126,16 @@ if [ ! -z "$FINETUNE" ]
 then
     FINETUNEARG="--fine-tune-pretrained"
     FTP="-tune"
+elif [ ! -z "$FINETUNEAFTERCONVERGENCE" ]
+then
+    FINETUNEARG="--fine-tune-after-convergence"
+    FTP="-tune-ac"
+fi
+
+if [ ! -z "$FINETUNELR" ]
+then
+    FINETUNEARG="$FINETUNEARG --fine-tune-learning-rate $FINETUNELR"
+    FTP="$FTP$FINETUNELR"
 fi
 
 WEIGHTEDLOSSARG=""

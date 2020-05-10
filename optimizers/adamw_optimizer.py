@@ -18,7 +18,7 @@ class AdamWOptimizer(OptimizerBase):
 
     def _init_optimizer(self) -> Optimizer:
         optimizer = optim.AdamW(
-            self._model.parameters(),
+            self._model.optimizer_parameters(),
             lr=self._learning_rate,
             weight_decay=self._weight_decay)
 
