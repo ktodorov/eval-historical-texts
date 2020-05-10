@@ -37,6 +37,8 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
                             help="Pretrained model that will be used to tokenize strings and generate embeddings")
         parser.add_argument('--fine-tune-pretrained', action='store_true',
                             help='If true, the loaded pre-trained model will be fine-tuned instead of being frozen. Default is `false`')
+        parser.add_argument('--fine-tune-after-convergence', action='store_true',
+                            help='If true, the loaded pre-trained model will be fine-tuned but only once the full model has converged. Default is `false`')
 
     @property
     def pretrained_weights(self) -> str:
@@ -77,4 +79,8 @@ class PretrainedArgumentsService(ArgumentsServiceBase):
     @property
     def fine_tune_pretrained(self) -> bool:
         return self._get_argument('fine_tune_pretrained')
+
+    @property
+    def fine_tune_after_convergence(self) -> bool:
+        return self._get_argument('fine_tune_after_convergence')
 

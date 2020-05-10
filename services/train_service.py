@@ -20,7 +20,7 @@ from entities.data_output_log import DataOutputLog
 
 from enums.metric_type import MetricType
 
-from services.arguments.arguments_service_base import ArgumentsServiceBase
+from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 from services.dataloader_service import DataLoaderService
 from services.file_service import FileService
 from services.log_service import LogService
@@ -31,7 +31,7 @@ from transformers import BertTokenizer
 class TrainService:
     def __init__(
             self,
-            arguments_service: ArgumentsServiceBase,
+            arguments_service: PretrainedArgumentsService,
             dataloader_service: DataLoaderService,
             loss_function: LossBase,
             optimizer: OptimizerBase,
@@ -62,6 +62,13 @@ class TrainService:
 
             best_metrics = Metric(amount_limit=None)
             patience = self._arguments_service.patience
+
+            # if we are going to fine-tune after initial convergence
+            # then we set a low patience first and use the real one in
+            # the second training iteration set
+            if self._arguments_service.fine_tune_after_convergence:
+                patience = 5
+
             metric = Metric(amount_limit=self._arguments_service.eval_freq)
 
             start_epoch = 0
@@ -85,6 +92,7 @@ class TrainService:
 
             # run
             epoch = start_epoch
+            model_has_converged = False
             while epoch < self._arguments_service.epochs:
                 self._log_service.log_summary('Epoch', epoch)
 
@@ -106,8 +114,14 @@ class TrainService:
                         print(
                             f'Resetting training due to early stop activated. Resets left: {resets_left}')
                     else:
-                        print('Stopping training due to depleted patience')
-                        break
+                        # we only prompt the model for changes on convergence once
+                        should_start_again = not model_has_converged and self._model.on_convergence()
+                        if should_start_again:
+                            patience = self._arguments_service.patience
+                            epoch += 1
+                        else:
+                            print('Stopping training due to depleted patience')
+                            break
                 else:
                     epoch += 1
 

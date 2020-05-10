@@ -115,6 +115,15 @@ class ModelBase(nn.Module):
 
         return result
 
+    def on_convergence(self) -> bool:
+        result = False
+
+        for module_name, module in self.named_modules():
+            if isinstance(module, ModelBase):
+                result = result or module.on_convergence()
+
+        return result
+
     @overrides
     def state_dict(self, destination=None, prefix='', keep_vars=False):
         if self.do_not_save:

@@ -119,3 +119,13 @@ class RNNEncoder(ModelBase):
             outputs[entity_tag_type] = output
 
         return outputs, batch_representation.subword_lengths
+
+    @overrides
+    def on_convergence(self) -> bool:
+        if not self._embedding_layer._pretrained_layer._fine_tune_pretrained:
+            print('Starting to fine-tune BERT...')
+            self._embedding_layer._pretrained_layer._fine_tune_pretrained = True
+            self._embedding_layer._pretrained_layer.do_not_save = False
+            return True
+
+        return False
