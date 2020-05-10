@@ -135,7 +135,7 @@ def register_optimizer(
               configuration == Configuration.CharacterToCharacter or
               configuration == Configuration.CharacterToCharacterEncoderDecoder):
             optimizer = providers.Singleton(
-                AdamOptimizer,
+                AdamWOptimizer,
                 arguments_service=arguments_service,
                 model=model
             )

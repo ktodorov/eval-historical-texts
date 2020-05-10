@@ -10,6 +10,7 @@ from entities.metric import Metric
 from entities.batch_representation import BatchRepresentation
 from entities.options.embedding_layer_options import EmbeddingLayerOptions
 from entities.options.pretrained_representations_options import PretrainedRepresentationsOptions
+from entities.data_output_log import DataOutputLog
 
 from enums.metric_type import MetricType
 from enums.embedding_type import EmbeddingType
@@ -127,12 +128,12 @@ class SequenceModel(ModelBase):
 
         if self._arguments_service.use_beam_search:
             outputs, targets = self._decoding_service.beam_decode(
-                targets,
+                input_batch.targets,
                 encoder_context,
                 (lambda x, y, z: self._decoder.forward(x, y, z)))
         else:
             outputs, targets = self._decoding_service.greedy_decode(
-                targets,
+                input_batch.targets,
                 encoder_context,
                 (lambda x, y, z: self._decoder.forward(x, y, z)))
 
@@ -177,7 +178,7 @@ class SequenceModel(ModelBase):
 
             metrics[MetricType.JaccardSimilarity] = jaccard_score
 
-        character_results = None
+        output_log = None
         if MetricType.LevenshteinDistance in self._metric_types:
             predicted_strings = [self._vocabulary_service.ids_to_string(
                 x) for x in predicted_characters]
@@ -190,17 +191,18 @@ class SequenceModel(ModelBase):
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
 
             if output_characters:
-                character_results = []
-                ocr_texts_tensor, _, lengths, _, _ = batch
-                ocr_texts = ocr_texts_tensor.cpu().detach().tolist()
+                output_log = DataOutputLog()
+                ocr_texts = batch.character_sequences.cpu().detach().tolist()
                 for i in range(len(ocr_texts)):
                     input_string = self._vocabulary_service.ids_to_string(
                         ocr_texts[i])
 
-                    character_results.append(
-                        [input_string, predicted_strings[i], target_strings[i]])
+                    output_log.add_new_data(
+                        input_data=input_string,
+                        output_data=predicted_strings[i],
+                        true_data=target_strings[i])
 
-        return metrics, character_results
+        return metrics, output_log
 
     @overrides
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
@@ -208,4 +210,37 @@ class SequenceModel(ModelBase):
             return True
 
         result = best_metric.get_current_loss() > new_metric.get_current_loss()
+        return result
+
+    @overrides
+    def optimizer_parameters(self):
+        if not self._arguments_service.fine_tune_learning_rate:
+            return self.parameters()
+
+        embedding_layer = None
+        if self._shared_embedding_layer is not None:
+            embedding_layer = self._shared_embedding_layer
+        else:
+            embedding_layer = self._encoder._embedding_layer
+
+        if not embedding_layer._include_pretrained:
+            return self.parameters()
+
+        pretrained_layer_parameters = embedding_layer._pretrained_layer.parameters()
+        model_parameters = [
+            param
+            for param in self.parameters()
+            if param not in pretrained_layer_parameters
+        ]
+
+        result = [
+            {
+                'params': model_parameters
+            },
+            {
+                'params': pretrained_layer_parameters,
+                'lr': self._arguments_service.fine_tune_learning_rate
+            }
+        ]
+
         return result

@@ -24,7 +24,82 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --configuration char-to-char-encoder-decoder --learning-rate 1e-3 --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 128 --hidden-dimension 512 --encoder-embedding-size 32 --decoder-embedding-size 32 --share-embedding-layer --dropout 0.2 --number-of-layers 1 --bidirectional --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4300 --include-pretrained-model --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --use-beam-search --checkpoint-name pretr --validation-dataset-limit-size 1024 > output/char-to-char-enc-dec-bert-13.txt
+
+PRETR=""
+if [ ! -z "$INCLUDEPRETR" ]
+then
+    PRETR="-pretr"
+fi
+
+LEARNINGRATE="$LR"
+if [ -z "$LR" ]
+then
+    LEARNINGRATE="1e-3"
+fi
+
+HIDDENSIZE="$HIDDEN"
+if [ -z "$HIDDEN" ]
+then
+    HIDDENSIZE="512"
+fi
+
+EMBEDDINGSSIZE="$EMB"
+if [ -z "$EMB" ]
+then
+    EMBEDDINGSSIZE="32"
+fi
+
+NUMBERLAYERS="$LAYERS"
+if [ -z "$LAYERS" ]
+then
+    NUMBERLAYERS="1"
+fi
+
+BIDIRECTIONAL="--bidirectional"
+BIARG="-bi"
+if [ ! -z "$UNI" ]
+then
+    BIDIRECTIONAL=""
+    BIARG=""
+fi
+
+DROPOUT="$DR"
+if [ -z "$DR" ]
+then
+    DROPOUT="0.3"
+fi
+
+FINETUNEARG=""
+FTP=""
+if [ ! -z "$FINETUNE" ]
+then
+    FINETUNEARG="--fine-tune-pretrained"
+    FTP="-tune"
+elif [ ! -z "$FINETUNEAFTERCONVERGENCE" ]
+then
+    FINETUNEARG="--fine-tune-after-convergence"
+    FTP="-tune-ac"
+fi
+
+if [ ! -z "$FINETUNELR" ]
+then
+    FINETUNEARG="$FINETUNEARG --fine-tune-learning-rate $FINETUNELR"
+    FTP="$FTP$FINETUNELR"
+fi
+
+PATIENCEARG="$PATIENCE"
+if [ -z "$PATIENCE" ]
+then
+    PATIENCEARG="10"
+fi
+
+CHECKPOINTNAME=""
+if [ -z "$CHECKPOINT" ]
+then
+    CHECKPOINTNAME="english-$PRETR-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR$FTP"
+fi
+
+srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --patience $PATIENCEARG --configuration char-to-char-encoder-decoder --learning-rate $LEARNINGRATE --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 128 --hidden-dimension $HIDDENSIZE --encoder-embedding-size $EMBEDDINGSSIZE --decoder-embedding-size $EMBEDDINGSSIZE --share-embedding-layer --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $BIDIRECTIONAL --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4300 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --use-beam-search --checkpoint-name $CHECKPOINTNAME
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/

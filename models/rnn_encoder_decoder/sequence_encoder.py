@@ -60,7 +60,7 @@ class SequenceEncoder(ModelBase):
         embeddings = self._embedding_layer.forward(input_batch)
 
         x_packed = pack_padded_sequence(
-            embeddings, input_batch.lengths, batch_first=True)
+            embeddings, input_batch.character_lengths, batch_first=True)
 
         _, hidden = self.rnn.forward(x_packed)
 

@@ -111,6 +111,9 @@ class BatchRepresentation:
         list_to_modify: list,
         pad_idx: int,
         return_tensor: bool = True):
+        if isinstance(list_to_modify, torch.Tensor):
+            return list_to_modify, None
+
         if list_to_modify is None or len(list_to_modify) == 0:
             return (None, None)
 

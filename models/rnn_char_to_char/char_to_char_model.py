@@ -162,3 +162,27 @@ class CharToCharModel(ModelBase):
 
         result = best_metric.get_current_loss() > new_metric.get_current_loss()
         return result
+
+    @overrides
+    def optimizer_parameters(self):
+        if not self._arguments_service.fine_tune_learning_rate or not self._embedding_layer._include_pretrained:
+            return self.parameters()
+
+        pretrained_layer_parameters = self._embedding_layer._pretrained_layer.parameters()
+        model_parameters = [
+            param
+            for param in self.parameters()
+            if param not in pretrained_layer_parameters
+        ]
+
+        result = [
+            {
+                'params': model_parameters
+            },
+            {
+                'params': pretrained_layer_parameters,
+                'lr': self._arguments_service.fine_tune_learning_rate
+            }
+        ]
+
+        return result

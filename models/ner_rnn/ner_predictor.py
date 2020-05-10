@@ -240,7 +240,7 @@ class NERPredictor(ModelBase):
 
     @overrides
     def optimizer_parameters(self):
-        if not self._arguments_service.fine_tune_learning_rate:
+        if not self._arguments_service.fine_tune_learning_rate or not self.rnn_encoder._embedding_layer._include_pretrained:
             return self.parameters()
 
         pretrained_layer_parameters = self.rnn_encoder._embedding_layer._pretrained_layer.parameters()

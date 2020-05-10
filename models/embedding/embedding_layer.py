@@ -103,6 +103,8 @@ class EmbeddingLayer(ModelBase):
         word_embeddings = None
         character_embeddings = None
 
+        include_pretrained = self._include_pretrained and batch_representation.subword_sequences is not None
+
         if self._learn_word_embeddings:
             word_embeddings = self._word_embedding.forward(
                 batch_representation.word_sequences)
@@ -128,7 +130,7 @@ class EmbeddingLayer(ModelBase):
                     batch_representation.character_sequences,
                     batch_representation.subword_characters_count)
 
-        if self._include_pretrained:
+        if include_pretrained:
             pretrained_embeddings = self._pretrained_layer.get_pretrained_representation(
                 batch_representation.subword_sequences)
 
@@ -146,14 +148,14 @@ class EmbeddingLayer(ModelBase):
         if self._output_embedding_type == EmbeddingType.Character:
             result_embeddings = character_embeddings
 
-            if result_embeddings is None and not self._include_pretrained and not self._include_fasttext_model:
+            if result_embeddings is None and not include_pretrained and not self._include_fasttext_model:
                 raise Exception('Invalid configuration')
 
             if self._learn_subword_embeddings:
                 # TODO Concat sub-word embeddings to character embeddings
                 pass
 
-            if self._include_pretrained:
+            if include_pretrained:
                 result_embeddings = self._add_subword_to_character_embeddings(
                     result_embeddings,
                     pretrained_embeddings,
@@ -170,7 +172,7 @@ class EmbeddingLayer(ModelBase):
             if subword_embeddings is not None:
                 result_embeddings = subword_embeddings
 
-            if result_embeddings is None and not self._include_pretrained and not self._include_fasttext_model:
+            if result_embeddings is None and not include_pretrained and not self._include_fasttext_model:
                 raise Exception('Invalid configuration')
 
             if self._learn_character_embeddings:
@@ -180,7 +182,7 @@ class EmbeddingLayer(ModelBase):
                     character_embeddings,
                     batch_representation.subword_characters_count)
 
-            if self._include_pretrained:
+            if include_pretrained:
                 if result_embeddings is None:
                     result_embeddings = pretrained_embeddings
                 else:
