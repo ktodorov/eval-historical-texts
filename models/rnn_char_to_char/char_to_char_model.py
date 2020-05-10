@@ -97,7 +97,7 @@ class CharToCharModel(ModelBase):
                 self._arguments_service.device)
             padded_targets[:, :input_batch.targets.shape[1]
                            ] = input_batch.targets
-            input_batch.targets = padded_targets
+            input_batch._targets = padded_targets
 
         return output, input_batch.targets
 
