@@ -104,12 +104,6 @@ class NERDataset(DatasetBase):
             manual_features=feature_set,
             pad_idx=pad_idx)
 
-        # if we are going to merge the subwords, then we should sort using the original lengths, not the expanded ones
-        if self._arguments_service.merge_subwords:
-            lengths_tensor = torch.tensor(
-                original_lengths, device=self._device)
-            batch_representation.sort_batch(lengths_tensor)
-        else:
-            batch_representation.sort_batch()
+        batch_representation.sort_batch()
 
         return batch_representation
