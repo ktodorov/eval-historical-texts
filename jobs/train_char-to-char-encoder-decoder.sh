@@ -99,7 +99,7 @@ then
     CHECKPOINTNAME="english-$PRETR-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR$FTP"
 fi
 
-srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --patience $PATIENCEARG --configuration char-to-char-encoder-decoder --learning-rate $LEARNINGRATE --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 128 --hidden-dimension $HIDDENSIZE --encoder-embedding-size $EMBEDDINGSSIZE --decoder-embedding-size $EMBEDDINGSSIZE --share-embedding-layer --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $BIDIRECTIONAL --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4300 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME
+srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --patience $PATIENCEARG --configuration char-to-char-encoder-decoder --learning-rate $LEARNINGRATE --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 64 --hidden-dimension $HIDDENSIZE --encoder-embedding-size $EMBEDDINGSSIZE --decoder-embedding-size $EMBEDDINGSSIZE --share-embedding-layer --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $BIDIRECTIONAL --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4300 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME $FINETUNEARG
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/
