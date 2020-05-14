@@ -227,7 +227,8 @@ class TrainService:
                     epoch_num,
                     i,
                     data_loader_length,
-                    new_best)
+                    new_best,
+                    metric_log_key=self._model.metric_log_key)
 
                 self._log_service.log_summary(
                     key='Patience left', value=patience)
@@ -303,6 +304,8 @@ class TrainService:
             metric.add_accuracies(metrics_batch)
             metric.add_loss(loss_batch)
 
+        final_metric = self._model.calculate_overall_metrics()
+        metric.add_accuracies(final_metric)
         self._log_service.log_batch_results(full_output_log)
 
         assert not math.isnan(metric.get_current_loss(
