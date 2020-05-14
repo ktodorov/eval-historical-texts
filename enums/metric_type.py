@@ -4,5 +4,5 @@ class MetricType(ArgumentEnum):
     LevenshteinDistance = 'levenshtein-distance'
     JaccardSimilarity = 'jaccard-similarity'
     F1Score = 'f1-score'
-    PrecisionScore = 'precision-score'
-    RecallScore = 'recall-score'
+    PrecisionScore = 'precision'
+    RecallScore = 'recall'

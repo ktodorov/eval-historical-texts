@@ -73,9 +73,3 @@ class MetricsService:
     def calculate_euclidean_distance(self, list1: list, list2: list) -> float:
         euclidean_distance = scipy_distances.euclidean(list1, list2)
         return euclidean_distance
-
-    def _validate_tags_metrics(self, targets, predictions) -> bool:
-        target_labels = set(targets)
-        predicted_labels = set(predictions)
-        result = len(target_labels) == len(predicted_labels)
-        return result

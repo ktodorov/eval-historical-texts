@@ -17,7 +17,6 @@ from enums.metric_type import MetricType
 from services.data_service import DataService
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 
-
 class ModelBase(nn.Module):
     def __init__(
             self,
@@ -28,6 +27,8 @@ class ModelBase(nn.Module):
         self._data_service = data_service
         self._arguments_service = arguments_service
         self.do_not_save: bool = False
+
+        self.metric_log_key: str = None
 
     def forward(self, batch_representation: BatchRepresentation):
         return None
@@ -164,3 +165,7 @@ class ModelBase(nn.Module):
 
     def optimizer_parameters(self):
         return self.parameters()
+
+
+    def calculate_overall_metrics(self, metric: Metric) -> Dict[str, float]:
+        return {}

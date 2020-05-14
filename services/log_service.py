@@ -71,7 +71,8 @@ class LogService:
             epoch: int,
             iteration: int,
             iterations: int,
-            new_best: bool):
+            new_best: bool,
+            metric_log_key: str = None):
         """
         logs progress to user through tensorboard and terminal
         """
@@ -86,12 +87,18 @@ class LogService:
         validation_loss = validation_metric.get_current_loss()
         validation_accuracies = validation_metric.get_current_accuracies()
         if train_accuracies and len(train_accuracies) > 0:
-            train_accuracy = list(train_accuracies.values())[0]
+            if metric_log_key is not None:
+                train_accuracy = train_metric.get_accuracy_metric(metric_log_key)
+            else:
+                train_accuracy = list(train_accuracies.values())[0]
         else:
             train_accuracy = 0
 
         if validation_accuracies and len(validation_accuracies) > 0:
-            validation_accuracy = list(validation_accuracies.values())[0]
+            if metric_log_key is not None:
+                validation_accuracy = validation_metric.get_accuracy_metric(metric_log_key)
+            else:
+                validation_accuracy = list(validation_accuracies.values())[0]
         else:
             validation_accuracy = 0
 

@@ -70,6 +70,7 @@ from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
 from services.experiment_service import ExperimentService
 from services.decoding_service import DecodingService
+from services.tag_metrics_service import TagMetricsService
 
 import logging
 
@@ -231,6 +232,7 @@ def register_model(
         model_service: ModelService,
         process_service: ProcessServiceBase,
         decoding_service: DecodingService,
+        tag_metrics_service: TagMetricsService,
         joint_model: bool,
         configuration: Configuration):
 
@@ -299,7 +301,8 @@ def register_model(
                 metrics_service=metrics_service,
                 process_service=process_service,
                 tokenize_service=tokenize_service,
-                file_service=file_service)
+                file_service=file_service,
+                tag_metrics_service=tag_metrics_service)
 
     elif joint_model:
         model = providers.Singleton(
@@ -459,6 +462,10 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service,
         vocabulary_service=vocabulary_service)
 
+    tag_metrics_service = providers.Factory(
+        TagMetricsService
+    )
+
     model = register_model(
         arguments_service=arguments_service,
         file_service=file_service,
@@ -471,6 +478,7 @@ class IocContainer(containers.DeclarativeContainer):
         model_service=model_service,
         process_service=process_service,
         decoding_service=decoding_service,
+        tag_metrics_service=tag_metrics_service,
         joint_model=joint_model,
         configuration=configuration)
 
