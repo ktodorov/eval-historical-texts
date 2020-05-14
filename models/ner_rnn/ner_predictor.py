@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-
 import numpy as np
 
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -16,6 +15,7 @@ from entities.options.pretrained_representations_options import PretrainedRepres
 from enums.metric_type import MetricType
 from enums.tag_measure_averaging import TagMeasureAveraging
 from enums.tag_measure_type import TagMeasureType
+from enums.tag_metric import TagMetric
 from enums.entity_tag_type import EntityTagType
 from enums.word_feature import WordFeature
 
@@ -29,6 +29,7 @@ from services.metrics_service import MetricsService
 from services.file_service import FileService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.process.ner_process_service import NERProcessService
+from services.tag_metrics_service import TagMetricsService
 
 
 class NERPredictor(ModelBase):
@@ -40,12 +41,14 @@ class NERPredictor(ModelBase):
             metrics_service: MetricsService,
             process_service: NERProcessService,
             tokenize_service: BaseTokenizeService,
-            file_service: FileService):
+            file_service: FileService,
+            tag_metrics_service: TagMetricsService):
         super().__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
         self._process_service = process_service
         self._arguments_service = arguments_service
+        self._tag_metrics_service = tag_metrics_service
 
         self.device = arguments_service.device
         self.number_of_tags = process_service.get_labels_amount()
@@ -106,9 +109,16 @@ class NERPredictor(ModelBase):
             for i, (entity_tag_type, number_of_tags) in enumerate(self.number_of_tags.items())
         ])
 
-        self.tag_measure_averages = [
-            TagMeasureAveraging.Macro, TagMeasureAveraging.Micro, TagMeasureAveraging.Weighted]
-        self.tag_measure_types = [TagMeasureType.Strict]
+        self.tag_measure_averages = [TagMeasureAveraging.Micro]
+        self.tag_measure_types = [
+            TagMeasureType.Partial, TagMeasureType.Strict]
+
+        self.metric_log_key = self._create_measure_key(
+            TagMetric.F1ScoreMicro,
+            TagMeasureType.Partial,
+            EntityTagType.LiteralCoarse if EntityTagType.LiteralCoarse in self._entity_tag_types else self._entity_tag_types[
+                0],
+            'all')
 
     @overrides
     def forward(self, batch_representation: BatchRepresentation):
@@ -146,55 +156,61 @@ class NERPredictor(ModelBase):
 
             predictions = output[entity_tag_type].cpu().detach().numpy()
             current_targets = targets[entity_tag_type].cpu().detach().numpy()
-            none_idx = self._process_service.get_entity_label(
-                'O', entity_tag_type)
 
-            mask = np.where(((current_targets != self._pad_idx) & (
-                current_targets != none_idx)), True, False)
+            main_entities = self._process_service.get_main_entities(
+                entity_tag_type)
+            prediction_tags = []
+            target_tags = []
+            for b in range(batch.batch_size):
+                current_prediction_tags = [self._process_service.get_entity_by_label(
+                    token, entity_tag_type) for token in predictions[b][:lengths[b]] if token != self._pad_idx]
+                prediction_tags.append(current_prediction_tags)
 
-            # if current batch has no targets other than O, we calculate the F1 score on those instead
-            if mask.sum() == 0:
-                mask = np.where(
-                    (current_targets != self._pad_idx), True, False)
+                current_target_tags = [self._process_service.get_entity_by_label(
+                    token, entity_tag_type) for token in current_targets[b][:lengths[b]] if token != self._pad_idx]
+                target_tags.append(current_target_tags)
 
-            predicted_labels = predictions[mask]
-            target_labels = current_targets[mask]
-
-            for tag_measure_averaging in self.tag_measure_averages:
-                for tag_measure_type in self.tag_measure_types:
-                    (precision_score, recall_score, f1_score, _) = self._metrics_service.calculate_precision_recall_fscore_support(
-                        predicted_labels,
-                        target_labels,
-                        tag_measure_type,
-                        tag_measure_averaging)
-
-                    if MetricType.F1Score in self._metric_types:
-                        key = self._create_measure_key(
-                            MetricType.F1Score, tag_measure_averaging, tag_measure_type, entity_tag_type)
-                        metrics[key] = f1_score
-
-                    if MetricType.PrecisionScore in self._metric_types:
-                        key = self._create_measure_key(
-                            MetricType.PrecisionScore, tag_measure_averaging, tag_measure_type, entity_tag_type)
-                        metrics[key] = precision_score
-
-                    if MetricType.RecallScore in self._metric_types:
-                        key = self._create_measure_key(
-                            MetricType.RecallScore, tag_measure_averaging, tag_measure_type, entity_tag_type)
-                        metrics[key] = recall_score
+            if self.training:
+                results, results_per_type = self._tag_metrics_service.calculate_batch(
+                    prediction_tags, target_tags, main_entities)
+                self.update_metrics(results, results_per_type,
+                                    metrics, entity_tag_type)
+            else:
+                self._tag_metrics_service.add_predictions(
+                    prediction_tags, target_tags, main_entities, entity_tag_type)
 
             if output_characters:
-                for i in range(batch.batch_size):
-                    predicted_string = ','.join(
-                        [self._process_service.get_entity_by_label(predicted_label, entity_tag_type) for predicted_label in predictions[i][:lengths[i]]])
-                    target_string = ','.join([self._process_service.get_entity_by_label(target_label, entity_tag_type)
-                                              for target_label in current_targets[i][:lengths[i]]])
+                for b in range(batch.batch_size):
+                    predicted_string = ','.join(prediction_tags[b])
+                    target_string = ','.join(target_tags[b])
 
                     output_log.add_new_data(
                         output_data=predicted_string,
                         true_data=target_string)
 
         return metrics, output_log
+
+    def update_metrics(self, results, results_per_type, metrics, entity_tag_type):
+        training_metrics = [TagMetric.F1ScoreMicro,
+                            TagMetric.PrecisionMicro,
+                            TagMetric.RecallMicro]
+
+        for result_type, type_results in results.items():
+            for metric_type, results_per_metric in type_results.items():
+                if not self.training or metric_type in training_metrics:
+                    measure_key = self._create_measure_key(
+                        metric_type, result_type, entity_tag_type, 'all')
+                    metrics[measure_key] = results_per_metric
+
+        for entity_type, results_per_entity in results_per_type.items():
+            for result_type, type_results in results_per_entity.items():
+                for metric_type, results_per_metric in type_results.items():
+                    if not self.training or metric_type in training_metrics:
+                        measure_key = self._create_measure_key(
+                            metric_type, result_type, entity_tag_type, entity_type)
+                        metrics[measure_key] = results_per_metric
+
+        return metrics
 
     @overrides
     def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
@@ -203,10 +219,10 @@ class NERPredictor(ModelBase):
 
         keys = [
             self._create_measure_key(
-                MetricType.F1Score,
-                TagMeasureAveraging.Macro,
-                TagMeasureType.Strict,
-                entity_tag_type)
+                TagMetric.F1ScoreMicro,
+                TagMeasureType.Partial,
+                entity_tag_type,
+                'all')
             for entity_tag_type in self._entity_tag_types
         ]
 
@@ -222,11 +238,11 @@ class NERPredictor(ModelBase):
 
     def _create_measure_key(
             self,
-            metric_type: MetricType,
-            tag_measure_averaging: TagMeasureAveraging,
+            metric_type: TagMetric,
             tag_measure_type: TagMeasureType,
-            entity_tag_type: EntityTagType):
-        key = f'{metric_type.value}-{tag_measure_averaging.value}-{tag_measure_type.value}-{entity_tag_type.value}'
+            entity_tag_type: EntityTagType,
+            entity_str: str):
+        key = f'{metric_type.value}-{tag_measure_type.value}-{entity_str}-{entity_tag_type.value}'
         return key
 
     def _create_mask(self, rnn_outputs: torch.Tensor, lengths: torch.Tensor):
@@ -261,3 +277,15 @@ class NERPredictor(ModelBase):
         ]
 
         return result
+
+    @overrides
+    def calculate_overall_metrics(self) -> Dict[str, float]:
+        metrics: Dict[str, float] = {}
+        overall_stats = self._tag_metrics_service.calculate_overall_stats()
+        for entity_tag_type, (results, results_per_type) in overall_stats.items():
+            self.update_metrics(results, results_per_type,
+                                metrics, entity_tag_type)
+
+        self._tag_metrics_service.reset()
+
+        return metrics

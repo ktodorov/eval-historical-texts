@@ -115,6 +115,12 @@ class NERProcessService(ProcessServiceBase):
         else:
             raise Exception('Unsupported language')
 
+    def get_main_entities(self, entity_tag_type: EntityTagType) -> set:
+        entity_mapping_keys = [
+            key for key, value in self._entity_mappings[entity_tag_type].items() if value >= 4]
+        entities = set([x[2:] for x in entity_mapping_keys if x[2:] != ''])
+        return entities
+
     def _create_entity_mappings(
             self,
             train_ne_collection: NECollection,
