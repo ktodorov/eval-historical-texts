@@ -15,7 +15,6 @@ from enums.pretrained_model import PretrainedModel
 
 from models.model_base import ModelBase
 
-
 class PretrainedRepresentationsLayer(ModelBase):
     def __init__(
             self,
@@ -67,8 +66,49 @@ class PretrainedRepresentationsLayer(ModelBase):
         if self._pretrained_model is None:
             return []
 
-        output = self._pretrained_model.forward(input)
-        return output[0]
+        if input.shape[1] > self._pretrained_max_length:
+            overlap_size = 5
+            window_size = self._pretrained_max_length - (overlap_size * 2)
+            offset_pairs = self.get_split_indices(input.shape[1], window_size, overlap_size)
+            result_tensor = torch.zeros(input.shape[0], input.shape[1], self._pretrained_model_size, device=input.device)
+
+            for (start_offset, end_offset) in offset_pairs:
+                current_input = input[:, start_offset:end_offset]
+                current_output = self._pretrained_model.forward(current_input)
+                current_representations = current_output[0]
+
+                if start_offset > 0:
+                    result_tensor[:, start_offset+overlap_size:end_offset] = current_representations[:, overlap_size:]
+                    # we get the mean of the overlapping representations
+                    result_tensor[:, start_offset:start_offset+overlap_size] = torch.mean(
+                        torch.stack([
+                            result_tensor[:, start_offset:start_offset+overlap_size],
+                            current_representations[:, :overlap_size]]))
+                else:
+                    result_tensor[:, :end_offset] = current_representations
+
+        else:
+            output = self._pretrained_model.forward(input)
+            result_tensor = output[0]
+
+        return result_tensor
+
+    def get_split_indices(self, full_length: int, window_size: int, overlap_size=5):
+
+        offset_pairs = []
+        for position in range(0, full_length, window_size-overlap_size):
+            start_offset = position
+            end_offset = position + window_size
+
+            if end_offset > full_length:
+                end_offset = full_length
+
+            offset_pairs.append((start_offset, end_offset))
+
+            if end_offset >= full_length:
+                break
+
+        return offset_pairs
 
     def get_fasttext_representation(
             self,
