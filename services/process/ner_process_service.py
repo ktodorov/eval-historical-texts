@@ -15,6 +15,7 @@ from entities.ne_line import NELine
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
+from services.data_service import DataService
 from services.vocabulary_service import VocabularyService
 from services.process.process_service_base import ProcessServiceBase
 
@@ -25,12 +26,15 @@ class NERProcessService(ProcessServiceBase):
             arguments_service: NERArgumentsService,
             vocabulary_service: VocabularyService,
             file_service: FileService,
-            tokenize_service: BaseTokenizeService):
+            tokenize_service: BaseTokenizeService,
+            data_service: DataService):
         super().__init__()
 
         self._arguments_service = arguments_service
         self._tokenize_service = tokenize_service
         self._file_service = file_service
+        self._data_service = data_service
+
         self._entity_tag_types = arguments_service.entity_tag_types
 
         self._data_version = "1.1"
@@ -59,7 +63,7 @@ class NERProcessService(ProcessServiceBase):
             self._train_ne_collection,
             self._validation_ne_collection)
 
-        vocabulary_data = self._create_vocabulary_data()
+        vocabulary_data = self._load_vocabulary_data(language_suffix, self._data_version)
         vocabulary_service.initialize_vocabulary_data(vocabulary_data)
 
     def preprocess_data(
@@ -179,7 +183,18 @@ class NERProcessService(ProcessServiceBase):
         result = self._validation_ne_collection.lines[idx].position_changes
         return result
 
-    def _create_vocabulary_data(self):
+    def _load_vocabulary_data(self, language_suffix: str, data_version: str):
+        pickles_path = self._file_service.get_pickles_path()
+        filename = f'char-vocab-{language_suffix}-{data_version}'
+        character_vocabulary_data = self._data_service.load_python_obj(
+            pickles_path,
+            filename,
+            print_on_error=False)
+
+        if character_vocabulary_data is not None:
+            return character_vocabulary_data
+
+
         unique_characters = set()
 
         for ne_line in self._train_ne_collection.lines:
@@ -194,7 +209,7 @@ class NERProcessService(ProcessServiceBase):
             unique_characters = unique_characters.union(
                 current_unique_characters)
 
-        unique_characters = list(unique_characters)
+        unique_characters = sorted(list(unique_characters))
         unique_characters.insert(0, '[PAD]')
         unique_characters.insert(1, '[UNK]')
         unique_characters.insert(2, '[CLS]')
@@ -207,5 +222,11 @@ class NERProcessService(ProcessServiceBase):
             'int2char': int2char,
             'char2int': char2int
         }
+
+        self._data_service.save_python_obj(
+            vocabulary_data,
+            pickles_path,
+            filename,
+            print_success=False)
 
         return vocabulary_data

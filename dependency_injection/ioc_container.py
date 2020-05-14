@@ -318,7 +318,8 @@ def register_process_service(
         arguments_service: ArgumentsServiceBase,
         file_service: FileService,
         tokenize_service: BaseTokenizeService,
-        vocabulary_service: VocabularyService):
+        vocabulary_service: VocabularyService,
+        data_service: DataService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
@@ -326,7 +327,8 @@ def register_process_service(
             arguments_service=arguments_service,
             vocabulary_service=vocabulary_service,
             file_service=file_service,
-            tokenize_service=tokenize_service)
+            tokenize_service=tokenize_service,
+            data_service=data_service)
     elif challenge == Challenge.SemanticChange and configuration == Configuration.CBOW:
         process_service = providers.Singleton(
             CBOWProcessService,
@@ -424,7 +426,8 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service,
         file_service=file_service,
         tokenize_service=tokenize_service,
-        vocabulary_service=vocabulary_service)
+        vocabulary_service=vocabulary_service,
+        data_service=data_service)
 
     dataset_service = providers.Factory(
         DatasetService,
