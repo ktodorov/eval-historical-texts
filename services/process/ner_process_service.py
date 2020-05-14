@@ -78,24 +78,35 @@ class NERProcessService(ProcessServiceBase):
         with open(file_path, 'r', encoding='utf-8') as tsv_file:
             reader = csv.DictReader(tsv_file, dialect=csv.excel_tab)
             current_sentence = NELine()
+            split_documents = self._arguments_service.split_documents
 
             for i, row in enumerate(reader):
-                if row['TOKEN'].startswith('#'):
+                if ((split_documents and row['TOKEN'].startswith('# segment')) or
+                    (not split_documents and row['TOKEN'].startswith('# document'))):
+                    if len(current_sentence.tokens) > 0:
+                        current_sentence.tokenize_text(
+                            self._tokenize_service,
+                            replace_all_numbers=self._arguments_service.replace_all_numbers,
+                            expand_targets=not self._arguments_service.merge_subwords)
+
+                        collection.add_line(current_sentence)
+                        current_sentence = NELine()
+
+                        if limit and len(collection) >= limit:
+                            break
+                elif row['TOKEN'].startswith('#'):
                     continue
+                else:
+                    current_sentence.add_data(row)
 
-                current_sentence.add_data(row)
+        # add last document
+        if len(current_sentence.tokens) > 0:
+            current_sentence.tokenize_text(
+                self._tokenize_service,
+                replace_all_numbers=self._arguments_service.replace_all_numbers,
+                expand_targets=not self._arguments_service.merge_subwords)
 
-                if 'EndOfLine' in row['MISC']:
-                    current_sentence.tokenize_text(
-                        self._tokenize_service,
-                        replace_all_numbers=self._arguments_service.replace_all_numbers,
-                        expand_targets=not self._arguments_service.merge_subwords)
-
-                    collection.add_line(current_sentence)
-                    current_sentence = NELine()
-
-                    if limit and len(collection) >= limit:
-                        break
+            collection.add_line(current_sentence)
 
         return collection
 
