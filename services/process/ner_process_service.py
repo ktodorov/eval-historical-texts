@@ -37,7 +37,7 @@ class NERProcessService(ProcessServiceBase):
 
         self._entity_tag_types = arguments_service.entity_tag_types
 
-        self._data_version = "1.1"
+        self._data_version = "1.2"
         self.PAD_TOKEN = '[PAD]'
         self.START_TOKEN = '[CLS]'
         self.STOP_TOKEN = '[SEP]'
