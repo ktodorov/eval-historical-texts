@@ -119,6 +119,7 @@ class DatasetService:
                     self._metrics_service,
                     self._log_service,
                     self._data_service,
+                    self._process_service,
                     run_type)
             elif configuration == Configuration.RNNSimple:
                 result = NERDataset(

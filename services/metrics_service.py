@@ -18,8 +18,13 @@ class MetricsService:
         return len(set1.intersection(set2)) / len(set1.union(set2))
 
     def calculate_normalized_levenshtein_distance(self, string1: str, string2: str) -> int:
-        result = float(jellyfish.levenshtein_distance(
+        result = float(self.calculate_levenshtein_distance(
             string1, string2)) / max(len(string1), len(string2))
+
+        return result
+
+    def calculate_levenshtein_distance(self, string1: str, string2: str) -> int:
+        result = jellyfish.levenshtein_distance(string1, string2)
         return result
 
     def calculate_f1_score(

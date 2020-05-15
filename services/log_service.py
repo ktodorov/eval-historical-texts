@@ -86,7 +86,7 @@ class LogService:
         validation_loss = validation_metric.get_current_loss()
         validation_accuracies = validation_metric.get_current_accuracies()
         if train_accuracies and len(train_accuracies) > 0:
-            if metric_log_key is not None:
+            if metric_log_key is not None and train_metric.contains_accuracy_metric(metric_log_key):
                 train_accuracy = train_metric.get_accuracy_metric(
                     metric_log_key)
             else:
@@ -95,7 +95,7 @@ class LogService:
             train_accuracy = 0
 
         if validation_accuracies and len(validation_accuracies) > 0:
-            if metric_log_key is not None:
+            if metric_log_key is not None and validation_metric.contains_accuracy_metric(metric_log_key):
                 validation_accuracy = validation_metric.get_accuracy_metric(
                     metric_log_key)
             else:
@@ -155,6 +155,14 @@ class LogService:
 
         wandb.log({
             'batch results': table_log
+        }, step=self._get_current_step())
+
+    def log_incremental_metric(self, metric_key: str, metric_value: object):
+        if not self._external_logging_enabled:
+            return
+
+        wandb.log({
+            metric_key: metric_value
         }, step=self._get_current_step())
 
     def log_heatmap(

@@ -18,6 +18,7 @@ from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
+from services.process.ocr_character_process_service import OCRCharacterProcessService
 
 from preprocessing.ocr_preprocessing import preprocess_data
 import preprocessing.ocr_download as ocr_download
@@ -35,6 +36,7 @@ class OCRCharacterDataset(OCRDataset):
             metrics_service: MetricsService,
             log_service: LogService,
             data_service: DataService,
+            process_service: OCRCharacterProcessService,
             run_type: RunType,
             **kwargs):
         super().__init__(
@@ -42,48 +44,14 @@ class OCRCharacterDataset(OCRDataset):
             file_service,
             tokenize_service,
             vocabulary_service,
-            metrics_service,
             log_service,
-            data_service,
             run_type,
             **kwargs)
 
-    @overrides
-    def _get_language_data_path(
-            self,
-            file_service: FileService,
-            run_type: RunType):
-        output_data_path = file_service.get_data_path()
-        language_data_path = os.path.join(
-            output_data_path, f'{run_type.to_str()}_language_data.pickle')
+        self._process_service = process_service
+        self._run_type = run_type
 
-        if not os.path.exists(language_data_path):
-            challenge_path = file_service.get_challenge_path()
-            full_data_path = os.path.join(challenge_path, 'articles')
-            if not os.path.exists(full_data_path):
-                os.mkdir(full_data_path)
-
-            if len(os.listdir(full_data_path)) == 0:
-                newseye_path = os.path.join('data', 'newseye')
-                trove_path = os.path.join('data', 'trove')
-                ocr_download.combine_data(
-                    self._data_service,
-                    full_data_path,
-                    newseye_path,
-                    trove_path)
-
-            pickles_path = file_service.get_pickles_path()
-            train_data_path = file_service.get_pickles_path()
-            preprocess_data(
-                self._tokenize_service,
-                self._metrics_service,
-                self._vocabulary_service,
-                self._data_service,
-                pickles_path,
-                full_data_path,
-                output_data_path)
-
-        return language_data_path
+        self._language_data = process_service.get_language_data(run_type)
 
     @overrides
     def __getitem__(self, idx):

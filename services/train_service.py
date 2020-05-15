@@ -233,6 +233,8 @@ class TrainService:
                 self._log_service.log_summary(
                     key='Patience left', value=patience)
 
+                self._model.finalize_batch_evaluation(is_new_best=new_best)
+
             # check if runtime is expired
             self._validate_time_passed()
 
@@ -304,7 +306,7 @@ class TrainService:
             metric.add_accuracies(metrics_batch)
             metric.add_loss(loss_batch)
 
-        final_metric = self._model.calculate_overall_metrics()
+        final_metric = self._model.calculate_evaluation_metrics()
         metric.add_accuracies(final_metric)
         self._log_service.log_batch_results(full_output_log)
 

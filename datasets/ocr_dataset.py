@@ -31,29 +31,24 @@ class OCRDataset(DatasetBase):
             file_service: FileService,
             tokenize_service: BaseTokenizeService,
             vocabulary_service: VocabularyService,
-            metrics_service: MetricsService,
             log_service: LogService,
-            data_service: DataService,
             run_type: RunType):
         super(OCRDataset, self).__init__()
 
         self._tokenize_service = tokenize_service
-        self._metrics_service = metrics_service
         self._vocabulary_service = vocabulary_service
-        self._data_service = data_service
 
         self._device = arguments_service.device
-        self._include_pretrained = arguments_service.include_pretrained_model
 
-        language_data_path = self._get_language_data_path(
-            file_service,
-            run_type)
+        # language_data_path = self._get_language_data_path(
+        #     file_service,
+        #     run_type)
 
-        self._language_data = self._load_language_data(
-            log_service,
-            language_data_path,
-            run_type,
-            arguments_service.train_dataset_limit_size if run_type == RunType.Train else arguments_service.validation_dataset_limit_size)
+        # self._language_data = self._load_language_data(
+        #     log_service,
+        #     language_data_path,
+        #     run_type,
+        #     arguments_service.train_dataset_limit_size if run_type == RunType.Train else arguments_service.validation_dataset_limit_size)
 
     def _get_language_data_path(
             self,

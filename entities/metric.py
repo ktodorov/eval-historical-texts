@@ -56,6 +56,9 @@ class Metric:
         for key, value in accuracies.items():
             self._accuracies[key] = value[-self._amount_limit:]
 
+    def contains_accuracy_metric(self, metric_key: str) -> bool:
+        return metric_key in self._accuracies.keys()
+
     @property
     def is_new(self) -> bool:
         return len(self._losses) == 0 and len(self._accuracies) == 0

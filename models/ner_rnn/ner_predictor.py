@@ -282,7 +282,7 @@ class NERPredictor(ModelBase):
         return result
 
     @overrides
-    def calculate_overall_metrics(self) -> Dict[str, float]:
+    def calculate_evaluation_metrics(self) -> Dict[str, float]:
         metrics: Dict[str, float] = {}
         overall_stats = self._tag_metrics_service.calculate_overall_stats()
         for entity_tag_type, (results, results_per_type) in overall_stats.items():

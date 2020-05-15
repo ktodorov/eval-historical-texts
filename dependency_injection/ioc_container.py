@@ -48,6 +48,7 @@ from services.arguments.pretrained_arguments_service import PretrainedArgumentsS
 from services.process.process_service_base import ProcessServiceBase
 from services.process.ner_process_service import NERProcessService
 from services.process.cbow_process_service import CBOWProcessService
+from services.process.ocr_character_process_service import OCRCharacterProcessService
 
 from services.evaluation.base_evaluation_service import BaseEvaluationService
 from services.evaluation.semantic_change_evaluation_service import SemanticChangeEvaluationService
@@ -292,7 +293,9 @@ def register_model(
                     vocabulary_service=vocabulary_service,
                     data_service=data_service,
                     metrics_service=metrics_service,
-                    file_service=file_service)
+                    file_service=file_service,
+                    log_service=log_service,
+                    process_service=process_service)
         elif configuration == Configuration.RNNSimple:
             model = providers.Singleton(
                 NERPredictor,
@@ -323,7 +326,9 @@ def register_process_service(
         file_service: FileService,
         tokenize_service: BaseTokenizeService,
         vocabulary_service: VocabularyService,
-        data_service: DataService):
+        data_service: DataService,
+        metrics_service: MetricsService,
+        log_service: LogService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
@@ -339,6 +344,16 @@ def register_process_service(
             arguments_service=arguments_service,
             vocabulary_service=vocabulary_service,
             file_service=file_service)
+    elif challenge == Challenge.PostOCRCorrection:
+        process_service = providers.Singleton(
+            OCRCharacterProcessService,
+            arguments_service=arguments_service,
+            data_service=data_service,
+            file_service=file_service,
+            tokenize_service=tokenize_service,
+            metrics_service=metrics_service,
+            vocabulary_service=vocabulary_service,
+            log_service=log_service)
 
     return process_service
 
@@ -431,7 +446,9 @@ class IocContainer(containers.DeclarativeContainer):
         file_service=file_service,
         tokenize_service=tokenize_service,
         vocabulary_service=vocabulary_service,
-        data_service=data_service)
+        data_service=data_service,
+        metrics_service=metrics_service,
+        log_service=log_service)
 
     dataset_service = providers.Factory(
         DatasetService,

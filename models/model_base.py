@@ -167,5 +167,8 @@ class ModelBase(nn.Module):
         return self.parameters()
 
 
-    def calculate_overall_metrics(self) -> Dict[str, float]:
+    def calculate_evaluation_metrics(self) -> Dict[str, float]:
         return {}
+
+    def finalize_batch_evaluation(self, is_new_best: bool):
+        pass

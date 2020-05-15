@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
-from typing import Dict
+from typing import Dict, List
 
 from overrides import overrides
 
@@ -21,10 +21,12 @@ from models.model_base import ModelBase
 from models.embedding.embedding_layer import EmbeddingLayer
 
 from services.arguments.postocr_characters_arguments_service import PostOCRCharactersArgumentsService
+from services.process.ocr_character_process_service import OCRCharacterProcessService
 from services.data_service import DataService
 from services.metrics_service import MetricsService
 from services.vocabulary_service import VocabularyService
 from services.file_service import FileService
+from services.log_service import LogService
 
 
 class CharToCharModel(ModelBase):
@@ -34,12 +36,16 @@ class CharToCharModel(ModelBase):
             vocabulary_service: VocabularyService,
             data_service: DataService,
             metrics_service: MetricsService,
-            file_service: FileService):
+            file_service: FileService,
+            log_service: LogService,
+            process_service: OCRCharacterProcessService):
         super().__init__(data_service, arguments_service)
 
         self._vocabulary_service = vocabulary_service
         self._metrics_service = metrics_service
         self._arguments_service = arguments_service
+        self._log_service = log_service
+        self._process_service = process_service
 
         embedding_layer_options = EmbeddingLayerOptions(
             device=arguments_service.device,
@@ -58,7 +64,8 @@ class CharToCharModel(ModelBase):
             dropout=arguments_service.dropout
         )
 
-        self._embedding_layer = EmbeddingLayer(file_service, embedding_layer_options)
+        self._embedding_layer = EmbeddingLayer(
+            file_service, embedding_layer_options)
 
         self._metric_types = arguments_service.metric_types
 
@@ -72,6 +79,12 @@ class CharToCharModel(ModelBase):
         multiplication_factor = 2 if arguments_service.bidirectional else 1
         self._output_layer = nn.Linear(arguments_service.hidden_dimension *
                                        multiplication_factor, vocabulary_service.vocabulary_size())
+
+        self._dev_edit_distances: List[float] = []
+        self._original_edit_sum: int = None
+        self._logged_original_edit_histogram: bool = False
+
+        self.metric_log_key = 'Levenshtein distance improvement (%)'
 
     @overrides
     def forward(self, input_batch: BatchRepresentation, debug=False, **kwargs):
@@ -119,39 +132,48 @@ class CharToCharModel(ModelBase):
 
         metrics = {}
 
+        predicted_strings = [self._vocabulary_service.ids_to_string(
+            x) for x in predicted_characters]
+        target_strings = [self._vocabulary_service.ids_to_string(
+            x) for x in target_characters]
+
         if MetricType.JaccardSimilarity in self._metric_types:
-            predicted_tokens = [self._vocabulary_service.ids_to_string(
-                x) for x in predicted_characters]
-            target_tokens = [self._vocabulary_service.ids_to_string(
-                x) for x in target_characters]
             jaccard_score = np.mean([self._metrics_service.calculate_jaccard_similarity(
-                target_tokens[i], predicted_tokens[i]) for i in range(len(predicted_tokens))])
+                target_strings[i], predicted_strings[i]) for i in range(len(predicted_strings))])
 
             metrics[MetricType.JaccardSimilarity] = jaccard_score
 
         output_log = None
         if MetricType.LevenshteinDistance in self._metric_types:
-            predicted_strings = [self._vocabulary_service.ids_to_string(
-                x) for x in predicted_characters]
-            target_strings = [self._vocabulary_service.ids_to_string(
-                x) for x in target_characters]
+            levenshtein_distances = [
+                self._metrics_service.calculate_normalized_levenshtein_distance(
+                    predicted_strings[i], target_strings[i]) for i in range(len(predicted_strings))
+            ]
 
-            levenshtein_distance = np.mean([self._metrics_service.calculate_normalized_levenshtein_distance(
-                predicted_strings[i], target_strings[i]) for i in range(len(predicted_strings))])
+            levenshtein_distance = np.mean(levenshtein_distances)
 
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
 
-            if output_characters:
-                output_log = DataOutputLog()
-                ocr_texts = batch.character_sequences.cpu().detach().tolist()
-                for i in range(len(ocr_texts)):
-                    input_string = self._vocabulary_service.ids_to_string(
-                        ocr_texts[i])
+            if not self.training:
+                predicted_levenshtein_distances = [
+                    self._metrics_service.calculate_levenshtein_distance(
+                        predicted_string, target_string) for predicted_string, target_string in zip(predicted_strings, target_strings)
+                ]
+                self._dev_edit_distances.extend(
+                    predicted_levenshtein_distances)
 
-                    output_log.add_new_data(
-                        input_data=input_string,
-                        output_data=predicted_strings[i],
-                        true_data=target_strings[i])
+        if output_characters:
+            input_strings = [
+                self._vocabulary_service.ids_to_string(x) for x in batch.character_sequences.cpu().detach().tolist()
+            ]
+
+            output_log = DataOutputLog()
+            ocr_texts = batch.character_sequences.cpu().detach().tolist()
+            for input_string, predicted_string, target_string in zip(input_strings, predicted_strings, target_strings):
+                output_log.add_new_data(
+                    input_data=input_string,
+                    output_data=predicted_string,
+                    true_data=target_string)
 
         return metrics, output_log
 
@@ -160,7 +182,7 @@ class CharToCharModel(ModelBase):
         if best_metric.is_new:
             return True
 
-        result = best_metric.get_current_loss() > new_metric.get_current_loss()
+        result = best_metric.get_accuracy_metric(self.metric_log_key) < new_metric.get_accuracy_metric(self.metric_log_key)
         return result
 
     @overrides
@@ -186,3 +208,33 @@ class CharToCharModel(ModelBase):
         ]
 
         return result
+
+    @overrides
+    def calculate_evaluation_metrics(self) -> Dict[str, float]:
+        if len(self._dev_edit_distances) == 0:
+            return {}
+
+        predicted_edit_sum = sum(self._dev_edit_distances)
+
+        original_edit_sum = self._process_service.original_levenshtein_distance_sum
+
+        improvement_percentage = (
+            1 - (float(predicted_edit_sum) / original_edit_sum)) * 100
+
+        result = {
+            self.metric_log_key: improvement_percentage
+        }
+
+        return result
+
+    @overrides
+    def finalize_batch_evaluation(self, is_new_best: bool):
+        if is_new_best:
+            predicted_histogram = np.histogram(
+                self._dev_edit_distances, bins=100)
+            self._log_service.log_summary(
+                'best-results-edit-distances-count', predicted_histogram[0])
+            self._log_service.log_summary(
+                'best-results-edit-distances-bins', predicted_histogram[1])
+
+        self._dev_edit_distances = []
