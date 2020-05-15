@@ -43,6 +43,13 @@ class ConditionalRandomField(ModelBase):
 
         self._transition_matrix = nn.Parameter(init_transition)
 
+        if self.use_weighted_loss:
+            self._weighted_loss_matrix = torch.ones(
+                self._number_of_tags, self._number_of_tags, device=self._device, requires_grad=False)
+            self._weighted_loss_matrix[self.none_idx, :] = 1.1
+            self._weighted_loss_matrix[:, self.none_idx] = 1.3
+            self._weighted_loss_matrix[self.none_idx, self.none_idx] = 1
+
     @overrides
     def forward(
             self,
@@ -58,20 +65,30 @@ class ConditionalRandomField(ModelBase):
         :param mask:
         :return:
         """
-        all_scores = self.calculate_all_scores(rnn_features=rnn_features, targets=targets)
+        all_scores = self.calculate_all_scores(rnn_features=rnn_features)
+        batch_size = rnn_features.shape[0]
+        if self.training and self.use_weighted_loss:
+            weighted_scores = torch.ones(all_scores.shape, device=all_scores.device)
+            for b in range(batch_size):
+                for word_idx in range(lengths[b]):
+                    for tag in range(self._number_of_tags):
+                        weighted_scores[b, word_idx, :, tag] = all_scores[b, word_idx, :, tag] * self._weighted_loss_matrix[targets[b, word_idx], tag]
+        else:
+            weighted_scores = all_scores
 
-        unlabed_score = self.forward_unlabeled(all_scores, lengths)
-        labeled_score = self.forward_labeled(
-            all_scores, lengths, targets, mask)
-        loss = torch.mean(unlabed_score - labeled_score)
+        unlabed_score = self._forward_unlabeled(weighted_scores, lengths, targets)
+        labeled_score = self._forward_labeled(
+            weighted_scores, lengths, targets, mask)
+        loss = unlabed_score - labeled_score
 
         _, decoded_tags = self._viterbi_decode(all_scores, lengths)
         return loss, decoded_tags
 
-    def forward_unlabeled(
+    def _forward_unlabeled(
             self,
             all_scores: torch.Tensor,
-            word_seq_lens: torch.Tensor) -> torch.Tensor:
+            word_seq_lens: torch.Tensor,
+            targets: torch.Tensor) -> torch.Tensor:
         """
         Calculate the scores with the forward algorithm. Basically calculating the normalization term
         :param all_scores: (batch_size x max_seq_len x num_labels x num_labels) from (lstm scores + transition scores).
@@ -83,7 +100,7 @@ class ConditionalRandomField(ModelBase):
             (batch_size, max_sequence_length, self._number_of_tags),
             device=self._device)
 
-        # the first position of all labels = (the transition from start - > all labels) + current emission.
+        # the first position of all labels = (the transition from start - > all labels) + current emission
         alpha[:, 0, :] = all_scores[:, 0,  self.start_idx, :]
 
         for word_idx in range(1, max_sequence_length):
@@ -93,7 +110,7 @@ class ConditionalRandomField(ModelBase):
                 self._number_of_tags)
 
             before_log_sum_exp = previous_alpha + all_scores[:, word_idx, :, :]
-            alpha[:, word_idx, :] = self._log_sum_exp(before_log_sum_exp)
+            alpha[:, word_idx, :] = self._log_sum_exp(before_log_sum_exp, targets[:, word_idx])
 
         # batch_size x number_of_tags
         last_alpha = alpha.gather(1, word_seq_lens.view(batch_size, 1, 1).expand(
@@ -101,11 +118,11 @@ class ConditionalRandomField(ModelBase):
         last_alpha += self._transition_matrix[:, self.end_idx].view(
             1, self._number_of_tags).expand(batch_size, self._number_of_tags)
         last_alpha = self._log_sum_exp(last_alpha.view(
-            batch_size, self._number_of_tags, 1)).view(batch_size)
+            batch_size, self._number_of_tags, 1), targets[:, -1]).view(batch_size)
 
         return torch.mean(last_alpha)
 
-    def forward_labeled(
+    def _forward_labeled(
             self,
             all_scores: torch.Tensor,
             word_seq_lens: torch.Tensor,
@@ -157,8 +174,7 @@ class ConditionalRandomField(ModelBase):
 
     def calculate_all_scores(
             self,
-            rnn_features: torch.Tensor,
-            targets: torch.Tensor) -> torch.Tensor:
+            rnn_features: torch.Tensor) -> torch.Tensor:
         """
         Calculate all scores by adding up the transition scores and emissions (from lstm).
         Basically, compute the scores for each edges between labels at adjacent positions.
@@ -185,14 +201,6 @@ class ConditionalRandomField(ModelBase):
             self._number_of_tags)
 
         all_scores = (expanded_transition_matrix + expanded_rnn_features)
-
-        # if self.use_weighted_loss and self.training:
-        #     ones = torch.ones(targets.shape, device=targets.device)
-        #     non_ones = torch.ones(targets.shape, device=targets.device).fill_(1.5)
-        #     none_mask = torch.where((targets != self.none_idx) & (targets != self.pad_idx) & (targets != self.start_idx) & (targets != self.end_idx), non_ones, ones)
-        #     expanded_none_mask = none_mask.unsqueeze(-1).unsqueeze(-1).expand(batch_size, max_length, self._number_of_tags, self._number_of_tags)
-        #     all_scores = all_scores * expanded_none_mask
-
         return all_scores
 
     def decode(
@@ -283,7 +291,8 @@ class ConditionalRandomField(ModelBase):
 
     def _log_sum_exp(
             self,
-            vec: torch.Tensor) -> torch.Tensor:
+            vec: torch.Tensor,
+            current_targets: torch.Tensor) -> torch.Tensor:
         """
         Calculate the log_sum_exp trick for the tensor.
         :param vec: [batchSize * from_label * to_label].
