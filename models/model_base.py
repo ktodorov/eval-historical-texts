@@ -167,5 +167,5 @@ class ModelBase(nn.Module):
         return self.parameters()
 
 
-    def calculate_overall_metrics(self, metric: Metric) -> Dict[str, float]:
+    def calculate_overall_metrics(self) -> Dict[str, float]:
         return {}

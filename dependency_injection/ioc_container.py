@@ -302,7 +302,8 @@ def register_model(
                 process_service=process_service,
                 tokenize_service=tokenize_service,
                 file_service=file_service,
-                tag_metrics_service=tag_metrics_service)
+                tag_metrics_service=tag_metrics_service,
+                log_service=log_service)
 
     elif joint_model:
         model = providers.Singleton(

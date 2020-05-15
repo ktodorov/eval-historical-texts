@@ -52,7 +52,6 @@ class LogService:
         else:
             self.log_summary('Iteration', current_step)
 
-
         epoch_str = 'N/A'
         if epoch_num is not None:
             epoch_str = str(epoch_num)
@@ -88,7 +87,8 @@ class LogService:
         validation_accuracies = validation_metric.get_current_accuracies()
         if train_accuracies and len(train_accuracies) > 0:
             if metric_log_key is not None:
-                train_accuracy = train_metric.get_accuracy_metric(metric_log_key)
+                train_accuracy = train_metric.get_accuracy_metric(
+                    metric_log_key)
             else:
                 train_accuracy = list(train_accuracies.values())[0]
         else:
@@ -96,7 +96,8 @@ class LogService:
 
         if validation_accuracies and len(validation_accuracies) > 0:
             if metric_log_key is not None:
-                validation_accuracy = validation_metric.get_accuracy_metric(metric_log_key)
+                validation_accuracy = validation_metric.get_accuracy_metric(
+                    metric_log_key)
             else:
                 validation_accuracy = list(validation_accuracies.values())[0]
         else:
@@ -152,7 +153,27 @@ class LogService:
         columns, data = data_output_log.get_log_data()
         table_log = wandb.Table(columns=columns, data=data)
 
-        wandb.log({'batch results': table_log}, step=self._get_current_step())
+        wandb.log({
+            'batch results': table_log
+        }, step=self._get_current_step())
+
+    def log_heatmap(
+            self,
+            heatmap_title: str,
+            matrix_values: np.array,
+            x_labels: list,
+            y_labels: list,
+            show_text_inside: bool = False):
+        if not self._external_logging_enabled:
+            return
+
+        wandb.log({
+            heatmap_title: wandb.plots.HeatMap(
+                x_labels,
+                y_labels,
+                matrix_values,
+                show_text=show_text_inside)
+        }, step=self._get_current_step())
 
     def start_logging_model(self, model: torch.nn.Module, criterion: torch.nn.Module = None):
         if not self._external_logging_enabled:

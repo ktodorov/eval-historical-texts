@@ -63,7 +63,8 @@ class NERProcessService(ProcessServiceBase):
             self._train_ne_collection,
             self._validation_ne_collection)
 
-        vocabulary_data = self._load_vocabulary_data(language_suffix, self._data_version)
+        vocabulary_data = self._load_vocabulary_data(
+            language_suffix, self._data_version)
         vocabulary_service.initialize_vocabulary_data(vocabulary_data)
 
     def preprocess_data(
@@ -82,7 +83,7 @@ class NERProcessService(ProcessServiceBase):
 
             for i, row in enumerate(reader):
                 if ((split_documents and row['TOKEN'].startswith('# segment')) or
-                    (not split_documents and row['TOKEN'].startswith('# document'))):
+                        (not split_documents and row['TOKEN'].startswith('# document'))):
                     if len(current_sentence.tokens) > 0:
                         current_sentence.tokenize_text(
                             self._tokenize_service,
@@ -196,6 +197,18 @@ class NERProcessService(ProcessServiceBase):
 
         return result
 
+    def get_entity_names(self, entity_tag_type: EntityTagType) -> List[str]:
+        if entity_tag_type not in self._entity_mappings.keys():
+            raise Exception('Invalid entity tag type')
+
+        # get the keys (entity names) for this entity tag type ordered by their values
+        result = list(
+            sorted(
+                self._entity_mappings[entity_tag_type],
+                key=self._entity_mappings[entity_tag_type].get))
+
+        return result
+
     def get_position_changes(self, idx: int) -> list:
         result = self._validation_ne_collection.lines[idx].position_changes
         return result
@@ -210,7 +223,6 @@ class NERProcessService(ProcessServiceBase):
 
         if character_vocabulary_data is not None:
             return character_vocabulary_data
-
 
         unique_characters = set()
 

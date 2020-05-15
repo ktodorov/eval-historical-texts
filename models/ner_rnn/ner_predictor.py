@@ -30,6 +30,7 @@ from services.file_service import FileService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.process.ner_process_service import NERProcessService
 from services.tag_metrics_service import TagMetricsService
+from services.log_service import LogService
 
 
 class NERPredictor(ModelBase):
@@ -42,13 +43,15 @@ class NERPredictor(ModelBase):
             process_service: NERProcessService,
             tokenize_service: BaseTokenizeService,
             file_service: FileService,
-            tag_metrics_service: TagMetricsService):
+            tag_metrics_service: TagMetricsService,
+            log_service: LogService):
         super().__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
         self._process_service = process_service
         self._arguments_service = arguments_service
         self._tag_metrics_service = tag_metrics_service
+        self._log_service = log_service
 
         self.device = arguments_service.device
         self.number_of_tags = process_service.get_labels_amount()
@@ -288,4 +291,20 @@ class NERPredictor(ModelBase):
 
         self._tag_metrics_service.reset()
 
+        self._log_crf_transition_matrices()
+
         return metrics
+
+    def _log_crf_transition_matrices(self):
+        for i, crf_layer in enumerate(self._crf_layers):
+            current_entity_tag_type = self._entity_tag_types[i]
+
+            transition_matrix = crf_layer._transition_matrix.detach().cpu().numpy()
+            entities = self._process_service.get_entity_names(current_entity_tag_type)
+
+            self._log_service.log_heatmap(
+                f'CRF Transition matrix - {current_entity_tag_type.value}',
+                transition_matrix,
+                entities,
+                entities,
+                show_text_inside=False)
