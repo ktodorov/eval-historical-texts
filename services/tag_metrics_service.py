@@ -244,6 +244,8 @@ class TagMetricsService:
             f1_sum = 0
 
             n_tags = len(results_per_type)
+            if n_tags == 0:
+                continue
 
             for tag in results_per_type:
                 precision_sum += results_per_type[tag][eval_schema][TagMetric.PrecisionMicro]
