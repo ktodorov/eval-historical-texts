@@ -17,6 +17,7 @@ class EmbeddingLayerOptions:
             character_embeddings_size: int = None,
             learn_word_embeddings: int = False,
             word_embeddings_size: int = None,
+            pretrained_word_weights = None,
             output_embedding_type: EmbeddingType = EmbeddingType.SubWord,
             character_rnn_hidden_size: int = 64,
             dropout: float = 0.0,
@@ -40,6 +41,7 @@ class EmbeddingLayerOptions:
 
         self.learn_word_embeddings = learn_word_embeddings
         self.word_embeddings_size = word_embeddings_size
+        self.pretrained_word_weights = pretrained_word_weights
 
         self.output_embedding_type = output_embedding_type
         self.dropout = dropout

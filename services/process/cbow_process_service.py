@@ -2,7 +2,9 @@ import os
 import pickle
 import re
 import numpy as np
+import gensim
 
+import torch
 from typing import List, Dict, Counter
 
 from enums.language import Language
@@ -10,19 +12,25 @@ from enums.language import Language
 from services.arguments.semantic_arguments_service import SemanticArgumentsService
 from services.file_service import FileService
 from services.vocabulary_service import VocabularyService
+from services.data_service import DataService
 from services.process.process_service_base import ProcessServiceBase
 
+from nltk.tokenize import RegexpTokenizer
 
 class CBOWProcessService(ProcessServiceBase):
     def __init__(
             self,
             arguments_service: SemanticArgumentsService,
             vocabulary_service: VocabularyService,
-            file_service: FileService):
+            file_service: FileService,
+            data_service: DataService):
         super().__init__()
 
         self._vocabulary_service = vocabulary_service
         self._file_service = file_service
+        self._data_service = data_service
+
+        self._device = arguments_service.device
 
         self._pad_idx = 0
         self._unk_idx = 1
@@ -31,6 +39,8 @@ class CBOWProcessService(ProcessServiceBase):
         self._mask_idx = 4
 
         self._window_size = 4
+
+        self._tokenizer = RegexpTokenizer(r'\w+')
 
         corpus_id = arguments_service.corpus
 
@@ -81,15 +91,40 @@ class CBOWProcessService(ProcessServiceBase):
                 corpus_data = pickle.load(corpus_data_file)
 
         if limit_size is not None:
-            corpus_data = corpus_data[:limit_size]
+            corpus_data = (corpus_data[0][:limit_size],
+                           corpus_data[1][:limit_size])
 
         return corpus_data
+
+    def get_pretrained_embedding_weights(self) -> torch.Tensor:
+        data_path = self._file_service.get_data_path()
+        pretrained_weights_filename = 'pretrained-weights'
+        pretrained_weights = self._data_service.load_python_obj(data_path, pretrained_weights_filename, print_on_error=False)
+        if pretrained_weights is not None:
+            pretrained_weights = pretrained_weights.float().to(self._device)
+            return pretrained_weights
+
+        word2vec_model_path = os.path.join(self._full_data_path, 'GoogleNews-vectors-negative300.bin')
+        word2vec_weights = gensim.models.KeyedVectors.load_word2vec_format(word2vec_model_path, binary = True)
+        vocabulary_iterator = self._vocabulary_service.get_vocabulary_tokens()
+        pretrained_weight_matrix = np.random.rand(
+            self._vocabulary_service.vocabulary_size(),
+            word2vec_weights.vector_size)
+
+        for index, word in vocabulary_iterator:
+            if word in word2vec_weights.index2word:
+                pretrained_weight_matrix[index] = word2vec_weights.wv[word]
+
+        result = torch.from_numpy(pretrained_weight_matrix).float().to(self._device)
+
+        self._data_service.save_python_obj(result, data_path, pretrained_weights_filename, print_success=False)
+
+        return result
 
     def _create_vocabulary(
             self,
             semeval_data_path: str,
             language: Language) -> Dict[str, int]:
-
         language_folder = os.path.join(semeval_data_path, language.value)
         corpus_ids = [1, 2]
 
@@ -118,8 +153,7 @@ class CBOWProcessService(ProcessServiceBase):
                 file_path = os.path.join(corpus_path, text_filename)
                 with open(file_path, 'r', encoding='utf-8') as textfile:
                     file_text = textfile.read()
-                    preprocessed_text = self._preprocess_text(file_text)
-                    current_words = preprocessed_text.split(' ')
+                    current_words = self._preprocess_text(file_text)
                     current_words_counter = Counter(current_words)
                     words_counter.update(current_words_counter)
 
@@ -147,10 +181,7 @@ class CBOWProcessService(ProcessServiceBase):
         return result
 
     def _preprocess_text(self, text: str) -> str:
-        result = text.lower().replace('\n', ' ')
-
-        result = re.sub('(([0-9]+)|(([0-9]*)\.([0-9]*)))', '$NMB$', result)
-
+        result = self._tokenizer.tokenize(text.lower().replace('\n', ' '))
         return result
 
     def _preprocess_corpus_data(self, semeval_data_path: str):
@@ -175,22 +206,36 @@ class CBOWProcessService(ProcessServiceBase):
 
                 text_lines = len(file_text_lines)
 
-                cbow_entries = [
-                    self._vocabulary_service.string_to_ids(file_text_line)
-                    for file_text_line in file_text_lines
-                ]
+                cbow_entries = []
+                cbow_targets = []
+                file_text_lines_len = len(file_text_lines)
+                for i, file_text_line in enumerate(file_text_lines):
+                    print(
+                        f'Processing text lines: {i}/{file_text_lines_len}            \r', end='')
+                    line_chunks, targets = self._split_line_to_chunks(
+                        file_text_line)
+                    cbow_entries.extend(line_chunks)
+                    cbow_targets.extend(targets)
 
-        return cbow_entries
+        return cbow_entries, cbow_targets
 
     def _preprocess_file_text_line(
             self,
             file_text_line: str):
-        return self._preprocess_text(file_text_line).split(' ')
+        return list(filter(None, self._preprocess_text(file_text_line)))
 
-    def _get_cbow_entry(
-            self,
-            file_text_line):
+    def _split_line_to_chunks(self, text_line: str):
+        splitted_text_line = self._vocabulary_service.string_to_ids(text_line)
+        window_size = 3
 
-        cbow_entries = []
+        chunks = []
+        targets = []
 
-        return cbow_entries
+        for i in range(window_size, len(splitted_text_line) - window_size - 1):
+            context_words = splitted_text_line[i-window_size:i] + \
+                splitted_text_line[i+1:i+window_size+1]
+
+            chunks.append(context_words)
+            targets.append(splitted_text_line[i])
+
+        return chunks, targets

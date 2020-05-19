@@ -25,7 +25,7 @@ class CBOWDataset(DatasetBase):
         self._device = arguments_service.device
         self._cbow_process_service = cbow_process_service
 
-        self._corpus_data = cbow_process_service.load_corpus_data(arguments_service.train_dataset_limit_size)
+        self._corpus_data, self._targets = cbow_process_service.load_corpus_data(arguments_service.train_dataset_limit_size)
 
         print(f'Loaded {len(self._corpus_data)} entries')
         log_service.log_summary(key='Entries amount',
@@ -37,12 +37,10 @@ class CBOWDataset(DatasetBase):
 
     @overrides
     def __getitem__(self, idx):
-        entry_tokens = self._corpus_data[idx]
+        context_words = self._corpus_data[idx]
+        target = self._targets[idx]
 
-        masked_id = random.randint(0, len(entry_tokens) - 1)
-        target_id = entry_tokens[masked_id]
-        # entry_tokens[masked_id] = self._cbow_process_service._mask_idx
-        return entry_tokens, target_id, masked_id
+        return context_words, target
 
     @overrides
     def use_collate_function(self) -> bool:
@@ -56,16 +54,13 @@ class CBOWDataset(DatasetBase):
         batch_size = len(DataLoaderBatch)
         batch_split = list(zip(*DataLoaderBatch))
 
-        context_word_ids, targets, masked_indices = batch_split
+        context_word_ids, targets = batch_split
         batch_representation = BatchRepresentation(
             device=self._device,
             batch_size=batch_size,
             word_sequences=context_word_ids,
             targets=list(targets),
             pad_idx=self._cbow_process_service._pad_idx)
-
-        for b in range(batch_representation.batch_size):
-            batch_representation.word_sequences[b, masked_indices[b]] = self._cbow_process_service._mask_idx
 
         batch_representation.sort_batch()
 

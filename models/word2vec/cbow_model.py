@@ -31,11 +31,17 @@ class CBOWModel(ModelBase):
             vocabulary_service: VocabularyService,
             data_service: DataService,
             process_service: CBOWProcessService,
-            file_service: FileService):
+            file_service: FileService,
+            use_only_embeddings: bool = False):
         super().__init__(data_service, arguments_service)
 
         self._arguments_service = arguments_service
+        self._vocabulary_service = vocabulary_service
         self._mask_token_idx = process_service._mask_idx
+
+        pretrained_word_weights = None
+        if not arguments_service.evaluate and not arguments_service.resume_training:
+            pretrained_word_weights = process_service.get_pretrained_embedding_weights()
 
         embedding_layer_options = EmbeddingLayerOptions(
             device=arguments_service.device,
@@ -44,44 +50,37 @@ class CBOWModel(ModelBase):
             vocabulary_size=vocabulary_service.vocabulary_size(),
             learn_word_embeddings=True,
             word_embeddings_size=arguments_service.word_embeddings_size,
+            pretrained_word_weights=pretrained_word_weights,
             output_embedding_type=EmbeddingType.Word)
 
-        self._embedding_layer = EmbeddingLayer(file_service, embedding_layer_options)
+        self._embedding_layer = EmbeddingLayer(
+            file_service, embedding_layer_options)
 
-        self._rnn_layer = nn.LSTM(
-            input_size=self._embedding_layer.output_size,
-            hidden_size=arguments_service.rnn_hidden_size,
-            num_layers=1,
-            batch_first=True,
-            bidirectional=False)
+        pretrained_weight_matrix_dim = 300
+        if pretrained_word_weights is not None:
+            pretrained_weight_matrix_dim = pretrained_word_weights.shape[1]
+        self._mapping_layer = nn.Linear(
+            in_features=6 * pretrained_weight_matrix_dim,
+            out_features=128)
 
         self._output_layer = nn.Linear(
-            in_features=arguments_service.rnn_hidden_size,
+            in_features=128,
             out_features=vocabulary_service.vocabulary_size())
+
+        self._use_only_embeddings = use_only_embeddings
 
     @overrides
     def forward(self, input_batch: BatchRepresentation, **kwargs):
         embeddings = self._embedding_layer.forward(input_batch)
 
-        x_packed = pack_padded_sequence(
-            embeddings, input_batch.word_lengths, batch_first=True)
+        if self._use_only_embeddings:
+            return embeddings
 
-        packed_output, hidden = self._rnn_layer.forward(x_packed)
+        embeddings = embeddings.view(input_batch.batch_size, -1)
+        mapped_embeddings = self._mapping_layer.forward(embeddings)
+        output_result = self._output_layer.forward(mapped_embeddings)
 
-        rnn_output, _ = pad_packed_sequence(packed_output, batch_first=True)
-
-        output_result = self._output_layer.forward(rnn_output)
-
-        mask_indices = torch.where(
-            input_batch.word_sequences == self._mask_token_idx)[1]
-        if mask_indices.shape[0] > 0:
-            mask_indices = mask_indices.unsqueeze(-1).repeat(
-                1, output_result.shape[2]).unsqueeze(1)
-            gathered_result = output_result.gather(1, mask_indices).squeeze()
-        else:
-            gathered_result = output_result
-
-        return gathered_result, rnn_output, input_batch.targets
+        return output_result, input_batch.targets
 
     @overrides
     def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:

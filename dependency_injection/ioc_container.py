@@ -343,7 +343,8 @@ def register_process_service(
             CBOWProcessService,
             arguments_service=arguments_service,
             vocabulary_service=vocabulary_service,
-            file_service=file_service)
+            file_service=file_service,
+            data_service=data_service)
     elif challenge == Challenge.PostOCRCorrection:
         process_service = providers.Singleton(
             OCRCharacterProcessService,
@@ -473,7 +474,8 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service,
         data_service=data_service,
         vocabulary_service=vocabulary_service,
-        process_service=process_service)
+        process_service=process_service,
+        file_service=file_service)
 
     decoding_service = providers.Factory(
         DecodingService,

@@ -25,5 +25,5 @@ class CBOWLoss(LossBase):
         return loss.item()
 
     def _calculate_inner_loss(self, model_output):
-        log_probabilities, _, target  = model_output
-        return self._criterion.forward(log_probabilities, target)
+        log_probabilities, targets = model_output
+        return self._criterion.forward(log_probabilities, targets)

@@ -57,8 +57,19 @@ class VocabularyService:
 
         return result
 
+    def ids_to_strings(
+        self,
+        input: List[int],
+        exclude_pad_tokens: bool = True) -> List[str]:
+        result = [self._int2char[x] for x in input]
+
+        if exclude_pad_tokens:
+            result = list(filter(lambda x: x != '[PAD]', result))
+
+        return result
+
     def vocabulary_size(self) -> int:
-        return len(self._int2char.keys())
+        return len(self._int2char)
 
     def get_all_english_nouns(self, limit_amount: int = None) -> List[str]:
         pickles_path = self._file_service.get_pickles_path()
@@ -84,6 +95,10 @@ class VocabularyService:
         self._data_service.save_python_obj(words, english_nouns_path, filename)
 
         return words
+
+    def get_vocabulary_tokens(self):
+        for index, token in self._int2char.items():
+            yield (index, token)
 
     @property
     def cls_token(self) -> int:

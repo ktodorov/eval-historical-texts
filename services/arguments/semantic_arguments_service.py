@@ -34,7 +34,7 @@ class SemanticArgumentsService(PretrainedArgumentsService):
 
         parser.add_argument('--word-embeddings-size', type=int, default=128,
                             help='The size for the word embeddings layer')
-        parser.add_argument('--rnn-hidden-size', type=int, default=256,
+        parser.add_argument('--rnn-hidden-size', type=int, default=64,
                             help='The size for the word embeddings layer')
 
     @property

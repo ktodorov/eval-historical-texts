@@ -2,8 +2,10 @@ import os
 import numpy as np
 import torch
 from typing import List
+import torch
 
 from entities.model_checkpoint import ModelCheckpoint
+from entities.batch_representation import BatchRepresentation
 
 from models.model_base import ModelBase
 
@@ -22,24 +24,18 @@ class JointModel(ModelBase):
 
         self._number_of_models: int = arguments_service.joint_model_amount
 
-        self._inner_models: List[ModelBase] = [
-            model_service.create_model() for _ in range(self._number_of_models)]
+        self._inner_models = torch.nn.ModuleList([
+            model_service.create_model() for _ in range(self._number_of_models)])
 
-    def forward(self, inputs, **kwargs):
+    def forward(self, batch_input: BatchRepresentation, **kwargs):
 
         result = []
         for i, model in enumerate(self._inner_models):
-            current_input = inputs[i] if len(inputs) == len(self._inner_models) else inputs
-            outputs = model.forward(current_input)
+            # current_input = inputs[i] if len(inputs) == len(self._inner_models) else inputs
+            outputs = model.forward(batch_input)
             result.append(outputs)
 
         return result
-
-    def named_parameters(self):
-        return [model.named_parameters() for model in self._inner_models]
-
-    def parameters(self):
-        return [model.parameters() for model in self._inner_models]
 
     def calculate_accuracy(self, predictions, targets) -> int:
         return 0
@@ -47,12 +43,6 @@ class JointModel(ModelBase):
     def compare_metric(self, best_metric, metrics) -> bool:
         if best_metric is None or np.sum(best_metric) > np.sum(metrics):
             return True
-
-    def clip_gradients(self):
-        model_parameters = self.parameters()
-
-        [torch.nn.utils.clip_grad_norm_(parameters, max_norm=1.0)
-         for parameters in model_parameters]
 
     def save(
             self,

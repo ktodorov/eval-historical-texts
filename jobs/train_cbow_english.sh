@@ -14,9 +14,6 @@ module load 2019
 module load Miniconda3
 module load Python/3.7.5-foss-2018b
 
-LANGUAGE='english'
-CORPUS=1
-
 source activate eval-env
 
 echo copying to SCRATCH...
@@ -29,7 +26,7 @@ echo copying finished
 
 cd "$TMPDIR"/eval-historical-texts
 
-srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --patience 100 --configuration cbow --learning-rate 1e-2 --language $LANGUAGE --corpus $CORPUS --checkpoint-name $CORPUS --challenge semantic-change --batch-size 32 --max-training-minutes 4320 --enable-external-logging --skip-validation  --reset-training-on-early-stop --training-reset-epoch-limit 1 --resets-limit 2
+srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --patience 100 --configuration cbow --learning-rate 1e-4 --language $LANGUAGE --corpus $CORPUS --checkpoint-name $CORPUS --challenge semantic-change --batch-size 64 --max-training-minutes 4320 --enable-external-logging --skip-validation  --reset-training-on-early-stop --training-reset-epoch-limit 1 --resets-limit 2
 
 cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/

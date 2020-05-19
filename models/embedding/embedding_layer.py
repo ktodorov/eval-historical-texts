@@ -79,13 +79,18 @@ class EmbeddingLayer(ModelBase):
 
         self._learn_word_embeddings = embedding_layer_options.learn_word_embeddings
         if self._learn_word_embeddings:
-            self._word_embedding = nn.Embedding(
-                embedding_layer_options.vocabulary_size,
-                embedding_layer_options.word_embeddings_size)
+            if embedding_layer_options.pretrained_word_weights is None:
+                self._word_embedding = nn.Embedding(
+                    embedding_layer_options.vocabulary_size,
+                    embedding_layer_options.word_embeddings_size)
+            else:
+                self._word_embedding: nn.Embedding = nn.Embedding.from_pretrained(
+                    embedding_layer_options.pretrained_word_weights,
+                    freeze=False)
 
             self._word_embedding_dropout = nn.Dropout(
                 embedding_layer_options.dropout)
-            self._output_size += embedding_layer_options.word_embeddings_size
+            self._output_size += self._word_embedding.embedding_dim
 
         self._learn_manual_features = embedding_layer_options.learn_manual_features
         if self._learn_manual_features:
