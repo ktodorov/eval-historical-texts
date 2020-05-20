@@ -45,8 +45,8 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         self._target_words.append(batch_input.additional_information)
 
         corpus1_output, corpus2_output = output
-        corpus1_output = corpus1_output.detach().cpu().numpy()
-        corpus2_output = corpus2_output.detach().cpu().numpy()
+        corpus1_output = self.normalize_word_vector(corpus1_output.detach().cpu().numpy())
+        corpus2_output = self.normalize_word_vector(corpus2_output.detach().cpu().numpy())
 
         evaluation_results = {}
         for evaluation_type in evaluation_types:
@@ -77,6 +77,8 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
             self._plot_distances(evaluation, checkpoint_folder)
             return
 
+        distances_file_path = os.path.join(
+            checkpoint_folder, 'distances.txt')
         output_file_task1 = os.path.join(
             checkpoint_folder, 'task1.txt')
         output_file_task2 = os.path.join(
@@ -95,6 +97,10 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
         abs_distances = [abs(distance) for distance in distances]
         max_args = list(np.argsort(abs_distances))
 
+        with open(distances_file_path, 'w', encoding='utf-8') as distances_file:
+            for target_word, distance in zip(self._target_words, distances):
+                distances_file.write(f'{target_word}\t{distance}\n')
+
         with open(output_file_task1, 'w', encoding='utf-8') as task1_file:
             for word, class_prediction in task1_dict.items():
                 task1_file.write(f'{word}\t{class_prediction}\n')
@@ -104,6 +110,12 @@ class SemanticChangeEvaluationService(BaseEvaluationService):
                 task2_file.write(f'{target}\t{max_args.index(i)}\n')
 
         print('Output saved')
+
+    def normalize_word_vector(self, word_vec):
+        norm=np.linalg.norm(word_vec)
+        if norm == 0:
+            return word_vec
+        return word_vec/norm
 
     def _plot_distances(
             self,
