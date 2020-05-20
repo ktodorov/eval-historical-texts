@@ -43,22 +43,23 @@ class CBOWModel(ModelBase):
         if not arguments_service.evaluate and not arguments_service.resume_training:
             pretrained_word_weights = process_service.get_pretrained_embedding_weights()
 
+        pretrained_weight_matrix_dim = 300
+        if pretrained_word_weights is not None:
+            pretrained_weight_matrix_dim = pretrained_word_weights.shape[1]
+
         embedding_layer_options = EmbeddingLayerOptions(
             device=arguments_service.device,
             pretrained_representations_options=PretrainedRepresentationsOptions(
                 include_pretrained_model=False),
             vocabulary_size=vocabulary_service.vocabulary_size(),
             learn_word_embeddings=True,
-            word_embeddings_size=arguments_service.word_embeddings_size,
+            word_embeddings_size=pretrained_weight_matrix_dim,
             pretrained_word_weights=pretrained_word_weights,
             output_embedding_type=EmbeddingType.Word)
 
         self._embedding_layer = EmbeddingLayer(
             file_service, embedding_layer_options)
 
-        pretrained_weight_matrix_dim = 300
-        if pretrained_word_weights is not None:
-            pretrained_weight_matrix_dim = pretrained_word_weights.shape[1]
         self._mapping_layer = nn.Linear(
             in_features=6 * pretrained_weight_matrix_dim,
             out_features=128)
