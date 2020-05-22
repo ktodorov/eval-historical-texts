@@ -122,7 +122,7 @@ class NELine:
             replace_all_numbers: bool = False,
             expand_targets: bool = True):
         if replace_all_numbers:
-            self.tokens = [re.sub('(([0-9]+)|(([0-9]*)\.([0-9]*)))', '0', token)
+            self.tokens = [re.sub('^(((([0-9]*)(\.|,)([0-9]+))+)|([0-9]+))', '0', token)
                            for token in self.tokens]  # replace digit with 0
 
         self.original_length = len(self.tokens)
