@@ -6,6 +6,7 @@ import argparse
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
 from enums.entity_tag_type import EntityTagType
+from enums.text_sequence_split_type import TextSequenceSplitType
 
 
 class NERArgumentsService(PretrainedArgumentsService):
@@ -63,8 +64,8 @@ class NERArgumentsService(PretrainedArgumentsService):
                             help="If set to true, CRF layer will use weighted loss which focuses more on non-empty tags")
         parser.add_argument("--use-manual-features", action='store_true',
                             help="If set to true, manual features representations will be learned and added to general embeddings")
-        parser.add_argument("--split-documents", action='store_true',
-                            help="Using this, the documents will be split into segments and treated as separate items during training and testing")
+        parser.add_argument('--split-type', type=TextSequenceSplitType, choices=list(TextSequenceSplitType), default=TextSequenceSplitType.Documents,
+                            help='This sets the split level of the input data. Default is document-level')
 
     @property
     def embeddings_size(self) -> int:
@@ -123,5 +124,5 @@ class NERArgumentsService(PretrainedArgumentsService):
         return self._get_argument('use_manual_features')
 
     @property
-    def split_documents(self) -> bool:
-        return self._get_argument('split_documents')
+    def split_type(self) -> TextSequenceSplitType:
+        return self._get_argument('split_type')

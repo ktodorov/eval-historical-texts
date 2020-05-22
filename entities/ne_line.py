@@ -11,6 +11,7 @@ class NELine:
     def __init__(self):
         self.tokens: List[str] = []
         self.tokens_features: List[List[int]] = []
+        self.token_ids = []
         self.misc = []
         self.ne_coarse_lit = []
         self.ne_coarse_meto = []
@@ -18,33 +19,62 @@ class NELine:
         self.ne_fine_meto = []
         self.ne_fine_comp = []
 
+        self.segment_start = []
+
         self.ne_nested = []
         self.nel_lit = []
         self.nel_meto = []
         self.original_length = 0
         self.position_changes: Dict[int, List[int]] = None
 
-    def add_data(self, csv_row: dict):
+        self.document_id = None
+        self.segment_idx = None
+
+    def start_new_segment(self):
+        if len(self.segment_start) > 0:
+            self.segment_start[-1] = True
+
+    def add_data(self, csv_row: dict, possible_entity_tag_types: List[EntityTagType]):
         token = self._add_entity_if_available(csv_row, 'TOKEN', self.tokens)
         self.tokens_features.append(self._get_token_features(token))
+
         self._add_entity_if_available(
             csv_row, 'MISC', self.misc, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NE-COARSE-LIT', self.ne_coarse_lit, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NE-COARSE-METO', self.ne_coarse_meto, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NE-FINE-LIT', self.ne_fine_lit, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NE-FINE-METO', self.ne_fine_meto, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NE-FINE-COMP', self.ne_fine_comp, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NE-NESTED', self.ne_nested, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NEL-LIT', self.nel_lit, use_none_if_empty=True)
-        self._add_entity_if_available(
-            csv_row, 'NEL-METO', self.nel_meto, use_none_if_empty=True)
+
+        if EntityTagType.LiteralCoarse in possible_entity_tag_types:
+            self._add_entity_if_available(
+                csv_row, 'NE-COARSE-LIT', self.ne_coarse_lit, use_none_if_empty=True)
+
+        if EntityTagType.MetonymicCoarse in possible_entity_tag_types:
+            self._add_entity_if_available(
+                csv_row, 'NE-COARSE-METO', self.ne_coarse_meto, use_none_if_empty=True)
+
+        if EntityTagType.LiteralFine in possible_entity_tag_types:
+            self._add_entity_if_available(
+                csv_row, 'NE-FINE-LIT', self.ne_fine_lit, use_none_if_empty=True)
+
+        if EntityTagType.MetonymicFine in possible_entity_tag_types:
+            self._add_entity_if_available(
+                csv_row, 'NE-FINE-METO', self.ne_fine_meto, use_none_if_empty=True)
+
+        if EntityTagType.Component in possible_entity_tag_types:
+            self._add_entity_if_available(
+                csv_row, 'NE-FINE-COMP', self.ne_fine_comp, use_none_if_empty=True)
+
+        if EntityTagType.Nested in possible_entity_tag_types:
+            self._add_entity_if_available(
+                csv_row, 'NE-NESTED', self.ne_nested, use_none_if_empty=True)
+
+        # we skip named entity linking for now
+        # self._add_entity_if_available(
+        #     csv_row, 'NEL-LIT', self.nel_lit, use_none_if_empty=True)
+        # self._add_entity_if_available(
+        #     csv_row, 'NEL-METO', self.nel_meto, use_none_if_empty=True)
+
+        if len(self.segment_start) > 0:
+            self.segment_start.append(False)
+        else:
+            self.segment_start.append(True)
 
     def _get_token_features(self, token: str) -> Dict[WordFeature, bool]:
         result = {
@@ -114,6 +144,8 @@ class NELine:
             new_ne_fine_meto = deepcopy(self.ne_fine_meto)
             new_ne_fine_comp = deepcopy(self.ne_fine_comp)
 
+            new_segment_start = deepcopy(self.segment_start)
+
             new_ne_nested = deepcopy(self.ne_nested)
             new_nel_lit = deepcopy(self.nel_lit)
             new_nel_meto = deepcopy(self.nel_meto)
@@ -128,6 +160,11 @@ class NELine:
 
                     new_tokens_features.insert(
                         corresponding_counter+1, self.tokens_features[i])
+
+                    # we always insert false for new segment start, since even if the current object is start of segment,
+                    # expanding it should not make the segment start appear twice
+                    new_segment_start.insert(corresponding_counter+1, False)
+
                     if expand_targets:
                         # we copy the value of the original token
                         self._insert_entity_tag(
@@ -165,6 +202,8 @@ class NELine:
             self.ne_nested = new_ne_nested
             self.nel_lit = new_nel_lit
             self.nel_meto = new_nel_meto
+
+            self.segment_start = new_segment_start
 
         self.position_changes = position_changes
 

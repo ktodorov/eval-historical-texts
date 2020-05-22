@@ -1,9 +1,11 @@
 import os
 import numpy as np
 
+import random
+
 import torch
 
-from typing import List
+from typing import List, Tuple
 from overrides import overrides
 
 from entities.ne_line import NELine
@@ -13,6 +15,7 @@ from entities.batch_representation import BatchRepresentation
 from datasets.dataset_base import DatasetBase
 from enums.run_type import RunType
 from enums.language import Language
+from enums.text_sequence_split_type import TextSequenceSplitType
 
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.vocabulary_service import VocabularyService
@@ -36,6 +39,7 @@ class NERDataset(DatasetBase):
         self._include_pretrained = arguments_service.include_pretrained_model
 
         self.ne_collection = ner_process_service.get_processed_data(run_type)
+        self._use_multi_segment_split = arguments_service.split_type == TextSequenceSplitType.MultiSegment
 
         print(f'Loaded {len(self.ne_collection)} items for \'{run_type}\' set')
 
@@ -46,11 +50,11 @@ class NERDataset(DatasetBase):
     @overrides
     def __getitem__(self, idx):
         item: NELine = self.ne_collection[idx]
+
         entity_labels = self._ner_process_service.get_entity_labels(
             item)
 
         filtered_tokens = [token.replace('#', '') for token in item.tokens]
-
         character_sequence = [self._vocabulary_service.string_to_ids(
             token) for token in filtered_tokens]
         token_characters = [len(x) for x in character_sequence]
@@ -65,10 +69,11 @@ class NERDataset(DatasetBase):
             entity_labels,
             filtered_tokens,
             item.position_changes,
-            item.original_length,
             character_sequence,
             token_characters,
-            features)
+            features,
+            item.document_id,
+            item.segment_idx)
 
     @overrides
     def use_collate_function(self) -> bool:
@@ -86,10 +91,11 @@ class NERDataset(DatasetBase):
          targets,
          tokens,
          position_changes,
-         original_lengths,
          character_sequences,
          token_characters_count,
-         feature_set) = batch_split
+         feature_set,
+         document_ids,
+         segment_ids) = batch_split
 
         pad_idx = self._ner_process_service.pad_idx
         batch_representation = BatchRepresentation(
@@ -102,6 +108,7 @@ class NERDataset(DatasetBase):
             tokens=tokens,
             position_changes=position_changes,
             manual_features=feature_set,
+            additional_information=(document_ids, segment_ids),
             pad_idx=pad_idx)
 
         batch_representation.sort_batch()

@@ -10,6 +10,9 @@ class NECollection:
 
     def add_line(self, line: NELine):
         self.lines.append(line)
+    
+    def add_lines(self, lines: List[NELine]):
+        self.lines.extend(lines)
 
     def get_unique_entity_tags(self, entity_tag_type: EntityTagType):
         entities = []

@@ -1,13 +1,14 @@
 import os
 import csv
 import codecs
-
+import numpy as np
 from typing import List, Dict, Tuple
 from collections import defaultdict
 
 from enums.language import Language
 from enums.run_type import RunType
 from enums.entity_tag_type import EntityTagType
+from enums.text_sequence_split_type import TextSequenceSplitType
 
 from entities.ne_collection import NECollection
 from entities.ne_line import NELine
@@ -76,29 +77,54 @@ class NERProcessService(ProcessServiceBase):
 
         collection = NECollection()
 
+        multi_segments_count = []
+        average_segments = []
+
         with open(file_path, 'r', encoding='utf-8') as tsv_file:
             reader = csv.DictReader(tsv_file, dialect=csv.excel_tab)
             current_sentence = NELine()
-            split_documents = self._arguments_service.split_documents
+            split_documents = self._arguments_service.split_type == TextSequenceSplitType.Segments
 
             for i, row in enumerate(reader):
-                if ((split_documents and row['TOKEN'].startswith('# segment')) or
-                        (not split_documents and row['TOKEN'].startswith('# document'))):
+                is_new_segment = row['TOKEN'].startswith('# segment')
+                is_new_document = row['TOKEN'].startswith('# document')
+
+                if is_new_segment:
+                    current_sentence.start_new_segment()
+
+                document_id = None
+                if is_new_document:
+                    document_id = row['TOKEN'].split('=')[-1].strip()
+
+                    if len(current_sentence.tokens) == 0:
+                        current_sentence.document_id = document_id
+
+                if ((split_documents and is_new_segment) or is_new_document):
                     if len(current_sentence.tokens) > 0:
                         current_sentence.tokenize_text(
                             self._tokenize_service,
                             replace_all_numbers=self._arguments_service.replace_all_numbers,
                             expand_targets=not self._arguments_service.merge_subwords)
 
-                        collection.add_line(current_sentence)
+                        if self._arguments_service.split_type == TextSequenceSplitType.MultiSegment:
+                            multi_segment_documents, ms_count, s_avg = self._split_sentence_to_multi_segments(
+                                current_sentence)
+                            multi_segments_count.append(ms_count)
+                            average_segments.append(s_avg)
+                            collection.add_lines(multi_segment_documents)
+                        else:
+                            collection.add_line(current_sentence)
+
                         current_sentence = NELine()
+                        if document_id is not None:
+                            current_sentence.document_id = document_id
 
                         if limit and len(collection) >= limit:
                             break
                 elif row['TOKEN'].startswith('#'):
                     continue
                 else:
-                    current_sentence.add_data(row)
+                    current_sentence.add_data(row, self._entity_tag_types)
 
         # add last document
         if len(current_sentence.tokens) > 0:
@@ -108,6 +134,9 @@ class NERProcessService(ProcessServiceBase):
                 expand_targets=not self._arguments_service.merge_subwords)
 
             collection.add_line(current_sentence)
+
+        if self._arguments_service.split_type == TextSequenceSplitType.MultiSegment:
+            print(f'Average multi segments per document: {np.mean(multi_segments_count)}\nAverage segments per multi segment:{np.mean(average_segments)}')
 
         return collection
 
@@ -259,3 +288,130 @@ class NERProcessService(ProcessServiceBase):
             print_success=False)
 
         return vocabulary_data
+
+    def _split_sentence_to_multi_segments(self, ne_line: NELine) -> List[NELine]:
+        # 1 Decide how many multi-segments are we going to have (N)
+        # max_tokens_length = self._arguments_service.pretrained_max_length
+        max_tokens_length = 250
+
+        # calculate segment statistics
+        segment_start_positions = [i for i, is_segment_start in enumerate(
+            ne_line.segment_start) if is_segment_start]
+        segment_lengths = [(segment_start_positions[i+1] - segment_start_positions[i])
+                           for i in range(len(segment_start_positions)-1)]
+        segment_lengths.append(len(ne_line.tokens) -
+                               segment_start_positions[-1])
+
+        multi_segments = []
+        current_segment = []
+        current_length = 0
+        for i, (segment_start_position, segment_length) in enumerate(zip(segment_start_positions, segment_lengths)):
+            if current_length + segment_length > max_tokens_length:
+                multi_segments.append(current_segment)
+                current_segment = []
+                current_length = 0
+
+            current_length += segment_length
+            current_segment.append(i)
+
+        multi_segments.append(current_segment)
+
+        result = []
+        # Split sentence into N multi-segments
+        for segment_idx, multi_segment in enumerate(multi_segments):
+            segment_start_id = segment_start_positions[min(multi_segment)]
+            segment_end_id = segment_start_positions[max(
+                multi_segment)] + segment_lengths[max(multi_segment)]
+
+            multi_segment_line = NELine()
+            multi_segment_line.tokens = ne_line.tokens[segment_start_id: segment_end_id]
+            multi_segment_line.token_ids = ne_line.token_ids[segment_start_id: segment_end_id]
+            multi_segment_line.tokens_features = ne_line.tokens_features[
+                segment_start_id: segment_end_id]
+
+            # copy tag targets
+            multi_segment_line.misc = self._copy_line_targets(ne_line.misc, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_coarse_lit = self._copy_line_targets(ne_line.ne_coarse_lit, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_coarse_meto = self._copy_line_targets(ne_line.ne_coarse_meto, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_fine_lit = self._copy_line_targets(ne_line.ne_fine_lit, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_fine_meto = self._copy_line_targets(ne_line.ne_fine_meto, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_fine_comp = self._copy_line_targets(ne_line.ne_fine_comp, segment_start_id, segment_end_id, ne_line.position_changes)
+
+            multi_segment_line.ne_nested = self._copy_line_targets(ne_line.ne_nested, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.position_changes = self._cut_position_changes(
+                ne_line.position_changes, segment_start_id, segment_end_id)
+            result.append(multi_segment_line)
+
+            multi_segment_line.document_id = ne_line.document_id
+            multi_segment_line.segment_idx = segment_idx
+
+
+        return result, len(result), np.mean([len(x) for x in multi_segments])
+
+    def _copy_line_targets(self, target_values: list, start_idx: int, end_idx: int, position_changes: Dict[int, List[int]]) -> list:
+        if target_values is None or len(target_values) == 0:
+            return None
+
+        result_targets = []
+        for original_position, new_positions in position_changes.items():
+            if any((x >= start_idx and x < end_idx) for x in new_positions):
+                result_targets.append(target_values[original_position])
+
+        return result_targets
+
+
+    def _cut_position_changes(self, item_position_changes, start_idx, end_idx):
+        result = {}
+        counter = 0
+        for original_position, new_positions in item_position_changes.items():
+            if all(position < start_idx or position >= end_idx for position in new_positions):
+                continue
+
+            result[counter] = [(x-start_idx)
+                               for x in new_positions if x >= start_idx and x < end_idx]
+            counter += 1
+
+        return result
+
+    def _select_random_line_segments(self, ne_line: NELine) -> Tuple[int, int]:
+        segment_start_ids = [i for i, is_segment_start in enumerate(
+            ne_line.segment_start) if is_segment_start]
+
+        previous_segment_start_idx = None
+        chosen_segment_start_id = None
+        token_count = 0
+        for i, segment_start_id in enumerate(reversed(segment_start_ids)):
+            if previous_segment_start_idx is None:
+                token_count += len(ne_line.tokens[segment_start_id:])
+            else:
+                token_count += len(
+                    ne_line.tokens[segment_start_id:previous_segment_start_idx])
+
+            if token_count >= self._arguments_service.pretrained_max_length:
+                break
+
+            previous_segment_start_idx = segment_start_id
+            chosen_segment_start_id = len(segment_start_ids) - i
+
+        last_possible_segment_start_idx = chosen_segment_start_id
+        if last_possible_segment_start_idx is None:
+            last_possible_segment_start_idx = len(segment_start_ids) - 1
+
+        # last_possible_segment_start_idx is the segment count that can select last,
+        # all segments after this will be shorter than what we want
+
+        start_segment_id = random.randint(0, last_possible_segment_start_idx)
+        end_segment_id = None
+        # we want to select multi segment that has as many segments as is the max length of BERT
+        multi_segment_length = 0
+        previous_segment_start_idx = segment_start_ids[start_segment_id]
+        for i, segment_id in enumerate(segment_start_ids[start_segment_id+1:]):
+            new_length = (segment_id - previous_segment_start_idx)
+            if multi_segment_length + new_length >= self._arguments_service.pretrained_max_length:
+                break
+
+            multi_segment_length += new_length
+            end_segment_id = start_segment_id + i + 1
+            previous_segment_start_idx = segment_id
+
+        return segment_start_ids[start_segment_id], segment_start_ids[end_segment_id]

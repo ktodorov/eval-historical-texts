@@ -18,6 +18,7 @@ from enums.tag_measure_type import TagMeasureType
 from enums.tag_metric import TagMetric
 from enums.entity_tag_type import EntityTagType
 from enums.word_feature import WordFeature
+from enums.text_sequence_split_type import TextSequenceSplitType
 
 from models.ner_rnn.rnn_encoder import RNNEncoder
 from models.ner_rnn.conditional_random_field import ConditionalRandomField
@@ -123,6 +124,15 @@ class NERPredictor(ModelBase):
                 0],
             'all')
 
+        self._main_entities_per_tag = {
+            entity_tag_type: self._process_service.get_main_entities(
+                entity_tag_type)
+            for entity_tag_type in self._entity_tag_types
+        }
+
+        if self._arguments_service.split_type != TextSequenceSplitType.Documents:
+            self._eval_outputs_per_tag = {}
+
     @overrides
     def forward(self, batch_representation: BatchRepresentation):
         rnn_outputs, lengths = self.rnn_encoder.forward(
@@ -160,8 +170,6 @@ class NERPredictor(ModelBase):
             predictions = output[entity_tag_type].cpu().detach().numpy()
             current_targets = targets[entity_tag_type].cpu().detach().numpy()
 
-            main_entities = self._process_service.get_main_entities(
-                entity_tag_type)
             prediction_tags = []
             target_tags = []
             for b in range(batch.batch_size):
@@ -175,12 +183,27 @@ class NERPredictor(ModelBase):
 
             if self.training:
                 results, results_per_type = self._tag_metrics_service.calculate_batch(
-                    prediction_tags, target_tags, main_entities)
+                    prediction_tags, target_tags, self._main_entities_per_tag[entity_tag_type])
                 self.update_metrics(results, results_per_type,
                                     metrics, entity_tag_type)
             else:
-                self._tag_metrics_service.add_predictions(
-                    prediction_tags, target_tags, main_entities, entity_tag_type)
+                if self._arguments_service.split_type != TextSequenceSplitType.Documents:
+                    if entity_tag_type not in self._eval_outputs_per_tag.keys():
+                        self._eval_outputs_per_tag[entity_tag_type] = []
+
+                    for b in range(batch.batch_size):
+                        self._eval_outputs_per_tag[entity_tag_type].append((
+                            prediction_tags[b],
+                            target_tags[b],
+                            batch.additional_information[0][b],  # document id
+                            batch.additional_information[1][b],  # segment idx
+                        ))
+                else:
+                    self._tag_metrics_service.add_predictions(
+                        prediction_tags,
+                        target_tags,
+                        self._main_entities_per_tag[entity_tag_type],
+                        entity_tag_type)
 
             if output_characters:
                 for b in range(batch.batch_size):
@@ -281,8 +304,41 @@ class NERPredictor(ModelBase):
 
         return result
 
+    def _compute_multi_segment_eval_metrics(self):
+        predictions_per_doc = {}
+        for entity_tag_type, validation_predictions in self._eval_outputs_per_tag.items():
+            for prediction in validation_predictions:
+                document_id = prediction[2]
+                segment_idx = prediction[3]
+
+                if document_id not in predictions_per_doc.keys():
+                    predictions_per_doc[document_id] = {}
+
+                predictions_per_doc[document_id][segment_idx] = (
+                    prediction[0], prediction[1])
+
+            for predictions_per_segment in predictions_per_doc.values():
+                document_predictions = []
+                document_targets = []
+
+                segment_ids = list(sorted(predictions_per_segment.keys()))
+                for segment_idx in segment_ids:
+                    document_predictions.extend(
+                        predictions_per_segment[segment_idx][0])
+                    document_targets.extend(
+                        predictions_per_segment[segment_idx][1])
+
+                self._tag_metrics_service.add_predictions(
+                    document_predictions,
+                    document_targets,
+                    self._main_entities_per_tag[entity_tag_type],
+                    entity_tag_type)
+
     @overrides
     def calculate_evaluation_metrics(self) -> Dict[str, float]:
+        if self._arguments_service.split_type != TextSequenceSplitType.Documents:
+            self._compute_multi_segment_eval_metrics()
+
         metrics: Dict[str, float] = {}
         overall_stats = self._tag_metrics_service.calculate_overall_stats()
         for entity_tag_type, (results, results_per_type) in overall_stats.items():
@@ -290,6 +346,7 @@ class NERPredictor(ModelBase):
                                 metrics, entity_tag_type)
 
         self._tag_metrics_service.reset()
+        self._eval_outputs_per_tag = {}
 
         self._log_crf_transition_matrices()
 
@@ -300,7 +357,8 @@ class NERPredictor(ModelBase):
             current_entity_tag_type = self._entity_tag_types[i]
 
             transition_matrix = crf_layer._transition_matrix.detach().cpu().numpy()
-            entities = self._process_service.get_entity_names(current_entity_tag_type)
+            entities = self._process_service.get_entity_names(
+                current_entity_tag_type)
 
             self._log_service.log_heatmap(
                 f'CRF Transition matrix - {current_entity_tag_type.value}',

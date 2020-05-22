@@ -162,12 +162,16 @@ then
     NEWEMB="-nonew"
 fi
 
-SPLITARG=""
-SPL=""
-if [ ! -z "$SPLIT" ]
+SPLITARG="--split-type document"
+SPL="-spl-d"
+if [ $SPLIT == "seg" ]
 then
-    SPLITARG="--split-documents"
-    SPL="-spl"
+    SPLITARG="--split-type segment"
+    SPL="-spl-s"
+elif [ $SPLIT == "multi-seg" ]
+then
+    SPLITARG="--split-type multi-segment"
+    SPL="-spl-ms"
 fi
 
 PATIENCEARG="$PATIENCE"
