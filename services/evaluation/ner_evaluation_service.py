@@ -61,13 +61,13 @@ class NEREvaluationService(BaseEvaluationService):
         language_suffix = self._process_service.get_language_suffix(
             self._arguments_service.language)
         dev_filepath = os.path.join(
-            data_path, f'HIPE-data-v{self._process_service._data_version}-dev-{language_suffix}.tsv')
+            data_path, f'HIPE-data-v{self._process_service._data_version}-test-masked-{language_suffix}.tsv')
 
         predictions = evaluation[EvaluationType.NamedEntityRecognitionMatch]
 
         tokens: List[str] = []
         with open(dev_filepath, 'r', encoding='utf-8') as dev_tsv:
-            reader = csv.DictReader(dev_tsv, dialect=csv.excel_tab)
+            reader = csv.DictReader(dev_tsv, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
             header = reader.fieldnames
             for row in reader:
                 tokens.append(row['TOKEN'])

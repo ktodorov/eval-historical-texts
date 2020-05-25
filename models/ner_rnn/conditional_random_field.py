@@ -213,10 +213,10 @@ class ConditionalRandomField(ModelBase):
         :return:
         """
         all_scores = self.calculate_all_scores(features)
-        bestScores, decodeIdx = self._viterbi_decode(
+        _, decodeIdx = self._viterbi_decode(
             all_scores, wordSeqLengths)
 
-        return bestScores, decodeIdx
+        return decodeIdx
 
     def _viterbi_decode(
             self,

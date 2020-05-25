@@ -60,6 +60,8 @@ class NERPredictor(ModelBase):
 
         self._entity_tag_types = arguments_service.entity_tag_types
 
+        self._evaluation_mode = arguments_service.evaluate
+
         pretrained_options = PretrainedRepresentationsOptions(
             include_pretrained_model=arguments_service.include_pretrained_model,
             pretrained_model_size=arguments_service.pretrained_model_size,
@@ -142,6 +144,12 @@ class NERPredictor(ModelBase):
         predictions: Dict[EntityTagType, torch.Tensor] = {}
 
         for i, entity_tag_type in enumerate(self._entity_tag_types):
+            # if we are in evaluation mode, we don't have targets to compute loss for
+            # therefore we only decode the predictions
+            if self._evaluation_mode:
+                predictions[entity_tag_type] = self._crf_layers[i].decode(rnn_outputs[entity_tag_type], lengths)
+                continue
+
             mask = self._create_mask(rnn_outputs[entity_tag_type], lengths)
             loss, prediction = self._crf_layers[i].forward(
                 rnn_outputs[entity_tag_type], lengths, batch_representation.targets[entity_tag_type], mask)
@@ -329,8 +337,8 @@ class NERPredictor(ModelBase):
                         predictions_per_segment[segment_idx][1])
 
                 self._tag_metrics_service.add_predictions(
-                    document_predictions,
-                    document_targets,
+                    [document_predictions],
+                    [document_targets],
                     self._main_entities_per_tag[entity_tag_type],
                     entity_tag_type)
 

@@ -60,6 +60,12 @@ class NERProcessService(ProcessServiceBase):
                 data_path, f'HIPE-data-v{self._data_version}-dev-{language_suffix}.tsv'),
             limit=arguments_service.validation_dataset_limit_size)
 
+        if arguments_service.evaluate:
+            self._test_ne_collection = self.preprocess_data(
+                os.path.join(
+                    data_path,
+                    f'HIPE-data-v{self._data_version}-test-masked-{language_suffix}.tsv'))
+
         self._entity_mappings = self._create_entity_mappings(
             self._train_ne_collection,
             self._validation_ne_collection)
@@ -81,7 +87,7 @@ class NERProcessService(ProcessServiceBase):
         average_segments = []
 
         with open(file_path, 'r', encoding='utf-8') as tsv_file:
-            reader = csv.DictReader(tsv_file, dialect=csv.excel_tab)
+            reader = csv.DictReader(tsv_file, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
             current_sentence = NELine()
             split_documents = self._arguments_service.split_type == TextSequenceSplitType.Segments
 
@@ -143,8 +149,14 @@ class NERProcessService(ProcessServiceBase):
     def get_processed_data(self, run_type: RunType):
         if run_type == RunType.Train:
             return self._train_ne_collection
-        else:
+        elif run_type == RunType.Validation:
             return self._validation_ne_collection
+        elif run_type == RunType.Test:
+            if not self._arguments_service.evaluate:
+                raise Exception('You must have an evaluation run to use test collection')
+            return self._test_ne_collection
+
+        raise Exception('Unsupported run type')
 
     def get_language_suffix(self, language: Language):
         if language == Language.English:

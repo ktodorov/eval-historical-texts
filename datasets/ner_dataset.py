@@ -41,6 +41,8 @@ class NERDataset(DatasetBase):
         self.ne_collection = ner_process_service.get_processed_data(run_type)
         self._use_multi_segment_split = arguments_service.split_type == TextSequenceSplitType.MultiSegment
 
+        self._run_type = run_type
+
         print(f'Loaded {len(self.ne_collection)} items for \'{run_type}\' set')
 
     @overrides
@@ -51,8 +53,10 @@ class NERDataset(DatasetBase):
     def __getitem__(self, idx):
         item: NELine = self.ne_collection[idx]
 
-        entity_labels = self._ner_process_service.get_entity_labels(
-            item)
+        entity_labels = []
+        if self._run_type != RunType.Test:
+            entity_labels = self._ner_process_service.get_entity_labels(
+                item)
 
         filtered_tokens = [token.replace('#', '') for token in item.tokens]
         character_sequence = [self._vocabulary_service.string_to_ids(
@@ -96,6 +100,9 @@ class NERDataset(DatasetBase):
          feature_set,
          document_ids,
          segment_ids) = batch_split
+
+        if self._run_type == RunType.Test:
+            targets = None
 
         pad_idx = self._ner_process_service.pad_idx
         batch_representation = BatchRepresentation(

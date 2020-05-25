@@ -75,7 +75,7 @@ class DatasetService:
                     self._arguments_service,
                     self._vocabulary_service,
                     self._process_service,
-                    RunType.Validation)
+                    RunType.Test)
         if not joint_model:
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
                 result = SemanticChangeDataset(
