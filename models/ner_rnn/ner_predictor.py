@@ -203,8 +203,8 @@ class NERPredictor(ModelBase):
                         self._eval_outputs_per_tag[entity_tag_type].append((
                             prediction_tags[b],
                             target_tags[b],
-                            batch.additional_information[0][b],  # document id
-                            batch.additional_information[1][b],  # segment idx
+                            batch.additional_information[b][0],  # document id
+                            batch.additional_information[b][1],  # segment idx
                         ))
                 else:
                     self._tag_metrics_service.add_predictions(

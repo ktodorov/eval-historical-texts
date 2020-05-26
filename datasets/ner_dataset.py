@@ -115,7 +115,7 @@ class NERDataset(DatasetBase):
             tokens=tokens,
             position_changes=position_changes,
             manual_features=feature_set,
-            additional_information=(document_ids, segment_ids),
+            additional_information=[(doc_id, seg_id) for doc_id, seg_id in zip(document_ids, segment_ids)],
             pad_idx=pad_idx)
 
         batch_representation.sort_batch()

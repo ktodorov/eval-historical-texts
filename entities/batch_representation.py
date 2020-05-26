@@ -92,6 +92,8 @@ class BatchRepresentation:
 
         self._manual_features = self._sort_tensor(self._manual_features, perm_idx)
 
+        self._additional_information = self._sort_list(self._additional_information, perm_idx)
+
         return perm_idx
 
     def _sort_tensor(self, tensor: torch.Tensor, perm_idx) -> torch.Tensor:
