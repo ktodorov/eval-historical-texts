@@ -90,10 +90,12 @@ class NERProcessService(ProcessServiceBase):
             reader = csv.DictReader(tsv_file, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
             current_sentence = NELine()
             split_documents = self._arguments_service.split_type == TextSequenceSplitType.Segments
+            ignore_segmentation = self._arguments_service.language == Language.English and not self._arguments_service.evaluate
 
             for i, row in enumerate(reader):
                 is_new_segment = row['TOKEN'].startswith('# segment')
                 is_new_document = row['TOKEN'].startswith('# document')
+                is_comment = row['TOKEN'].startswith('#')
 
                 if is_new_segment:
                     current_sentence.start_new_segment()
@@ -105,7 +107,7 @@ class NERProcessService(ProcessServiceBase):
                     if len(current_sentence.tokens) == 0:
                         current_sentence.document_id = document_id
 
-                if ((split_documents and is_new_segment) or is_new_document):
+                if ((split_documents and (is_new_segment or (is_comment and ignore_segmentation))) or is_new_document):
                     if len(current_sentence.tokens) > 0:
                         current_sentence.tokenize_text(
                             self._tokenize_service,
@@ -127,7 +129,7 @@ class NERProcessService(ProcessServiceBase):
 
                         if limit and len(collection) >= limit:
                             break
-                elif row['TOKEN'].startswith('#'):
+                elif is_comment:
                     continue
                 else:
                     current_sentence.add_data(row, self._entity_tag_types)
