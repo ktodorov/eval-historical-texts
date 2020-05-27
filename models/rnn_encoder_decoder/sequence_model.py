@@ -23,7 +23,6 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
-from services.decoding_service import DecodingService
 from services.file_service import FileService
 
 from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
@@ -41,13 +40,11 @@ class SequenceModel(ModelBase):
             data_service: DataService,
             metrics_service: MetricsService,
             vocabulary_service: VocabularyService,
-            decoding_service: DecodingService,
             file_service: FileService):
         super(SequenceModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
         self._vocabulary_service = vocabulary_service
-        self._decoding_service = decoding_service
 
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
@@ -102,10 +99,15 @@ class SequenceModel(ModelBase):
             hidden_dimension=arguments_service.hidden_dimension * 2,
             number_of_layers=arguments_service.number_of_layers,
             attention=self._attention,
+            vocabulary_size=self._vocabulary_service.vocabulary_size(),
             dropout=arguments_service.dropout,
             use_own_embeddings=(
                 not self._arguments_service.share_embedding_layer),
-            shared_embedding_layer=self._shared_embedding_layer)
+            shared_embedding_layer=self._shared_embedding_layer,
+            use_beam_search=self._arguments_service.use_beam_search,
+            beam_width=self._arguments_service.beam_width,
+            teacher_forcing_ratio=self._arguments_service.teacher_forcing_ratio,
+            eos_token=self._vocabulary_service.eos_token)
 
         self.apply(self.init_weights)
 
@@ -126,16 +128,8 @@ class SequenceModel(ModelBase):
 
         encoder_context = encoder_context.permute(1, 0, 2)
 
-        if self._arguments_service.use_beam_search:
-            outputs, targets = self._decoding_service.beam_decode(
-                input_batch.targets,
-                encoder_context,
-                (lambda x, y, z: self._decoder.forward(x, y, z)))
-        else:
-            outputs, targets = self._decoding_service.greedy_decode(
-                input_batch.targets,
-                encoder_context,
-                (lambda x, y, z: self._decoder.forward(x, y, z)))
+        outputs, targets = self._decoder.forward(
+            encoder_context, input_batch.targets)
 
         if outputs.shape[1] < targets.shape[1]:
             padded_output = torch.zeros((outputs.shape[0], targets.shape[1], outputs.shape[2])).to(

@@ -70,7 +70,6 @@ from services.train_service import TrainService
 from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
 from services.experiment_service import ExperimentService
-from services.decoding_service import DecodingService
 from services.tag_metrics_service import TagMetricsService
 
 import logging
@@ -232,7 +231,6 @@ def register_model(
         vocabulary_service: VocabularyService,
         model_service: ModelService,
         process_service: ProcessServiceBase,
-        decoding_service: DecodingService,
         tag_metrics_service: TagMetricsService,
         joint_model: bool,
         configuration: Configuration):
@@ -274,7 +272,6 @@ def register_model(
                     data_service=data_service,
                     metrics_service=metrics_service,
                     vocabulary_service=vocabulary_service,
-                    decoding_service=decoding_service,
                     file_service=file_service)
             elif configuration == Configuration.TransformerSequence:
                 model = providers.Singleton(
@@ -477,11 +474,6 @@ class IocContainer(containers.DeclarativeContainer):
         process_service=process_service,
         file_service=file_service)
 
-    decoding_service = providers.Factory(
-        DecodingService,
-        arguments_service=arguments_service,
-        vocabulary_service=vocabulary_service)
-
     tag_metrics_service = providers.Factory(
         TagMetricsService
     )
@@ -497,7 +489,6 @@ class IocContainer(containers.DeclarativeContainer):
         vocabulary_service=vocabulary_service,
         model_service=model_service,
         process_service=process_service,
-        decoding_service=decoding_service,
         tag_metrics_service=tag_metrics_service,
         joint_model=joint_model,
         configuration=configuration)
