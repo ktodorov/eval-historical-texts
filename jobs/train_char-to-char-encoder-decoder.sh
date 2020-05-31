@@ -12,18 +12,9 @@ module purge
 module load pre2019
 module load 2019
 module load Miniconda3
-module load Python/3.7.5-foss-2018b
+module load Python/3.7.5-foss-2019b
 
 source activate eval-env
-
-echo copying to SCRATCH...
-shopt -s extglob # This is to enable ! on the next line
-mkdir -p "$TMPDIR"/eval-historical-texts/results
-cp -a $HOME/eval-historical-texts/!(results) "$TMPDIR"/eval-historical-texts
-echo copying finished
-
-cd "$TMPDIR"/eval-historical-texts
-
 
 PRETR=""
 if [ ! -z "$INCLUDEPRETR" ]
@@ -93,13 +84,25 @@ then
     PATIENCEARG="10"
 fi
 
+BATCHSIZEARG="$BATCHSIZE"
+if [ -z "$BATCHSIZE" ]
+then
+    BATCHSIZEARG="64"
+fi
+
+EVALFREQARG="$EVALFREQ"
+if [ -z "$EVALFREQ" ]
+then
+    EVALFREQARG="200"
+fi
+
 CHECKPOINTNAME=""
 if [ -z "$CHECKPOINT" ]
 then
     CHECKPOINTNAME="english-$PRETR-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR$FTP"
 fi
 
-srun python3 -u run.py --device cuda --seed 13 --eval-freq 200 --patience $PATIENCEARG --configuration char-to-char-encoder-decoder --learning-rate $LEARNINGRATE --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size 64 --hidden-dimension $HIDDENSIZE --encoder-embedding-size $EMBEDDINGSSIZE --decoder-embedding-size $EMBEDDINGSSIZE --share-embedding-layer --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $BIDIRECTIONAL --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4300 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME $FINETUNEARG
+srun python3 -u run.py --device cuda --seed 13 --eval-freq $EVALFREQARG --patience $PATIENCEARG --configuration char-to-char-encoder-decoder --learning-rate $LEARNINGRATE --metric-types jaccard-similarity levenshtein-distance --language english --challenge post-ocr-correction --batch-size $BATCHSIZEARG --hidden-dimension $HIDDENSIZE --encoder-embedding-size $EMBEDDINGSSIZE --decoder-embedding-size $EMBEDDINGSSIZE --share-embedding-layer --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $BIDIRECTIONAL --enable-external-logging --pretrained-weights bert-base-cased --max-training-minutes 4300 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME $FINETUNEARG
 
-cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
-cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/
+# cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
+# cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/

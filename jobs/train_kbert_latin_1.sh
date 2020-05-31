@@ -12,7 +12,7 @@ module purge
 module load pre2019
 module load 2019
 module load Miniconda3
-module load Python/3.7.5-foss-2018b
+module load Python/3.7.5-foss-2019b
 
 LANGUAGE='latin'
 CORPUS=1
