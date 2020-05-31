@@ -59,7 +59,7 @@ class OCRCharacterDataset(OCRDataset):
 
         _, ocr_aligned, _, ocr_text, gs_text, ocr_offsets = result
 
-        return ocr_aligned, ocr_text, gs_text, ocr_offsets
+        return ocr_aligned[1:], ocr_text[1:], gs_text, ocr_offsets
 
     @overrides
     def collate_function(self, batch_input):

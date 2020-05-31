@@ -83,7 +83,7 @@ class OCRSequenceDataset(OCRDataset):
 
         _, ocr_aligned, gs_aligned, ocr_text, gs_text = result
 
-        return ocr_aligned, gs_aligned, ocr_text, gs_text
+        return ocr_aligned[1:], gs_aligned, ocr_text[1:], gs_text
 
     def _pad_and_sort_batch(self, DataLoaderBatch):
         batch_size = len(DataLoaderBatch)

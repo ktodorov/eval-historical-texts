@@ -4,34 +4,43 @@ from torch.functional import F
 from overrides import overrides
 from models.model_base import ModelBase
 
+
 class SequenceAttention(ModelBase):
-    def __init__(
-            self,
-            encoder_hidden_dimension: int,
-            decoder_hidden_dimension: int):
+    def __init__(self, hidden_size, key_size=None, query_size=None):
         super().__init__()
 
-        self._attention = nn.Linear(
-            (encoder_hidden_dimension * 2) + (decoder_hidden_dimension * 2),
-            decoder_hidden_dimension)
+        # We assume a bi-directional encoder so key_size is 2*hidden_size
+        key_size = 2 * hidden_size if key_size is None else key_size
+        query_size = hidden_size if query_size is None else query_size
 
-        self.v = nn.Linear(
-            decoder_hidden_dimension,
-            1,
-            bias=False)
+        self.key_layer = nn.Linear(key_size, hidden_size, bias=False)
+        self.query_layer = nn.Linear(query_size, hidden_size, bias=False)
+        self.energy_layer = nn.Linear(hidden_size, 1, bias=False)
 
-    @overrides
-    def forward(self, hidden, encoder_context):
+        # to store attention scores
+        self.alphas = None
 
-        batch_size = encoder_context.shape[0]
-        src_len = encoder_context.shape[1]
+    def forward(self, mask, query=None, proj_key=None, value=None):
+        assert mask is not None, "mask is required"
 
-        hidden = hidden.permute(1, 0, 2)
+        # We first project the query (the decoder state).
+        # The projected keys (the encoder states) were already pre-computated.
+        query = self.query_layer(query)
 
-        energy = torch.tanh(
-            self._attention.forward(torch.cat((hidden, encoder_context), dim=2)))
+        # Calculate scores.
+        scores = self.energy_layer(torch.tanh(query + proj_key))
+        scores = scores.squeeze(2).unsqueeze(1)
 
-        attention = self.v.forward(energy).squeeze(2)
+        # Mask out invalid positions.
+        # The mask marks valid positions so we invert it using `mask & 0`.
+        scores.data.masked_fill_(mask == 0, -float('inf'))
 
-        result = F.softmax(attention, dim=1)
-        return result
+        # Turn scores to probabilities.
+        alphas = F.softmax(scores, dim=-1)
+        self.alphas = alphas
+
+        # The context vector is the weighted sum of the values.
+        context = torch.bmm(alphas, value)
+
+        # context shape: [B, 1, 2D], alphas shape: [B, 1, M]
+        return context, alphas

@@ -24,10 +24,11 @@ from services.metrics_service import MetricsService
 from services.log_service import LogService
 from services.vocabulary_service import VocabularyService
 from services.file_service import FileService
+from services.process.ocr_character_process_service import OCRCharacterProcessService
 
 from models.rnn_encoder_decoder.sequence_encoder import SequenceEncoder
 from models.rnn_encoder_decoder.sequence_decoder import SequenceDecoder
-from models.rnn_encoder_decoder.sequence_attention import SequenceAttention
+from models.rnn_encoder_decoder.sequence_generator import SequenceGenerator
 from models.embedding.embedding_layer import EmbeddingLayer
 
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
@@ -40,11 +41,15 @@ class SequenceModel(ModelBase):
             data_service: DataService,
             metrics_service: MetricsService,
             vocabulary_service: VocabularyService,
-            file_service: FileService):
+            file_service: FileService,
+            process_service: OCRCharacterProcessService,
+            log_service: LogService):
         super(SequenceModel, self).__init__(data_service, arguments_service)
 
         self._metrics_service = metrics_service
         self._vocabulary_service = vocabulary_service
+        self._process_service = process_service
+        self._log_service = log_service
 
         self._device = arguments_service.device
         self._metric_types = arguments_service.metric_types
@@ -87,19 +92,17 @@ class SequenceModel(ModelBase):
                 not self._arguments_service.share_embedding_layer),
             shared_embedding_layer=self._shared_embedding_layer)
 
-        self._attention = SequenceAttention(
-            encoder_hidden_dimension=arguments_service.hidden_dimension,
-            decoder_hidden_dimension=arguments_service.hidden_dimension)
-
         self._decoder = SequenceDecoder(
             file_service=file_service,
             device=self._device,
             embedding_size=arguments_service.decoder_embedding_size,
             output_dimension=vocabulary_service.vocabulary_size(),
-            hidden_dimension=arguments_service.hidden_dimension * 2,
+            attention_dimension=arguments_service.hidden_dimension,
+            encoder_hidden_dimension=arguments_service.hidden_dimension,
+            decoder_hidden_dimension=arguments_service.hidden_dimension * 2,
             number_of_layers=arguments_service.number_of_layers,
-            attention=self._attention,
             vocabulary_size=self._vocabulary_service.vocabulary_size(),
+            pad_idx=self._vocabulary_service.pad_token,
             dropout=arguments_service.dropout,
             use_own_embeddings=(
                 not self._arguments_service.share_embedding_layer),
@@ -109,12 +112,14 @@ class SequenceModel(ModelBase):
             teacher_forcing_ratio=self._arguments_service.teacher_forcing_ratio,
             eos_token=self._vocabulary_service.eos_token)
 
+        self._generator = SequenceGenerator(
+            hidden_size=arguments_service.hidden_dimension,
+            vocab_size=vocabulary_service.vocabulary_size())
+
         self.apply(self.init_weights)
 
-    def init_hidden(self, batch_size, hidden_dimension):
-        # initialize the hidden state and the cell state to zeros
-        return (torch.zeros(batch_size, hidden_dimension).to(self._device),
-                torch.zeros(batch_size, hidden_dimension).to(self._device))
+        self._dev_edit_distances: List[float] = []
+        self.metric_log_key = 'Levenshtein distance improvement (%)'
 
     @staticmethod
     def init_weights(self):
@@ -124,25 +129,18 @@ class SequenceModel(ModelBase):
     @overrides
     def forward(self, input_batch: BatchRepresentation, debug=False, **kwargs):
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        encoder_context = self._encoder.forward(input_batch)
+        encoder_hidden, encoder_final  = self._encoder.forward(input_batch)
 
-        encoder_context = encoder_context.permute(1, 0, 2)
+        outputs = self._decoder.forward(
+            input_batch.targets[:, :-1], # we remove the [EOS] tokens
+            encoder_hidden,
+            encoder_final,
+            input_batch.generate_mask(input_batch.character_sequences))
 
-        outputs, targets = self._decoder.forward(
-            encoder_context, input_batch.targets)
+        # return outputs, targets
+        gen_outputs = self._generator.forward(outputs)
 
-        if outputs.shape[1] < targets.shape[1]:
-            padded_output = torch.zeros((outputs.shape[0], targets.shape[1], outputs.shape[2])).to(
-                self._arguments_service.device)
-            padded_output[:, :outputs.shape[1], :] = outputs
-            outputs = padded_output
-        elif outputs.shape[1] > targets.shape[1]:
-            padded_targets = torch.zeros((targets.shape[0], outputs.shape[1]), dtype=torch.int64).to(
-                self._arguments_service.device)
-            padded_targets[:, :targets.shape[1]] = targets
-            targets = padded_targets
-
-        return outputs, targets
+        return gen_outputs, input_batch.targets
 
     @overrides
     def calculate_accuracies(self, batch: BatchRepresentation, outputs, output_characters=False) -> Dict[MetricType, float]:
@@ -150,7 +148,7 @@ class SequenceModel(ModelBase):
         output_dim = output.shape[-1]
         predictions = output.max(dim=2)[1].cpu().detach().numpy()
 
-        targets = targets.cpu().detach().numpy()
+        targets = targets[:, 1:].cpu().detach().numpy()
         predicted_characters = []
         target_characters = []
 
@@ -184,6 +182,14 @@ class SequenceModel(ModelBase):
 
             metrics[MetricType.LevenshteinDistance] = levenshtein_distance
 
+            if not self.training:
+                predicted_levenshtein_distances = [
+                    self._metrics_service.calculate_levenshtein_distance(
+                        predicted_string, target_string) for predicted_string, target_string in zip(predicted_strings, target_strings)
+                ]
+                self._dev_edit_distances.extend(
+                    predicted_levenshtein_distances)
+
             if output_characters:
                 output_log = DataOutputLog()
                 ocr_texts = batch.character_sequences.cpu().detach().tolist()
@@ -197,14 +203,6 @@ class SequenceModel(ModelBase):
                         true_data=target_strings[i])
 
         return metrics, output_log
-
-    @overrides
-    def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
-        if best_metric.is_new:
-            return True
-
-        result = best_metric.get_current_loss() > new_metric.get_current_loss()
-        return result
 
     @overrides
     def optimizer_parameters(self):
@@ -238,3 +236,33 @@ class SequenceModel(ModelBase):
         ]
 
         return result
+
+    @overrides
+    def calculate_evaluation_metrics(self) -> Dict[str, float]:
+        if len(self._dev_edit_distances) == 0:
+            return {}
+
+        predicted_edit_sum = sum(self._dev_edit_distances)
+
+        original_edit_sum = self._process_service.original_levenshtein_distance_sum
+
+        improvement_percentage = (
+            1 - (float(predicted_edit_sum) / original_edit_sum)) * 100
+
+        result = {
+            self.metric_log_key: improvement_percentage
+        }
+
+        return result
+
+    @overrides
+    def finalize_batch_evaluation(self, is_new_best: bool):
+        if is_new_best:
+            predicted_histogram = np.histogram(
+                self._dev_edit_distances, bins=100)
+            self._log_service.log_summary(
+                'best-results-edit-distances-count', predicted_histogram[0])
+            self._log_service.log_summary(
+                'best-results-edit-distances-bins', predicted_histogram[1])
+
+        self._dev_edit_distances = []

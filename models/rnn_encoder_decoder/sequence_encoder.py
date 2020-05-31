@@ -51,9 +51,12 @@ class SequenceEncoder(ModelBase):
 
             self._embedding_layer = EmbeddingLayer(file_service, embedding_layer_options)
 
-        self.rnn = nn.GRU(self._embedding_layer.output_size, hidden_dimension,
-                          number_of_layers, batch_first=True, bidirectional=bidirectional)
-        self.dropout = nn.Dropout(dropout)
+        self.rnn = nn.GRU(
+            self._embedding_layer.output_size,
+            hidden_dimension,
+            number_of_layers,
+            batch_first=True,
+            bidirectional=bidirectional)
 
     @overrides
     def forward(self, input_batch: BatchRepresentation, debug: bool = False, **kwargs):
@@ -62,10 +65,12 @@ class SequenceEncoder(ModelBase):
         x_packed = pack_padded_sequence(
             embeddings, input_batch.character_lengths, batch_first=True)
 
-        _, hidden = self.rnn.forward(x_packed)
+        output, hidden = self.rnn.forward(x_packed)
+
+        output, _ = pad_packed_sequence(output, batch_first=True)
 
         if self._bidirectional:
             hidden = torch.cat(
                 (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
 
-        return hidden
+        return output, hidden

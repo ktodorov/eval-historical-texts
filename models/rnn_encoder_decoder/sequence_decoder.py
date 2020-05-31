@@ -13,6 +13,7 @@ from entities.options.pretrained_representations_options import PretrainedRepres
 from entities.beam_search_node import BeamSearchNode
 
 from models.embedding.embedding_layer import EmbeddingLayer
+from models.rnn_encoder_decoder.sequence_attention import SequenceAttention
 
 from services.file_service import FileService
 from models.model_base import ModelBase
@@ -24,11 +25,13 @@ class SequenceDecoder(ModelBase):
             file_service: FileService,
             device: str,
             embedding_size: int,
-            hidden_dimension: int,
+            attention_dimension: int,
+            encoder_hidden_dimension: int,
+            decoder_hidden_dimension: int,
             number_of_layers: int,
             output_dimension: int,
-            attention: nn.Module,
             vocabulary_size: int,
+            pad_idx: int,
             dropout: float = 0,
             use_own_embeddings: bool = True,
             shared_embedding_layer: EmbeddingLayer = None,
@@ -45,6 +48,7 @@ class SequenceDecoder(ModelBase):
         self._teacher_forcing_ratio = teacher_forcing_ratio
 
         self._eos_token = eos_token
+        self._pad_idx = pad_idx
 
         if not use_own_embeddings:
             if shared_embedding_layer is None:
@@ -64,23 +68,36 @@ class SequenceDecoder(ModelBase):
                     dropout=dropout,
                     output_embedding_type=EmbeddingType.Character))
 
-        self.rnn = nn.GRU(embedding_size + hidden_dimension,
-                          hidden_dimension, number_of_layers, batch_first=True)
+        self._rnn_layer = nn.GRU(
+            embedding_size + decoder_hidden_dimension,
+            encoder_hidden_dimension,
+            number_of_layers,
+            batch_first=True)
 
-        self.attention = attention
+        self._attention_layer = SequenceAttention(
+            hidden_size=attention_dimension)
 
-        self.fc_out = nn.Linear(
-            embedding_size + hidden_dimension * 2, output_dimension)
-        self.dropout = nn.Dropout(dropout)
+        # to initialize from the final encoder state
+        self._bridge_layer = nn.Linear(
+            decoder_hidden_dimension, encoder_hidden_dimension, bias=True)
+
+        self._pre_output_layer = nn.Linear(
+            encoder_hidden_dimension + decoder_hidden_dimension + embedding_size,
+            encoder_hidden_dimension,
+            bias=False)
+
+        self.dropout_layer = nn.Dropout(dropout)
 
     @overrides
-    def forward(self, encoder_context, targets):
+    def forward(self, targets, encoder_hidden, encoder_final, src_mask):
         if self._use_beam_search:
-            outputs, targets = self._beam_decode(encoder_context, targets)
+            outputs, targets = self._beam_decode(encoder_final, targets)
         else:
-            outputs = self._greedy_decode(encoder_context, targets)
+            out, _, pre_output = self._greedy_decode2(
+                encoder_hidden, encoder_final, targets, src_mask)
 
-        return outputs, targets
+        # return outputs, targets
+        return pre_output
 
     def _beam_decode(
             self,
@@ -202,60 +219,71 @@ class SequenceDecoder(ModelBase):
 
         return padded_decoded_batch, target_tensor[:, 1:]
 
-    def _greedy_decode(self, encoder_context, targets):
+    def init_hidden(self, encoder_final):
+        """Returns the initial decoder state,
+        conditioned on the final encoder state."""
 
-        batch_size, trg_len = targets.shape
-        teacher_forcing_ratio = self._teacher_forcing_ratio
-        hidden = encoder_context.permute(1, 0, 2)
+        if encoder_final is None:
+            return None  # start with zeros
 
-        # tensor to store decoder outputs
-        outputs = torch.zeros(batch_size, trg_len,
-                              self._vocabulary_size, device=self._device)
+        return torch.tanh(self._bridge_layer.forward(encoder_final))
 
-        input = targets[:, 0]
+    def _greedy_decode2(self, encoder_hidden, encoder_final, targets, src_mask, hidden=None):
+        # the maximum number of steps to unroll the RNN
+        batch_size, max_len = targets.shape
 
-        for t in range(0, trg_len):
+        # initialize decoder hidden state
+        if hidden is None:
+            hidden = self.init_hidden(encoder_final)
 
-            # insert input token embedding, previous hidden and previous cell states
-            # receive output tensor (predictions) and new hidden and cell states
-            output, hidden = self._internal_forward(
-                input,
-                hidden,
-                encoder_context)
-
-            outputs[:, t] = output
-
-            # decide if we are going to use teacher forcing or not
-            teacher_force = random.random() < teacher_forcing_ratio
-
-            # if teacher forcing, use actual next token as next input
-            # if not, use predicted token
-            if teacher_force:
-                input = targets[:, t]
-            else:
-                # get the highest predicted token from our predictions
-                top1 = output.argmax(1)
-                input = top1
-
-        return outputs
-
-    def _internal_forward(self, input_sequence, hidden, encoder_context):
         input_batch = BatchRepresentation(
             device=self._device,
-            batch_size=input_sequence.shape[0],
-            character_sequences=input_sequence.unsqueeze(1))
+            batch_size=batch_size,
+            character_sequences=targets)
 
-        embeddings = self._embedding_layer.forward(input_batch)
+        target_embeddings = self._embedding_layer.forward(input_batch)
 
-        attention_result = self.attention(hidden, encoder_context)
-        attention_result = attention_result.unsqueeze(1)
+        # pre-compute projected encoder hidden states
+        # (the "keys" for the attention mechanism)
+        # this is only done for efficiency
+        proj_key = self._attention_layer.key_layer(encoder_hidden)
 
-        weighted_context = torch.bmm(attention_result, encoder_context)
-        rnn_input = torch.cat((embeddings, weighted_context), dim=2)
-        output, hidden = self.rnn.forward(rnn_input, hidden)
+        # here we store all intermediate hidden states and pre-output vectors
+        decoder_states = []
+        pre_output_vectors = []
 
-        output = torch.cat(
-            (embeddings.squeeze(1), hidden.squeeze(0), encoder_context.squeeze(1)), dim=1)
+        # unroll the decoder RNN for max_len steps
+        for i in range(max_len):
+            prev_embed = target_embeddings[:, i].unsqueeze(1)
+            output, hidden, pre_output = self._internal_forward(
+                prev_embed,
+                encoder_hidden,
+                src_mask,
+                proj_key,
+                hidden)
 
-        prediction = self.fc_out(output)
-        return prediction, hidden
+            decoder_states.append(output)
+            pre_output_vectors.append(pre_output)
+
+        decoder_states = torch.cat(decoder_states, dim=1)
+        pre_output_vectors = torch.cat(pre_output_vectors, dim=1)
+        return decoder_states, hidden, pre_output_vectors  # [B, N, D]
+
+    def _internal_forward(self, prev_embed, encoder_hidden, src_mask, proj_key, hidden):
+        """Perform a single decoder step (1 character)"""
+
+        # compute context vector using attention mechanism
+        query = hidden[-1].unsqueeze(1)  # [#layers, B, D] -> [B, 1, D]
+        context, attn_probs = self._attention_layer.forward(
+            query=query, proj_key=proj_key,
+            value=encoder_hidden, mask=src_mask)
+
+        # update rnn hidden state
+        rnn_input = torch.cat([prev_embed, context], dim=2)
+        output, hidden = self._rnn_layer.forward(rnn_input, hidden)
+
+        pre_output = torch.cat([prev_embed, output, context], dim=2)
+        pre_output = self.dropout_layer(pre_output)
+        pre_output = self._pre_output_layer(pre_output)
+
+        return output, hidden, pre_output

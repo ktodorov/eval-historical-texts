@@ -40,8 +40,23 @@ class ModelBase(nn.Module):
         output_characters=False) -> Tuple[Dict[MetricType, float], List[str]]:
         return ({}, None)
 
-    def compare_metric(self, best_metric: Metric, new_metrics: Metric) -> bool:
-        return True
+    def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
+        if best_metric.is_new:
+            return True
+
+        current_best = 0
+        new_result = 0
+
+        if self.metric_log_key is not None:
+            current_best = best_metric.get_accuracy_metric(self.metric_log_key)
+            new_result = new_metric.get_accuracy_metric(self.metric_log_key)
+
+        if current_best == new_result:
+            result = best_metric.get_current_loss() >= new_metric.get_current_loss()
+        else:
+            result = current_best < new_result
+
+        return result
 
     def clip_gradients(self):
         torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)

@@ -263,8 +263,7 @@ def register_model(
                     data_service=data_service,
                     tokenize_service=tokenize_service,
                     metrics_service=metrics_service,
-                    log_service=log_service
-                )
+                    log_service=log_service)
             elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder:
                 model = providers.Singleton(
                     SequenceModel,
@@ -272,7 +271,9 @@ def register_model(
                     data_service=data_service,
                     metrics_service=metrics_service,
                     vocabulary_service=vocabulary_service,
-                    file_service=file_service)
+                    file_service=file_service,
+                    process_service=process_service,
+                    log_service=log_service)
             elif configuration == Configuration.TransformerSequence:
                 model = providers.Singleton(
                     TransformerModel,

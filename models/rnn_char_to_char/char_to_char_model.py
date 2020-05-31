@@ -81,8 +81,6 @@ class CharToCharModel(ModelBase):
                                        multiplication_factor, vocabulary_service.vocabulary_size())
 
         self._dev_edit_distances: List[float] = []
-        self._original_edit_sum: int = None
-        self._logged_original_edit_histogram: bool = False
 
         self.metric_log_key = 'Levenshtein distance improvement (%)'
 
@@ -176,14 +174,6 @@ class CharToCharModel(ModelBase):
                     true_data=target_string)
 
         return metrics, output_log
-
-    @overrides
-    def compare_metric(self, best_metric: Metric, new_metric: Metric) -> bool:
-        if best_metric.is_new:
-            return True
-
-        result = best_metric.get_accuracy_metric(self.metric_log_key) < new_metric.get_accuracy_metric(self.metric_log_key)
-        return result
 
     @overrides
     def optimizer_parameters(self):

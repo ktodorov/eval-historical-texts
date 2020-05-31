@@ -53,6 +53,7 @@ class BatchRepresentation:
         self._offset_lists = offset_lists
         self._position_changes = position_changes
         self._additional_information = additional_information
+        self._pad_idx = pad_idx
 
     def sort_batch(
         self,
@@ -95,6 +96,10 @@ class BatchRepresentation:
         self._additional_information = self._sort_list(self._additional_information, perm_idx)
 
         return perm_idx
+
+    def generate_mask(self, tensor: torch.Tensor) -> torch.Tensor:
+        mask = (tensor != self._pad_idx).unsqueeze(-2)
+        return mask
 
     def _sort_tensor(self, tensor: torch.Tensor, perm_idx) -> torch.Tensor:
         if tensor is None:

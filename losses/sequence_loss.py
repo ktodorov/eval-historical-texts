@@ -11,7 +11,7 @@ class SequenceLoss(LossBase):
     def __init__(self):
         super().__init__()
 
-        self._criterion = nn.CrossEntropyLoss(ignore_index=0)
+        self._criterion = nn.NLLLoss(reduction="sum", ignore_index=0)
 
     @overrides
     def backward(self, model_output):
@@ -26,16 +26,16 @@ class SequenceLoss(LossBase):
         return loss.item()
 
     def _calculate_inner_loss(self, model_output):
-        output, targets = model_output
-        output_dim = output.shape[-1]
+        outputs, targets = model_output
+        batch_size = targets.shape[0]
 
-        sequences_length = output.shape[1]
-        batch_size = output.shape[0]
+        target_y = targets[:, 1:]
 
-        output = output.reshape(-1, output_dim)
-        targets = targets.reshape(-1)
+        loss = self._criterion.forward(
+            outputs.contiguous().view(-1, outputs.size(-1)),
+            target_y.contiguous().view(-1))
 
-        loss = self._criterion.forward(output, targets)
+        loss = loss / batch_size
         return loss
 
     @property
