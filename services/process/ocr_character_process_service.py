@@ -140,33 +140,55 @@ class OCRCharacterProcessService(ProcessServiceBase):
             run_type,
             limit_size)
 
-        if run_type != RunType.Train:
-            self._calculate_data_statistics(
+        if run_type == RunType.Validation:
+            (_, _, _, self.original_levenshtein_distance_sum, _) = self.calculate_data_statistics(
                 language_data, log_summaries=(run_type == RunType.Validation))
 
         return language_data
 
-    def _calculate_data_statistics(self, language_data, log_summaries: bool = True):
+    def calculate_data_statistics(self, language_data: LanguageData = None, run_type: RunType = None, log_summaries: bool = True):
+        assert language_data is not None or run_type is not None, 'At least one of language_data or run_type must be supplied'
+
+        if language_data is None and run_type is not None:
+            language_data = self.get_language_data(run_type)
+
+        input_strings = []
+        target_strings = []
         edit_distances = []
 
         for idx in range(language_data.length):
             entry = language_data.get_entry(idx)
             _, _, _, ocr_text, gs_text, _ = entry
 
-            input_string = self._vocabulary_service.ids_to_string(ocr_text)
-            target_string = self._vocabulary_service.ids_to_string(gs_text)
+            input_string = self._vocabulary_service.ids_to_string(
+                ocr_text,
+                exclude_special_tokens=True)
+
+            target_string = self._vocabulary_service.ids_to_string(
+                gs_text,
+                exclude_special_tokens=True)
+
             input_levenshtein_distance = self._metrics_service.calculate_levenshtein_distance(
                 input_string,
                 target_string)
 
             edit_distances.append(input_levenshtein_distance)
 
-        self.original_levenshtein_distance_sum = sum(edit_distances)
+            input_strings.append(input_string)
+            target_strings.append(target_string)
 
-        self.original_histogram = np.histogram(edit_distances, bins=100)
+        original_levenshtein_distance_sum = sum(edit_distances)
+        original_histogram = np.histogram(edit_distances, bins=100)
 
         if log_summaries:
             self._log_service.log_summary(
-                'original-edit-distances-count', self.original_histogram[0])
+                'original-edit-distances-count', original_histogram[0])
             self._log_service.log_summary(
-                'original-edit-distances-bins', self.original_histogram[1])
+                'original-edit-distances-bins', original_histogram[1])
+
+        return (
+            input_strings,
+            target_strings,
+            edit_distances,
+            original_levenshtein_distance_sum,
+            original_histogram)
