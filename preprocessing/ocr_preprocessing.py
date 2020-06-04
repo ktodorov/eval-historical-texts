@@ -27,33 +27,42 @@ def preprocess_data(
         data_service: DataService,
         pickles_path: str,
         full_data_path: str,
-        data_output_path: str):
+        data_output_path: str,
+        split_data: bool = True):
 
-    train_language_data, validation_language_data = parse_language_data(
+    language_data_result = parse_language_data(
         tokenize_service,
         metrics_service,
         vocabulary_service,
         data_service,
         pickles_path,
-        full_data_path)
+        full_data_path,
+        split_data=split_data)
 
-    train_language_data_filepath = os.path.join(
-        data_output_path, f'train_language_data.pickle')
-    validation_language_data_filepath = os.path.join(
-        data_output_path, f'validation_language_data.pickle')
+    if split_data:
+        train_language_data, validation_language_data = language_data_result
+        train_language_data_filepath = os.path.join(
+            data_output_path, f'train_language_data.pickle')
+        validation_language_data_filepath = os.path.join(
+            data_output_path, f'validation_language_data.pickle')
 
-    with open(train_language_data_filepath, 'wb') as train_handle:
-        pickle.dump(train_language_data, train_handle, protocol=-1)
+        with open(train_language_data_filepath, 'wb') as train_handle:
+            pickle.dump(train_language_data, train_handle, protocol=-1)
 
-    with open(validation_language_data_filepath, 'wb') as validation_handle:
-        pickle.dump(validation_language_data, validation_handle, protocol=-1)
+        with open(validation_language_data_filepath, 'wb') as validation_handle:
+            pickle.dump(validation_language_data, validation_handle, protocol=-1)
+    else:
+        test_language_data_filepath = os.path.join(
+            data_output_path, f'test_language_data.pickle')
+        with open(test_language_data_filepath, 'wb') as test_handle:
+            pickle.dump(language_data_result, test_handle, protocol=-1)
 
 
 def save_data_files(
-    data_service: DataService,
-    full_data_path: str,
-    full_ocr_path: str,
-    full_gs_path: str):
+        data_service: DataService,
+        full_data_path: str,
+        full_ocr_path: str,
+        full_gs_path: str):
     ocr_aligned_lengths = []
     gs_aligned_lengths = []
     file_paths = []
@@ -65,7 +74,8 @@ def save_data_files(
 
     for i, file_name in enumerate(file_names):
         print(f'{i}/{number_of_files}             \r', end='')
-        result = data_service.load_python_obj(full_data_path, file_name, extension_included=True)
+        result = data_service.load_python_obj(
+            full_data_path, file_name, extension_included=True)
 
         ocr_file_data.extend(result[0])
         gs_file_data.extend(result[1])
@@ -186,7 +196,8 @@ def parse_metrics_obj(
         ocr_file_data: List[str],
         gs_file_data: List[str],
         pickles_path: str):
-    token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = load_metrics_obj(pickles_path)
+    token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = load_metrics_obj(
+        pickles_path)
 
     if token_pairs is None:
         token_pairs = [([tokenize_service.id_to_token(x) for x in ocr_tokens[i]], [
@@ -242,10 +253,16 @@ def load_split_data(
         full_ocr_tokens_path: str,
         full_gs_tokens_path: str,
         pickles_path: str,
-        train_pickle_path: str,
-        validation_pickle_path: str):
+        train_pickle_path: str = None,
+        validation_pickle_path: str = None,
+        test_pickle_path: str = None):
 
-    if not os.path.exists(train_pickle_path) or not os.path.exists(validation_pickle_path):
+    assert (train_pickle_path is not None and validation_pickle_path is not None) or test_pickle_path is not None, 'Either train/validation paths must be provided or test'
+    train_split = (
+        train_pickle_path is not None and validation_pickle_path is not None)
+
+    if ((train_split and (not os.path.exists(train_pickle_path) or not os.path.exists(validation_pickle_path))) or
+            (not train_split and not os.path.exists(test_pickle_path))):
         ocr_file_data, gs_file_data, ocr_tokens, gs_tokens = read_data(
             tokenize_service,
             data_service,
@@ -255,7 +272,7 @@ def load_split_data(
             full_ocr_tokens_path,
             full_gs_tokens_path)
 
-        token_pairs, decoded_pairs, jaccard_similarities, levenshtein_distances = parse_metrics_obj(
+        token_pairs, decoded_pairs, _, _ = parse_metrics_obj(
             tokenize_service,
             metrics_service,
             ocr_tokens,
@@ -264,31 +281,48 @@ def load_split_data(
             gs_file_data,
             pickles_path)
 
-        eval_indices = random.sample(
-            range(len(token_pairs)), int(0.2 * len(token_pairs)))
+        if train_split:
+            eval_indices = random.sample(
+                range(len(token_pairs)), int(0.01 * len(token_pairs)))
 
-        train_pairs = []
-        eval_pairs = [ [token_pairs[i], decoded_pairs[i]] for i in eval_indices ]
+            train_pairs = []
+            eval_pairs = [[token_pairs[i], decoded_pairs[i]]
+                          for i in eval_indices]
 
-        eval_indices_dict = { i: False for i in range(len(token_pairs)) }
-        for i in eval_indices:
-            eval_indices_dict[i] = True
+            eval_indices_dict = {i: False for i in range(len(token_pairs))}
+            for i in eval_indices:
+                eval_indices_dict[i] = True
 
-        train_pairs = [ [token_pairs[i], decoded_pairs[i]] for i in range(len(token_pairs)) if not eval_indices_dict[i]]
+            train_pairs = [[token_pairs[i], decoded_pairs[i]]
+                           for i in range(len(token_pairs)) if not eval_indices_dict[i]]
 
-        with open(train_pickle_path, 'wb') as train_handle:
-            pickle.dump(train_pairs, train_handle, protocol=-1)
+            with open(train_pickle_path, 'wb') as train_handle:
+                pickle.dump(train_pairs, train_handle, protocol=-1)
 
-        with open(validation_pickle_path, 'wb') as eval_handle:
-            pickle.dump(eval_pairs, eval_handle, protocol=-1)
+            with open(validation_pickle_path, 'wb') as eval_handle:
+                pickle.dump(eval_pairs, eval_handle, protocol=-1)
+        else:
+            test_pairs = [[token_pair, decoded_pair]
+                          for token_pair, decoded_pair
+                          in zip(token_pairs, decoded_pairs)]
+
+            with open(test_pickle_path, 'wb') as test_handle:
+                pickle.dump(test_pairs, test_handle, protocol=-1)
     else:
-        with open(train_pickle_path, 'rb') as train_pickle_file:
-            train_pairs = pickle.load(train_pickle_file)
+        if train_split:
+            with open(train_pickle_path, 'rb') as train_pickle_file:
+                train_pairs = pickle.load(train_pickle_file)
 
-        with open(validation_pickle_path, 'rb') as validation_pickle_file:
-            eval_pairs = pickle.load(validation_pickle_file)
+            with open(validation_pickle_path, 'rb') as validation_pickle_file:
+                eval_pairs = pickle.load(validation_pickle_file)
+        else:
+            with open(test_pickle_path, 'rb') as test_pickle_file:
+                test_pairs = pickle.load(test_pickle_file)
 
-    return train_pairs, eval_pairs
+    if train_split:
+        return train_pairs, eval_pairs
+    else:
+        return test_pairs
 
 
 def parse_language_data(
@@ -297,10 +331,18 @@ def parse_language_data(
         vocabulary_service: VocabularyService,
         data_service: DataService,
         pickles_path: str,
-        full_data_path: str) -> LanguageData:
+        full_data_path: str,
+        split_data: bool = True) -> LanguageData:
 
-    train_pickle_path = os.path.join(pickles_path, 'train_pairs.pickle')
-    validation_pickle_path = os.path.join(pickles_path, 'eval_pairs.pickle')
+    train_pickle_path = None
+    validation_pickle_path = None
+    test_pickle_path = None
+    if split_data:
+        train_pickle_path = os.path.join(pickles_path, 'train_pairs.pickle')
+        validation_pickle_path = os.path.join(
+            pickles_path, 'eval_pairs.pickle')
+    else:
+        test_pickle_path = os.path.join(pickles_path, 'test_pairs.pickle')
 
     full_ocr_path = os.path.join(pickles_path, 'combined_ocr.pickle')
     full_gs_path = os.path.join(pickles_path, 'combined_gs.pickle')
@@ -310,7 +352,7 @@ def parse_language_data(
     full_gs_tokens_path = os.path.join(
         pickles_path, 'combined_gs_tokens.pickle')
 
-    train_pairs, validation_pairs = load_split_data(
+    data_split = load_split_data(
         tokenize_service,
         metrics_service,
         data_service,
@@ -321,16 +363,25 @@ def parse_language_data(
         full_gs_tokens_path,
         pickles_path,
         train_pickle_path,
-        validation_pickle_path)
+        validation_pickle_path,
+        test_pickle_path)
 
-    train_language_data = LanguageData([], [], [], [], [], [], [])
-    for train_pair in train_pairs:
-        train_language_data.add_entry(
-            None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenize_service, vocabulary_service)
+    if split_data:
+        train_pairs, validation_pairs = data_split
+        train_language_data = LanguageData([], [], [], [], [], [], [])
+        for train_pair in train_pairs:
+            train_language_data.add_entry(
+                None, train_pair[0][0], train_pair[0][1], train_pair[1][0], train_pair[1][1], tokenize_service, vocabulary_service)
 
-    validation_language_data = LanguageData([], [], [], [], [], [], [])
-    for validation_pair in validation_pairs:
-        validation_language_data.add_entry(
-            None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenize_service, vocabulary_service)
+        validation_language_data = LanguageData([], [], [], [], [], [], [])
+        for validation_pair in validation_pairs:
+            validation_language_data.add_entry(
+                None, validation_pair[0][0], validation_pair[0][1], validation_pair[1][0], validation_pair[1][1], tokenize_service, vocabulary_service)
+        return train_language_data, validation_language_data
+    else:
+        test_language_data = LanguageData([], [], [], [], [], [], [])
+        for test_pair in data_split:
+            test_language_data.add_entry(
+                None, test_pair[0][0], test_pair[0][1], test_pair[1][0], test_pair[1][1], tokenize_service, vocabulary_service)
 
-    return train_language_data, validation_language_data
+        return test_language_data

@@ -32,7 +32,7 @@ def combine_data(
     process_newseye_files(newseye_2017_path, output_path,
                           'newseye-2017', data_service)
     process_newseye_files(newseye_2019_path, output_path,
-                          'newseye-2019', data_service)
+                          'newseye-2019', data_service, subfolder_to_use='train')
 
     if not os.path.exists(trove_path):
         os.mkdir(trove_path)
@@ -56,12 +56,13 @@ def process_newseye_files(
         unique_prefix: str,
         data_service: DataService,
         start_position: int = 14,
-        max_string_length: int = 50):
+        max_string_length: int = 50,
+        subfolder_to_use: str = 'full'):
     ocr_sequences = []
     gs_sequences = []
 
     for subdir_name in os.listdir(data_path):
-        if subdir_name != 'full':
+        if subdir_name != subfolder_to_use:
             continue
 
         subdir_path = os.path.join(data_path, subdir_name)
