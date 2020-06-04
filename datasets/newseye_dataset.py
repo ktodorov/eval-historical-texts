@@ -15,8 +15,6 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 from preprocessing.newseye import train_spm_model, preprocess_data
 
-from utils import path_utils
-
 
 class NewsEyeDataset(DatasetBase):
     def __init__(

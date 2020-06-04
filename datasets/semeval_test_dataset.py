@@ -15,8 +15,6 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.file_service import FileService
 from services.vocabulary_service import VocabularyService
 
-from utils import path_utils
-
 
 class SemEvalTestDataset(DatasetBase):
     def __init__(

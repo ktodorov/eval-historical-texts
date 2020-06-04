@@ -10,8 +10,6 @@ from services.arguments.semantic_arguments_service import SemanticArgumentsServi
 from services.process.cbow_process_service import CBOWProcessService
 from services.log_service import LogService
 
-from utils import path_utils
-
 
 class CBOWDataset(DatasetBase):
     def __init__(
@@ -25,7 +23,8 @@ class CBOWDataset(DatasetBase):
         self._device = arguments_service.device
         self._cbow_process_service = cbow_process_service
 
-        self._corpus_data, self._targets = cbow_process_service.load_corpus_data(arguments_service.train_dataset_limit_size)
+        self._corpus_data, self._targets = cbow_process_service.load_corpus_data(
+            arguments_service.train_dataset_limit_size)
 
         print(f'Loaded {len(self._corpus_data)} entries')
         log_service.log_summary(key='Entries amount',

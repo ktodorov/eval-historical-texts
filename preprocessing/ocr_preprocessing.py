@@ -12,7 +12,6 @@ from typing import List, Tuple
 from transformers import PreTrainedTokenizer
 
 from entities.language_data import LanguageData
-from utils import path_utils
 
 from services.vocabulary_service import VocabularyService
 from services.tokenize.base_tokenize_service import BaseTokenizeService

@@ -7,7 +7,6 @@ from sentencepiece import SentencePieceProcessor
 
 from enums.language import Language
 from entities.language_data import LanguageData
-from utils import path_utils
 
 
 def parse_language_data(

@@ -21,8 +21,6 @@ from services.data_service import DataService
 
 from preprocessing.ocr_preprocessing import preprocess_data
 
-from utils import path_utils
-
 
 class OCRDataset(DatasetBase):
     def __init__(

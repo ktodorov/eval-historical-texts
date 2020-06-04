@@ -23,8 +23,6 @@ from services.process.ocr_character_process_service import OCRCharacterProcessSe
 from preprocessing.ocr_preprocessing import preprocess_data
 import preprocessing.ocr_download as ocr_download
 
-from utils import path_utils
-
 
 class OCRCharacterDataset(OCRDataset):
     def __init__(

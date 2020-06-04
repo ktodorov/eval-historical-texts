@@ -8,8 +8,6 @@ from enums.language import Language
 from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 sys.path.append('..')
-from utils import path_utils
-
 
 def generate_transformer_tokens(
     text_file_paths: List[str],

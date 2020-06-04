@@ -13,9 +13,6 @@ from services.log_service import LogService
 
 from preprocessing.semeval_preprocessing import preprocess_data
 
-from utils import path_utils
-
-
 class SemanticChangeDataset(DatasetBase):
     def __init__(
             self,

@@ -98,3 +98,21 @@ class FileService:
             os.mkdir(experiments_path)
 
         return experiments_path
+
+    def combine_path(self, path: str, *paths: str, create_if_missing: bool = False) -> str:
+        if create_if_missing and not os.path.exists(path):
+            os.mkdir(path)
+
+        if paths is None or len(paths) == 0:
+            return path
+
+        final_path = path
+        for path_extension in paths:
+            final_path = os.path.join(final_path, path_extension)
+            if not os.path.exists(final_path):
+                if create_if_missing:
+                    os.mkdir(final_path)
+                else:
+                    raise Exception(f'Path "{final_path}" does not exist')
+
+        return final_path

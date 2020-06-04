@@ -12,8 +12,6 @@ from typing import List
 from transformers import PreTrainedTokenizer
 
 from entities.language_data import LanguageData
-from utils import path_utils
-
 from services.data_service import DataService
 
 ocr_prefix = '[OCR_toInput] '
