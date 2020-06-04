@@ -241,7 +241,7 @@ class SequenceDecoder(ModelBase):
             batch_size=batch_size,
             character_sequences=targets)
 
-        target_embeddings = self._embedding_layer.forward(input_batch)
+        target_embeddings = self._embedding_layer.forward(input_batch, skip_pretrained_representation=True)
 
         # pre-compute projected encoder hidden states
         # (the "keys" for the attention mechanism)
