@@ -72,6 +72,7 @@ from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
 from services.experiment_service import ExperimentService
 from services.tag_metrics_service import TagMetricsService
+from services.cache_service import CacheService
 
 import logging
 
@@ -334,7 +335,8 @@ def register_process_service(
         vocabulary_service: VocabularyService,
         data_service: DataService,
         metrics_service: MetricsService,
-        log_service: LogService):
+        log_service: LogService,
+        cache_service: CacheService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
@@ -343,7 +345,8 @@ def register_process_service(
             vocabulary_service=vocabulary_service,
             file_service=file_service,
             tokenize_service=tokenize_service,
-            data_service=data_service)
+            data_service=data_service,
+            cache_service=cache_service)
     elif challenge == Challenge.SemanticChange and configuration == Configuration.CBOW:
         process_service = providers.Singleton(
             CBOWProcessService,
@@ -422,6 +425,12 @@ class IocContainer(containers.DeclarativeContainer):
         arguments_service=arguments_service
     )
 
+    cache_service = providers.Singleton(
+        CacheService,
+        arguments_service=arguments_service,
+        file_service=file_service,
+        data_service=data_service)
+
     plot_service = providers.Factory(
         PlotService,
         data_service=data_service
@@ -446,6 +455,7 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service,
         file_service=file_service
     )
+
     process_service = register_process_service(
         challenge,
         configuration,
@@ -455,7 +465,8 @@ class IocContainer(containers.DeclarativeContainer):
         vocabulary_service=vocabulary_service,
         data_service=data_service,
         metrics_service=metrics_service,
-        log_service=log_service)
+        log_service=log_service,
+        cache_service=cache_service)
 
     dataset_service = providers.Factory(
         DatasetService,
