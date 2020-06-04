@@ -266,3 +266,12 @@ class SequenceModel(ModelBase):
                 'best-results-edit-distances-bins', predicted_histogram[1])
 
         self._dev_edit_distances = []
+    def before_load(self):
+        if self._shared_embedding_layer is not None:
+            self._encoder._embedding_layer = None
+            self._decoder._embedding_layer = None
+
+    def after_load(self):
+        if self._shared_embedding_layer is not None:
+            self._encoder._embedding_layer = self._shared_embedding_layer
+            self._decoder._embedding_layer = self._shared_embedding_layer
