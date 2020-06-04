@@ -45,15 +45,25 @@ class VocabularyService:
     def ids_to_string(
         self,
         input: List[int],
-        exclude_pad_tokens: bool = True,
-        join_str: str = '') -> str:
+        exclude_special_tokens: bool = True,
+        join_str: str = '',
+        cut_after_end_token: bool = False) -> str:
         if join_str is None:
             raise Exception('`join_str` must be a valid string')
 
         result = join_str.join([self._int2char[x] for x in input])
 
-        if exclude_pad_tokens:
+        if cut_after_end_token:
+            try:
+                eos_index = result.index('[EOS]')
+                result = result[:eos_index]
+            except ValueError:
+                pass
+
+        if exclude_special_tokens:
             result = result.replace('[PAD]', '')
+            result = result.replace('[EOS]', '')
+            result = result.replace('[CLS]', '')
 
         return result
 
