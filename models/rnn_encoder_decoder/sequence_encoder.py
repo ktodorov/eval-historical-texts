@@ -69,8 +69,9 @@ class SequenceEncoder(ModelBase):
 
         output, _ = pad_packed_sequence(output, batch_first=True)
 
-        if self._bidirectional:
-            hidden = torch.cat(
-                (hidden[0, :, :], hidden[1, :, :]), dim=1).unsqueeze(0)
+        # we need to manually concatenate the final states for both directions
+        fwd_hidden = hidden[0:hidden.size(0):2]
+        bwd_hidden = hidden[1:hidden.size(0):2]
+        final = torch.cat([fwd_hidden, bwd_hidden], dim=2)  # [num_layers, batch, 2*dim]
 
-        return output, hidden
+        return output, final
