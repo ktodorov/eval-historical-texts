@@ -113,11 +113,18 @@ class ModelBase(nn.Module):
             model_dict = model_checkpoint.model_dict
 
             for module_name, module in self.named_modules():
-                if isinstance(module, ModelBase) and module.do_not_save:
-                    for parameter_name, parameter_value in module.named_parameters():
-                        model_dict[f'{module_name}.{parameter_name}'] = parameter_value
+                if isinstance(module, ModelBase):
+                    if module.do_not_save:
+                        for parameter_name, parameter_value in module.named_parameters():
+                            model_dict[f'{module_name}.{parameter_name}'] = parameter_value
+
+                    module.before_load()
 
             self.load_state_dict(model_dict)
+
+            for module_name, module in self.named_modules():
+                if isinstance(module, ModelBase):
+                    module.after_load()
 
         return model_checkpoint
 
@@ -186,4 +193,10 @@ class ModelBase(nn.Module):
         return {}
 
     def finalize_batch_evaluation(self, is_new_best: bool):
+        pass
+
+    def before_load(self):
+        pass
+
+    def after_load(self):
         pass
