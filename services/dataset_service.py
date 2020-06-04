@@ -63,7 +63,7 @@ class DatasetService:
         if run_type == RunType.Test:
             if (configuration == Configuration.KBert or
                 configuration == Configuration.XLNet or
-                configuration == Configuration.CBOW):
+                    configuration == Configuration.CBOW):
                 return SemEvalTestDataset(
                     language,
                     self._arguments_service,
@@ -76,6 +76,17 @@ class DatasetService:
                     self._vocabulary_service,
                     self._process_service,
                     RunType.Test)
+            elif (configuration == Configuration.CharacterToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder):
+                result = OCRCharacterDataset(
+                    self._arguments_service,
+                    self._file_service,
+                    self._tokenize_service,
+                    self._vocabulary_service,
+                    self._metrics_service,
+                    self._log_service,
+                    self._data_service,
+                    self._process_service,
+                    run_type)
         if not joint_model:
             if (configuration == Configuration.KBert or configuration == Configuration.XLNet):
                 result = SemanticChangeDataset(
@@ -141,7 +152,7 @@ class DatasetService:
         configuration = self._arguments_service.configuration
 
         result = []
-        if configuration == Configuration.KBert or configuration == Configuration.XLNet or configuration==Configuration.CBOW:
+        if configuration == Configuration.KBert or configuration == Configuration.XLNet or configuration == Configuration.CBOW:
             result = [SemanticChangeDataset(language, self._arguments_service, self._mask_service, self._file_service, self._tokenize_service, self._log_service, corpus_id=i+1)
                       for i in range(number_of_datasets)]
         else:
