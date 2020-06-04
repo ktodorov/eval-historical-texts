@@ -53,6 +53,7 @@ from services.process.ocr_character_process_service import OCRCharacterProcessSe
 from services.evaluation.base_evaluation_service import BaseEvaluationService
 from services.evaluation.semantic_change_evaluation_service import SemanticChangeEvaluationService
 from services.evaluation.ner_evaluation_service import NEREvaluationService
+from services.evaluation.ocr_evaluation_service import OCREvaluationService
 
 from services.data_service import DataService
 from services.dataloader_service import DataLoaderService
@@ -189,6 +190,7 @@ def register_evaluation_service(
         plot_service: PlotService,
         metrics_service: MetricsService,
         process_service: ProcessServiceBase,
+        vocabulary_service: VocabularyService,
         joint_model: bool,
         configuration: Configuration):
     evaluation_service = None
@@ -215,7 +217,13 @@ def register_evaluation_service(
           configuration == Configuration.TransformerSequence or
           configuration == Configuration.CharacterToCharacter or
           configuration == Configuration.CharacterToCharacterEncoderDecoder):
-        evaluation_service = providers.Factory(BaseEvaluationService)
+        evaluation_service = providers.Factory(
+            OCREvaluationService,
+            arguments_service=arguments_service,
+            vocabulary_service=vocabulary_service,
+            process_service=process_service,
+            metrics_service=metrics_service,
+            file_service=file_service)
 
     return evaluation_service
 
@@ -515,6 +523,7 @@ class IocContainer(containers.DeclarativeContainer):
         plot_service=plot_service,
         metrics_service=metrics_service,
         process_service=process_service,
+        vocabulary_service=vocabulary_service,
         joint_model=joint_model,
         configuration=configuration)
 
