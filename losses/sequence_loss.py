@@ -26,7 +26,7 @@ class SequenceLoss(LossBase):
         return loss.item()
 
     def _calculate_inner_loss(self, model_output):
-        outputs, targets = model_output
+        outputs, targets, _ = model_output
         batch_size = targets.shape[0]
 
         target_y = targets[:, 1:]

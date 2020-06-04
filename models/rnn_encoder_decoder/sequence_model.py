@@ -121,6 +121,8 @@ class SequenceModel(ModelBase):
         self._dev_edit_distances: List[float] = []
         self.metric_log_key = 'Levenshtein distance improvement (%)'
 
+        self._evaluation_mode = arguments_service.evaluate
+
     @staticmethod
     def init_weights(self):
         for name, param in self.named_parameters():
@@ -129,42 +131,84 @@ class SequenceModel(ModelBase):
     @overrides
     def forward(self, input_batch: BatchRepresentation, debug=False, **kwargs):
         # last hidden state of the encoder is used as the initial hidden state of the decoder
-        encoder_hidden, encoder_final  = self._encoder.forward(input_batch)
+        encoder_hidden, encoder_final = self._encoder.forward(input_batch)
+        src_mask = input_batch.generate_mask(input_batch.character_sequences)
 
-        outputs = self._decoder.forward(
-            input_batch.targets[:, :-1], # we remove the [EOS] tokens
+        predictions = None
+        if not self.training:
+            predictions = self._decode_predictions(src_mask, encoder_hidden, encoder_final, input_batch.targets.shape[1])
+
+        outputs, _ = self._decoder.forward(
+            input_batch.targets[:, :-1],  # we remove the [EOS] tokens
             encoder_hidden,
             encoder_final,
             input_batch.generate_mask(input_batch.character_sequences))
 
-        # return outputs, targets
         gen_outputs = self._generator.forward(outputs)
 
-        return gen_outputs, input_batch.targets
+        return gen_outputs, input_batch.targets, predictions
+
+    def _decode_predictions(self, src_mask, encoder_hidden, encoder_final, max_len=60):
+        batch_size = src_mask.shape[0]
+        prev_y = torch.ones(batch_size, 1, dtype=torch.long, device=encoder_hidden.device).fill_(self._vocabulary_service.cls_token)
+        trg_mask = torch.ones_like(prev_y)
+
+        output = [[] for _ in range(batch_size)]
+        hidden = None
+
+        for i in range(max_len):
+            pre_output, hidden = self._decoder.forward(
+                prev_y,
+                encoder_hidden,
+                encoder_final,
+                src_mask,
+                hidden)
+
+            # we predict from the pre-output layer, which is
+            # a combination of Decoder state, prev emb, and context
+            prob = self._generator.forward(pre_output[:, -1])
+
+            _, next_char = torch.max(prob, dim=1)
+            for b in range(batch_size):
+                output[b].append(next_char[b].data.item())
+
+            prev_y = next_char.clone().detach().unsqueeze(-1)
+
+        output = torch.tensor(output).to(encoder_hidden.device)
+
+        return output
 
     @overrides
     def calculate_accuracies(self, batch: BatchRepresentation, outputs, output_characters=False) -> Dict[MetricType, float]:
-        output, targets = outputs
-        output_dim = output.shape[-1]
-        predictions = output.max(dim=2)[1].cpu().detach().numpy()
+        output, _, predictions = outputs
 
-        targets = targets[:, 1:].cpu().detach().numpy()
+        if predictions is None:
+            predictions = output.max(dim=2)[1]
+
+        predictions = predictions.cpu().detach().numpy()
+
+        targets = batch.targets[:, 1:].cpu().detach().numpy()
         predicted_characters = []
         target_characters = []
 
         for i in range(targets.shape[0]):
             indices = np.array(
                 (targets[i] != self._vocabulary_service.pad_token), dtype=bool)
-            predicted_characters.append(predictions[i][indices])
+
             target_characters.append(targets[i][indices])
+
+            if predictions.shape[1] > targets.shape[1]:
+                predicted_characters.append(predictions[i][:indices.shape[0]][indices])
+            else:
+                predicted_characters.append(predictions[i][indices])
 
         metrics = {}
 
         if MetricType.JaccardSimilarity in self._metric_types:
             predicted_tokens = [self._vocabulary_service.ids_to_string(
-                x) for x in predicted_characters]
+                x, exclude_special_tokens=True) for x in predicted_characters]
             target_tokens = [self._vocabulary_service.ids_to_string(
-                x) for x in target_characters]
+                x, exclude_special_tokens=True) for x in target_characters]
             jaccard_score = np.mean([self._metrics_service.calculate_jaccard_similarity(
                 target_tokens[i], predicted_tokens[i]) for i in range(len(predicted_tokens))])
 
@@ -266,6 +310,7 @@ class SequenceModel(ModelBase):
                 'best-results-edit-distances-bins', predicted_histogram[1])
 
         self._dev_edit_distances = []
+
     def before_load(self):
         if self._shared_embedding_layer is not None:
             self._encoder._embedding_layer = None

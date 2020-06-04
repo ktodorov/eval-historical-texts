@@ -89,15 +89,15 @@ class SequenceDecoder(ModelBase):
         self.dropout_layer = nn.Dropout(dropout)
 
     @overrides
-    def forward(self, targets, encoder_hidden, encoder_final, src_mask):
+    def forward(self, targets, encoder_hidden, encoder_final, src_mask, hidden=None):
         if self._use_beam_search:
             outputs, targets = self._beam_decode(encoder_final, targets)
         else:
-            out, _, pre_output = self._greedy_decode2(
-                encoder_hidden, encoder_final, targets, src_mask)
+            out, hidden, pre_output = self._greedy_decode(
+                encoder_hidden, encoder_final, targets, src_mask, hidden=hidden)
 
         # return outputs, targets
-        return pre_output
+        return pre_output, hidden
 
     def _beam_decode(
             self,
@@ -228,7 +228,7 @@ class SequenceDecoder(ModelBase):
 
         return torch.tanh(self._bridge_layer.forward(encoder_final))
 
-    def _greedy_decode2(self, encoder_hidden, encoder_final, targets, src_mask, hidden=None):
+    def _greedy_decode(self, encoder_hidden, encoder_final, targets, src_mask, hidden=None):
         # the maximum number of steps to unroll the RNN
         batch_size, max_len = targets.shape
 
