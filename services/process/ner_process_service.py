@@ -12,6 +12,7 @@ from enums.text_sequence_split_type import TextSequenceSplitType
 
 from entities.ne_collection import NECollection
 from entities.ne_line import NELine
+from entities.timespan import Timespan
 
 from services.arguments.ner_arguments_service import NERArgumentsService
 from services.tokenize.base_tokenize_service import BaseTokenizeService
@@ -19,6 +20,7 @@ from services.file_service import FileService
 from services.data_service import DataService
 from services.vocabulary_service import VocabularyService
 from services.process.process_service_base import ProcessServiceBase
+from services.cache_service import CacheService
 
 
 class NERProcessService(ProcessServiceBase):
@@ -28,7 +30,8 @@ class NERProcessService(ProcessServiceBase):
             vocabulary_service: VocabularyService,
             file_service: FileService,
             tokenize_service: BaseTokenizeService,
-            data_service: DataService):
+            data_service: DataService,
+            cache_service: CacheService):
         super().__init__()
 
         self._arguments_service = arguments_service
@@ -50,21 +53,32 @@ class NERProcessService(ProcessServiceBase):
         data_path = file_service.get_data_path()
         language_suffix = self.get_language_suffix(arguments_service.language)
 
-        self._train_ne_collection = self.preprocess_data(
-            os.path.join(
-                data_path, f'HIPE-data-v{self._data_version}-train-{language_suffix}.tsv'),
-            limit=arguments_service.train_dataset_limit_size)
+        train_cache_key = f'train-hipe-data-v{self._data_version}-limit-{arguments_service.train_dataset_limit_size}-{arguments_service.split_type.value}-merge-{arguments_service.merge_subwords}-replacen-{arguments_service.replace_all_numbers}'
+        validation_cache_key = f'validation-hipe-data-v{self._data_version}-limit-{arguments_service.validation_dataset_limit_size}-{arguments_service.split_type.value}-merge-{arguments_service.merge_subwords}-replacen-{arguments_service.replace_all_numbers}'
+        self._train_ne_collection = cache_service.get_item_from_cache(
+            item_key=train_cache_key,
+            callback_function=lambda: (
+                self.preprocess_data(
+                    os.path.join(
+                        data_path, f'HIPE-data-v{self._data_version}-train-{language_suffix}.tsv'),
+                    limit=arguments_service.train_dataset_limit_size)))
 
-        self._validation_ne_collection = self.preprocess_data(
-            os.path.join(
-                data_path, f'HIPE-data-v{self._data_version}-dev-{language_suffix}.tsv'),
-            limit=arguments_service.validation_dataset_limit_size)
+        self._validation_ne_collection = cache_service.get_item_from_cache(
+            item_key=validation_cache_key,
+            callback_function=lambda: (
+                self.preprocess_data(
+                    os.path.join(
+                        data_path, f'HIPE-data-v{self._data_version}-dev-{language_suffix}.tsv'),
+                    limit=arguments_service.validation_dataset_limit_size)))
 
         if arguments_service.evaluate:
-            self._test_ne_collection = self.preprocess_data(
-                os.path.join(
-                    data_path,
-                    f'HIPE-data-v{self._data_version}-test-masked-{language_suffix}.tsv'))
+            test_cache_key = f'test-hipe-data-v{self._data_version}-{arguments_service.split_type.value}-merge-{arguments_service.merge_subwords}-replacen-{arguments_service.replace_all_numbers}'
+            self._test_ne_collection = cache_service.get_item_from_cache(
+                item_key=test_cache_key,
+                callback_function=lambda: (
+                    self.preprocess_data(
+                        os.path.join(
+                            data_path, f'HIPE-data-v{self._data_version}-test-masked-{language_suffix}.tsv'))))
 
         self._entity_mappings = self._create_entity_mappings(
             self._train_ne_collection,
@@ -72,6 +86,7 @@ class NERProcessService(ProcessServiceBase):
 
         vocabulary_data = self._load_vocabulary_data(
             language_suffix, self._data_version)
+
         vocabulary_service.initialize_vocabulary_data(vocabulary_data)
 
     def preprocess_data(
@@ -87,7 +102,8 @@ class NERProcessService(ProcessServiceBase):
         average_segments = []
 
         with open(file_path, 'r', encoding='utf-8') as tsv_file:
-            reader = csv.DictReader(tsv_file, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
+            reader = csv.DictReader(
+                tsv_file, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
             current_sentence = NELine()
             split_documents = self._arguments_service.split_type == TextSequenceSplitType.Segments
             ignore_segmentation = self._arguments_service.language == Language.English and not self._arguments_service.evaluate
@@ -144,7 +160,8 @@ class NERProcessService(ProcessServiceBase):
             collection.add_line(current_sentence)
 
         if self._arguments_service.split_type == TextSequenceSplitType.MultiSegment:
-            print(f'Average multi segments per document: {np.mean(multi_segments_count)}\nAverage segments per multi segment:{np.mean(average_segments)}')
+            print(
+                f'Average multi segments per document: {np.mean(multi_segments_count)}\nAverage segments per multi segment:{np.mean(average_segments)}')
 
         return collection
 
@@ -155,7 +172,8 @@ class NERProcessService(ProcessServiceBase):
             return self._validation_ne_collection
         elif run_type == RunType.Test:
             if not self._arguments_service.evaluate:
-                raise Exception('You must have an evaluation run to use test collection')
+                raise Exception(
+                    'You must have an evaluation run to use test collection')
             return self._test_ne_collection
 
         raise Exception('Unsupported run type')
@@ -344,21 +362,27 @@ class NERProcessService(ProcessServiceBase):
                 segment_start_id: segment_end_id]
 
             # copy tag targets
-            multi_segment_line.misc = self._copy_line_targets(ne_line.misc, segment_start_id, segment_end_id, ne_line.position_changes)
-            multi_segment_line.ne_coarse_lit = self._copy_line_targets(ne_line.ne_coarse_lit, segment_start_id, segment_end_id, ne_line.position_changes)
-            multi_segment_line.ne_coarse_meto = self._copy_line_targets(ne_line.ne_coarse_meto, segment_start_id, segment_end_id, ne_line.position_changes)
-            multi_segment_line.ne_fine_lit = self._copy_line_targets(ne_line.ne_fine_lit, segment_start_id, segment_end_id, ne_line.position_changes)
-            multi_segment_line.ne_fine_meto = self._copy_line_targets(ne_line.ne_fine_meto, segment_start_id, segment_end_id, ne_line.position_changes)
-            multi_segment_line.ne_fine_comp = self._copy_line_targets(ne_line.ne_fine_comp, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.misc = self._copy_line_targets(
+                ne_line.misc, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_coarse_lit = self._copy_line_targets(
+                ne_line.ne_coarse_lit, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_coarse_meto = self._copy_line_targets(
+                ne_line.ne_coarse_meto, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_fine_lit = self._copy_line_targets(
+                ne_line.ne_fine_lit, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_fine_meto = self._copy_line_targets(
+                ne_line.ne_fine_meto, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_fine_comp = self._copy_line_targets(
+                ne_line.ne_fine_comp, segment_start_id, segment_end_id, ne_line.position_changes)
 
-            multi_segment_line.ne_nested = self._copy_line_targets(ne_line.ne_nested, segment_start_id, segment_end_id, ne_line.position_changes)
+            multi_segment_line.ne_nested = self._copy_line_targets(
+                ne_line.ne_nested, segment_start_id, segment_end_id, ne_line.position_changes)
             multi_segment_line.position_changes = self._cut_position_changes(
                 ne_line.position_changes, segment_start_id, segment_end_id)
             result.append(multi_segment_line)
 
             multi_segment_line.document_id = ne_line.document_id
             multi_segment_line.segment_idx = segment_idx
-
 
         return result, len(result), np.mean([len(x) for x in multi_segments])
 
@@ -372,7 +396,6 @@ class NERProcessService(ProcessServiceBase):
                 result_targets.append(target_values[original_position])
 
         return result_targets
-
 
     def _cut_position_changes(self, item_position_changes, start_idx, end_idx):
         result = {}
