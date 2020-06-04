@@ -95,7 +95,8 @@ class EmbeddingLayer(ModelBase):
         self._learn_manual_features = embedding_layer_options.learn_manual_features
         if self._learn_manual_features:
             self._manual_features_layer = nn.Embedding(
-                num_embeddings=(embedding_layer_options.manual_features_count * 2) + 1,
+                num_embeddings=(
+                    embedding_layer_options.manual_features_count * 2) + 1,
                 embedding_dim=1)
 
             self._output_size += embedding_layer_options.manual_features_count
@@ -103,7 +104,10 @@ class EmbeddingLayer(ModelBase):
         self._device = embedding_layer_options.device
 
     @overrides
-    def forward(self, batch_representation: BatchRepresentation):
+    def forward(
+            self,
+            batch_representation: BatchRepresentation, 
+            skip_pretrained_representation: bool = False):
         subword_embeddings = None
         word_embeddings = None
         character_embeddings = None
@@ -135,7 +139,7 @@ class EmbeddingLayer(ModelBase):
                     batch_representation.character_sequences,
                     batch_representation.subword_characters_count)
 
-        if include_pretrained:
+        if include_pretrained and not skip_pretrained_representation:
             pretrained_embeddings = self._pretrained_layer.get_pretrained_representation(
                 batch_representation.subword_sequences)
 
@@ -160,7 +164,7 @@ class EmbeddingLayer(ModelBase):
                 # TODO Concat sub-word embeddings to character embeddings
                 pass
 
-            if include_pretrained:
+            if include_pretrained and not skip_pretrained_representation:
                 result_embeddings = self._add_subword_to_character_embeddings(
                     result_embeddings,
                     pretrained_embeddings,
@@ -187,7 +191,7 @@ class EmbeddingLayer(ModelBase):
                     character_embeddings,
                     batch_representation.subword_characters_count)
 
-            if include_pretrained:
+            if include_pretrained and not skip_pretrained_representation:
                 if result_embeddings is None:
                     result_embeddings = pretrained_embeddings
                 else:
