@@ -11,6 +11,8 @@ from typing import List
 
 from transformers import PreTrainedTokenizer
 
+from enums.language import Language
+
 from entities.language_data import LanguageData
 from services.data_service import DataService
 from services.string_process_service import StringProcessService
@@ -27,40 +29,41 @@ class OCRDownloadService:
         self._string_process_service = string_process_service
         self._cache_service = cache_service
 
-    def download_training_data(self):
+    def download_training_data(self, language: Language):
         newseye_path = os.path.join('data', 'newseye')
         trove_path = os.path.join('data', 'trove')
 
         newseye_2017_key = 'newseye-2017-full-dataset'
         if not self._cache_service.item_exists(newseye_2017_key):
             newseye_2017_path = os.path.join(newseye_path, '2017')
-            newseye_2017_data = self.process_newseye_files(newseye_2017_path)
+            newseye_2017_data = self.process_newseye_files(language, newseye_2017_path)
             self._cache_service.cache_item(newseye_2017_key, newseye_2017_data)
 
         newseye_2019_key = 'newseye-2019-train-dataset'
         if not self._cache_service.item_exists(newseye_2019_key):
             newseye_2019_path = os.path.join(newseye_path, '2019')
             newseye_2019_data = self.process_newseye_files(
-                newseye_2019_path, subfolder_to_use='train')
+                language, newseye_2019_path, subfolder_to_use='train')
             self._cache_service.cache_item(newseye_2019_key, newseye_2019_data)
 
-        trove_cache_key = 'trove-dataset'
-        if not self._cache_service.item_exists(trove_cache_key):
-            trove_items_cache_key = 'trove-item-keys'
-            cache_item_keys = self._cache_service.get_item_from_cache(
-                item_key=trove_items_cache_key,
-                callback_function=self._download_trove_files)
+        if language == Language.English:
+            trove_cache_key = 'trove-dataset'
+            if not self._cache_service.item_exists(trove_cache_key):
+                trove_items_cache_key = 'trove-item-keys'
+                cache_item_keys = self._cache_service.get_item_from_cache(
+                    item_key=trove_items_cache_key,
+                    callback_function=self._download_trove_files)
 
-            trove_data = self._process_trove_files(cache_item_keys)
-            self._cache_service.cache_item(trove_cache_key, trove_data)
+                trove_data = self._process_trove_files(cache_item_keys)
+                self._cache_service.cache_item(trove_cache_key, trove_data)
 
-    def download_test_data(self):
+    def download_test_data(self, language: Language):
         newseye_path = os.path.join('data', 'newseye', '2019')
         newseye_eval_key = 'newseye-2019-eval-dataset'
         if self._cache_service.item_exists(newseye_eval_key):
             return
 
-        newseye_eval_data = self.process_newseye_files(newseye_path, subfolder_to_use='eval')
+        newseye_eval_data = self.process_newseye_files(language, newseye_path, subfolder_to_use='eval')
         self._cache_service.cache_item(newseye_eval_key, newseye_eval_data)
 
     def _cut_string(
@@ -78,12 +81,15 @@ class OCRDownloadService:
 
     def process_newseye_files(
             self,
+            language: Language,
             data_path: str,
             start_position: int = 14,
             max_string_length: int = 50,
             subfolder_to_use: str = 'full'):
         ocr_sequences = []
         gs_sequences = []
+
+        language_prefixes = self._get_folder_language_prefixes(language)
 
         for subdir_name in os.listdir(data_path):
             if subdir_name != subfolder_to_use:
@@ -94,22 +100,28 @@ class OCRDownloadService:
                 continue
 
             for language_name in os.listdir(subdir_path):
-                if not language_name.startswith('eng') and not language_name.startswith('EN'):
+                if not any([language_name.startswith(language_prefix) for language_prefix in language_prefixes]):
                     continue
 
                 language_path = os.path.join(subdir_path, language_name)
-                for data_file_name in os.listdir(language_path):
-                    data_file_path = os.path.join(
-                        language_path, data_file_name)
-                    with open(data_file_path, 'r', encoding='utf-8') as data_file:
-                        data_file_text = data_file.read().split('\n')
-                        ocr_strings = self._cut_string(
-                            data_file_text[1][start_position:], max_string_length)
-                        gs_strings = self._cut_string(
-                            data_file_text[2][start_position:], max_string_length)
+                subfolder_names = os.listdir(language_path)
+                subfolder_paths = [os.path.join(language_path, subfolder_name) for subfolder_name in subfolder_names]
+                subfolder_paths = [x for x in subfolder_paths if os.path.isdir(x)]
+                subfolder_paths.append(language_path)
 
-                        ocr_sequences.extend(ocr_strings)
-                        gs_sequences.extend(gs_strings)
+                for subfolder_path in subfolder_paths:
+                    filepaths = [os.path.join(subfolder_path, x) for x in os.listdir(subfolder_path)]
+                    filepaths = [x for x in filepaths if os.path.isfile(x)]
+                    for filepath in filepaths:
+                        with open(filepath, 'r', encoding='utf-8') as data_file:
+                            data_file_text = data_file.read().split('\n')
+                            ocr_strings = self._cut_string(
+                                data_file_text[1][start_position:], max_string_length)
+                            gs_strings = self._cut_string(
+                                data_file_text[2][start_position:], max_string_length)
+
+                            ocr_sequences.extend(ocr_strings)
+                            gs_sequences.extend(gs_strings)
 
         result = tuple(zip(*[
             (ocr_sequence, gs_sequence)
@@ -196,3 +208,11 @@ class OCRDownloadService:
             cache_item_keys.append(dataset3_key)
 
         return cache_item_keys
+
+    def _get_folder_language_prefixes(self, language: Language) -> List[str]:
+        if language == Language.English:
+            return ['eng', 'EN']
+        elif language == Language.French:
+            return ['fr', 'FR']
+        else:
+            raise NotImplementedError()

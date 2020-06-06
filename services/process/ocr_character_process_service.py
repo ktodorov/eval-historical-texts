@@ -125,13 +125,13 @@ class OCRCharacterProcessService(ProcessServiceBase):
             self,
             run_type: RunType):
         if run_type == RunType.Test:
-            self._ocr_download_service.download_test_data()
+            self._ocr_download_service.download_test_data(self._arguments_service.language)
 
             pairs = self._cache_service.get_item_from_cache(
                 item_key='test-pairs',
                 callback_function=self._load_eval_splits)
         else:
-            self._ocr_download_service.download_training_data()
+            self._ocr_download_service.download_training_data(self._arguments_service.language)
 
             train_pairs, validation_pairs = self._cache_service.get_item_from_cache(
                 item_key='train-validation-pairs',
@@ -147,8 +147,8 @@ class OCRCharacterProcessService(ProcessServiceBase):
         return language_data
 
     def _generate_vocabulary(self):
-        self._ocr_download_service.download_test_data()
-        self._ocr_download_service.download_training_data()
+        self._ocr_download_service.download_test_data(self._arguments_service.language)
+        self._ocr_download_service.download_training_data(self._arguments_service.language)
 
         ocr_gs_file_data_eval_cache_key = f'ocr-gs-file-data-eval'
         ocr_gs_file_data_cache_key = f'ocr-gs-file-data'
@@ -234,6 +234,9 @@ class OCRCharacterProcessService(ProcessServiceBase):
         for i, cache_key in enumerate(cache_keys):
             print(f'{i}/{number_of_files}             \r', end='')
             result = self._cache_service.get_item_from_cache(cache_key)
+            if result is None:
+                continue
+
             ocr_file_data.extend(result[0])
             gs_file_data.extend(result[1])
 
