@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 
 from typing import Callable
+import urllib.request
 
 from entities.timespan import Timespan
 
@@ -32,7 +33,7 @@ class CacheService:
     def get_item_from_cache(
             self,
             item_key: str,
-            callback_function: Callable,
+            callback_function: Callable = None,
             time_to_keep: Timespan = None) -> object:
 
         # try to get the cached object
@@ -45,17 +46,52 @@ class CacheService:
         if cached_object is None or self._cache_has_expired(item_key, time_to_keep):
             # if the cached object does not exist or has expired we call
             # the callback function to calculate it and then cache it to the file system
+            if callback_function is None:
+                return None
+
             cached_object = callback_function()
-            self.cache_item(cached_object, item_key)
+            self.cache_item(item_key, cached_object)
 
         return cached_object
 
-    def cache_item(self, item: object, item_key: str):
+    def load_file_from_cache(
+            self,
+            item_key: str) -> object:
+        filepath = os.path.join(self._cache_folder, item_key)
+        with open(filepath, 'rb') as cached_file:
+            result = cached_file.read()
+            return result
+
+    def cache_item(self, item_key: str, item: object, overwrite: bool = True):
+        if not overwrite and self.item_exists(item_key):
+            return
+
         self._data_service.save_python_obj(
             item,
             self._cache_folder,
             item_key,
             print_success=False)
+
+    def item_exists(self, item_key: str) -> bool:
+        result = self._data_service.check_python_object(self._cache_folder, item_key)
+        return result
+
+    def download_and_cache(self, item_key: str, download_url: str, overwrite: bool = True) -> bool:
+        if not overwrite and self.item_exists(item_key):
+            return True
+
+        try:
+            download_file_path = os.path.join(self._cache_folder, item_key)
+            urllib.request.urlretrieve(
+                download_url,
+                download_file_path)
+        except:
+            print(
+                f'There was error downloading file from url \'{download_url}\'')
+
+            return False
+
+        return True
 
     def _cache_has_expired(
             self,

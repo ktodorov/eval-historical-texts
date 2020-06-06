@@ -19,8 +19,6 @@ from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
 
-from preprocessing.ocr_preprocessing import preprocess_data
-
 
 class OCRDataset(DatasetBase):
     def __init__(

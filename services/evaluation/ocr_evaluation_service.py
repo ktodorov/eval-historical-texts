@@ -42,7 +42,7 @@ class OCREvaluationService(BaseEvaluationService):
          self._input_target_strings,
          self._original_edit_distances,
          self._original_levenshtein_distance_sum,
-         self._original_histogram) = process_service.calculate_data_statistics(run_type=RunType.Test, log_summaries=False)
+         self._original_histogram) = (None, None, None, None, None)
 
         self.final_results = []
 
@@ -62,6 +62,13 @@ class OCREvaluationService(BaseEvaluationService):
         :return: a dictionary with evaluation scores for every type
         :rtype: Dict[EvaluationType, List]
         """
+        if self._input_strings is None:
+            (self._input_strings,
+             self._input_target_strings,
+             self._original_edit_distances,
+             self._original_levenshtein_distance_sum,
+             self._original_histogram) = self._process_service.calculate_data_statistics(run_type=RunType.Test, log_summaries=False)
+
         _, _, predictions = output
         predictions = predictions.cpu().detach().numpy()
 

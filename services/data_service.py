@@ -44,6 +44,16 @@ class DataService:
             print("Failed saving {}, continue anyway".format(name))
             return False
 
+    def check_python_object(
+        self,
+        path: str,
+        name: str,
+        extension_included: bool = False) -> bool:
+        extension = '' if extension_included else '.pickle'
+        filepath = os.path.join(path, f'{name}{extension}')
+        result = (os.path.exists(filepath) and os.stat(filepath).st_size > 0)
+        return result
+
     def load_python_obj(
         self,
         path: str,

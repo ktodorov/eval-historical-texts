@@ -77,7 +77,7 @@ class DatasetService:
                     self._process_service,
                     RunType.Test)
             elif (configuration == Configuration.CharacterToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder):
-                result = OCRCharacterDataset(
+                return OCRCharacterDataset(
                     self._arguments_service,
                     self._file_service,
                     self._tokenize_service,
@@ -111,16 +111,17 @@ class DatasetService:
                     self._log_service,
                     self._data_service,
                     run_type)
-            elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
-                result = OCRSequenceDataset(
-                    self._arguments_service,
-                    self._file_service,
-                    self._tokenize_service,
-                    self._vocabulary_service,
-                    self._metrics_service,
-                    self._log_service,
-                    self._data_service,
-                    run_type)
+            # TODO Fix OCRSequenceDataset implementation
+            # elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.TransformerSequence:
+            #     result = OCRSequenceDataset(
+            #         self._arguments_service,
+            #         self._file_service,
+            #         self._tokenize_service,
+            #         self._vocabulary_service,
+            #         self._metrics_service,
+            #         self._log_service,
+            #         self._data_service,
+            #         run_type)
             elif configuration == Configuration.CharacterToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder:
                 result = OCRCharacterDataset(
                     self._arguments_service,

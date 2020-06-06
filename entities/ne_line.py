@@ -5,6 +5,7 @@ import re
 from enums.entity_tag_type import EntityTagType
 from enums.word_feature import WordFeature
 from services.tokenize.base_tokenize_service import BaseTokenizeService
+from services.string_process_service import StringProcessService
 
 
 class NELine:
@@ -119,11 +120,11 @@ class NELine:
     def tokenize_text(
             self,
             tokenize_service: BaseTokenizeService,
+            string_process_service: StringProcessService,
             replace_all_numbers: bool = False,
             expand_targets: bool = True):
         if replace_all_numbers:
-            self.tokens = [re.sub('^(((([0-9]*)(\.|,)([0-9]+))+)|([0-9]+))', '0', token)
-                           for token in self.tokens]  # replace digit with 0
+            self.tokens = string_process_service.replace_strings_numbers(self.tokens)
 
         self.original_length = len(self.tokens)
         text = self.get_text()

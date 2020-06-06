@@ -1,5 +1,8 @@
 import os
 import numpy as np
+import random
+
+from typing import List
 
 from enums.run_type import RunType
 
@@ -13,9 +16,8 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.metrics_service import MetricsService
 from services.vocabulary_service import VocabularyService
 from services.log_service import LogService
-
-from preprocessing.ocr_preprocessing import preprocess_data
-import preprocessing.ocr_download as ocr_download
+from services.download.ocr_download_service import OCRDownloadService
+from services.cache_service import CacheService
 
 
 class OCRCharacterProcessService(ProcessServiceBase):
@@ -27,7 +29,9 @@ class OCRCharacterProcessService(ProcessServiceBase):
             tokenize_service: BaseTokenizeService,
             metrics_service: MetricsService,
             vocabulary_service: VocabularyService,
-            log_service: LogService):
+            log_service: LogService,
+            ocr_download_service: OCRDownloadService,
+            cache_service: CacheService):
 
         self._arguments_service = arguments_service
         self._data_service = data_service
@@ -36,94 +40,16 @@ class OCRCharacterProcessService(ProcessServiceBase):
         self._metrics_service = metrics_service
         self._vocabulary_service = vocabulary_service
         self._log_service = log_service
+        self._ocr_download_service = ocr_download_service
+        self._cache_service = cache_service
 
         self.original_levenshtein_distance_sum: int = 0
 
-    def _get_language_data_path(
-            self,
-            run_type: RunType):
-        output_data_path = self._file_service.get_data_path()
-        language_data_path = os.path.join(
-            output_data_path, f'{run_type.to_str()}_language_data.pickle')
+        vocabulary_data = self._cache_service.get_item_from_cache(
+            item_key='char-vocabulary',
+            callback_function=self._generate_vocabulary)
 
-        if not os.path.exists(language_data_path):
-            challenge_path = self._file_service.get_challenge_path()
-
-            if run_type == RunType.Test:
-                full_data_path = os.path.join(challenge_path, 'articles-eval')
-                if not os.path.exists(full_data_path):
-                    os.mkdir(full_data_path)
-
-                newseye_2019_path = os.path.join('data', 'newseye', '2019')
-                ocr_download.process_newseye_files(
-                    newseye_2019_path,
-                    full_data_path,
-                    'newseye-2019-eval',
-                    self._data_service,
-                    subfolder_to_use='eval')
-
-                pickles_path = os.path.join(
-                    self._file_service.get_pickles_path(),
-                    'eval')
-
-                if not os.path.exists(pickles_path):
-                    os.mkdir(pickles_path)
-            else:
-                full_data_path = os.path.join(challenge_path, 'articles')
-                if not os.path.exists(full_data_path):
-                    os.mkdir(full_data_path)
-
-                if len(os.listdir(full_data_path)) == 0:
-                    newseye_path = os.path.join('data', 'newseye')
-                    trove_path = os.path.join('data', 'trove')
-                    ocr_download.combine_data(
-                        self._data_service,
-                        full_data_path,
-                        newseye_path,
-                        trove_path)
-
-                pickles_path = self._file_service.get_pickles_path()
-
-            preprocess_data(
-                self._tokenize_service,
-                self._metrics_service,
-                self._vocabulary_service,
-                self._data_service,
-                pickles_path,
-                full_data_path,
-                output_data_path,
-                split_data=(run_type != RunType.Test))
-
-        return language_data_path
-
-    def _load_language_data(
-            self,
-            language_data_path: str,
-            run_type: RunType,
-            reduction: int) -> LanguageData:
-
-        language_data = LanguageData()
-        language_data.load_data(language_data_path)
-
-        total_amount = language_data.length
-        if reduction is not None:
-            language_data_items = language_data.get_entries(
-                reduction)
-            language_data = LanguageData(
-                language_data_items[0],
-                language_data_items[1],
-                language_data_items[2],
-                language_data_items[3],
-                language_data_items[4],
-                language_data_items[5],
-                language_data_items[6])
-
-        print(
-            f'Loaded {language_data.length} entries out of {total_amount} total for {run_type.to_str()}')
-        self._log_service.log_summary(
-            key=f'\'{run_type.to_str()}\' entries amount', value=language_data.length)
-
-        return language_data
+        self._vocabulary_service.initialize_vocabulary_data(vocabulary_data)
 
     def get_language_data(self, run_type: RunType):
         language_data: LanguageData = None
@@ -134,9 +60,7 @@ class OCRCharacterProcessService(ProcessServiceBase):
         else:
             limit_size = None
 
-        language_data_path = self._get_language_data_path(run_type)
         language_data = self._load_language_data(
-            language_data_path,
             run_type,
             limit_size)
 
@@ -146,7 +70,11 @@ class OCRCharacterProcessService(ProcessServiceBase):
 
         return language_data
 
-    def calculate_data_statistics(self, language_data: LanguageData = None, run_type: RunType = None, log_summaries: bool = True):
+    def calculate_data_statistics(
+            self,
+            language_data: LanguageData = None,
+            run_type: RunType = None,
+            log_summaries: bool = True):
         assert language_data is not None or run_type is not None, 'At least one of language_data or run_type must be supplied'
 
         if language_data is None and run_type is not None:
@@ -192,3 +120,199 @@ class OCRCharacterProcessService(ProcessServiceBase):
             edit_distances,
             original_levenshtein_distance_sum,
             original_histogram)
+
+    def _generate_language_data(
+            self,
+            run_type: RunType):
+        if run_type == RunType.Test:
+            self._ocr_download_service.download_test_data()
+
+            pairs = self._cache_service.get_item_from_cache(
+                item_key='test-pairs',
+                callback_function=self._load_eval_splits)
+        else:
+            self._ocr_download_service.download_training_data()
+
+            train_pairs, validation_pairs = self._cache_service.get_item_from_cache(
+                item_key='train-validation-pairs',
+                callback_function=self._load_train_splits)
+
+            pairs = train_pairs if run_type == RunType.Train else validation_pairs
+
+        language_data = LanguageData.from_pairs(
+            self._tokenize_service,
+            self._vocabulary_service,
+            pairs)
+
+        return language_data
+
+    def _generate_vocabulary(self):
+        self._ocr_download_service.download_test_data()
+        self._ocr_download_service.download_training_data()
+
+        ocr_gs_file_data_eval_cache_key = f'ocr-gs-file-data-eval'
+        ocr_gs_file_data_cache_key = f'ocr-gs-file-data'
+        (ocr_file_data_eval, gs_file_data_eval) = self._cache_service.get_item_from_cache(
+            item_key=ocr_gs_file_data_eval_cache_key,
+            callback_function=lambda: (
+                self._load_file_data(evaluation_mode=True)))
+
+        (ocr_file_data, gs_file_data) = self._cache_service.get_item_from_cache(
+            item_key=ocr_gs_file_data_cache_key,
+            callback_function=lambda: (
+                self._load_file_data(evaluation_mode=False)))
+
+        full_string = ''.join(ocr_file_data_eval +
+                              ocr_file_data + gs_file_data_eval + gs_file_data)
+        data_characters = list(sorted(list(set(full_string))))
+        data_characters.insert(0, '[PAD]')
+        data_characters.insert(1, '[UNK]')
+        data_characters.insert(2, '[CLS]')
+        data_characters.insert(3, '[EOS]')
+
+        # use enumeration to give the characters integer values
+        int2char = dict(enumerate(data_characters))
+
+        # create the look up dictionary from characters to the assigned integers
+        char2int = {char: index for index, char in int2char.items()}
+
+        vocabulary_data = {
+            'characters-set': data_characters,
+            'int2char': int2char,
+            'char2int': char2int
+        }
+
+        return vocabulary_data
+
+    def _load_language_data(
+            self,
+            run_type: RunType,
+            reduction: int) -> LanguageData:
+        language_data = self._cache_service.get_item_from_cache(
+            item_key=f'language-data-{run_type.value}',
+            callback_function=lambda: self._generate_language_data(run_type))
+
+        total_amount = language_data.length
+        if reduction is not None:
+            language_data_items = language_data.get_entries(
+                reduction)
+            language_data = LanguageData(
+                language_data_items[0],
+                language_data_items[1],
+                language_data_items[2],
+                language_data_items[3],
+                language_data_items[4],
+                language_data_items[5],
+                language_data_items[6])
+
+        print(
+            f'Loaded {language_data.length} entries out of {total_amount} total for {run_type.to_str()}')
+        self._log_service.log_summary(
+            key=f'\'{run_type.to_str()}\' entries amount', value=language_data.length)
+
+        return language_data
+
+    def _load_file_data(
+            self,
+            evaluation_mode: bool):
+        ocr_aligned_lengths = []
+        gs_aligned_lengths = []
+
+        if evaluation_mode:
+            cache_keys = ['newseye-2019-eval-dataset']
+        else:
+            cache_keys = [
+                'trove-dataset',
+                'newseye-2017-full-dataset',
+                'newseye-2019-train-dataset']
+
+        number_of_files = len(cache_keys)
+
+        ocr_file_data = []
+        gs_file_data = []
+
+        for i, cache_key in enumerate(cache_keys):
+            print(f'{i}/{number_of_files}             \r', end='')
+            result = self._cache_service.get_item_from_cache(cache_key)
+            ocr_file_data.extend(result[0])
+            gs_file_data.extend(result[1])
+
+        return ocr_file_data, gs_file_data
+
+    def _load_tokens_data(
+            self,
+            ocr_file_data: List[str],
+            gs_file_data: List[str]):
+        ocr_tokens = [
+            self._tokenize_service.encode_sequence(ocr_file_data_obj)[0]
+            for ocr_file_data_obj in ocr_file_data
+        ]
+
+        gs_tokens = [
+            self._tokenize_service.encode_sequence(gs_file_data_obj)[0]
+            for gs_file_data_obj in gs_file_data
+        ]
+
+        return ocr_tokens, gs_tokens
+
+    def _read_data(self, evaluation_mode: bool):
+        evaluation_mode_str = '-eval' if evaluation_mode else ''
+        ocr_gs_file_data_cache_key = f'ocr-gs-file-data{evaluation_mode_str}'
+        (ocr_file_data, gs_file_data) = self._cache_service.get_item_from_cache(
+            item_key=ocr_gs_file_data_cache_key,
+            callback_function=lambda: (
+                self._load_file_data(evaluation_mode)))
+
+        ocr_gs_tokens_cache_key = f'ocr-gs-tokens{evaluation_mode_str}'
+        (ocr_tokens, gs_tokens) = self._cache_service.get_item_from_cache(
+            item_key=ocr_gs_tokens_cache_key,
+            callback_function=lambda: (self._load_tokens_data(ocr_file_data, gs_file_data)))
+
+        token_pairs_cache_key = f'metrics-token-pairs{evaluation_mode_str}'
+        token_pairs = self._cache_service.get_item_from_cache(
+            item_key=token_pairs_cache_key,
+            callback_function=lambda: (self._generate_token_pairs(ocr_tokens, gs_tokens)))
+
+        decoded_pairs_cache_key = f'metrics-decoded-pairs{evaluation_mode_str}'
+        decoded_pairs = self._cache_service.get_item_from_cache(
+            item_key=decoded_pairs_cache_key,
+            callback_function=lambda: (list(zip(ocr_file_data, gs_file_data))))
+
+        return token_pairs, decoded_pairs
+
+    def _generate_token_pairs(
+            self,
+            ocr_tokens: List[List[int]],
+            gs_tokens: List[List[int]],):
+        token_pairs = [
+            ([self._tokenize_service.id_to_token(x) for x in ocr_tokens[i]],
+             [self._tokenize_service.id_to_token(x) for x in gs_tokens[i]])
+            for i in range(len(ocr_tokens))
+        ]
+
+        return token_pairs
+
+    def _load_train_splits(self):
+        token_pairs, decoded_pairs = self._read_data(evaluation_mode=False)
+        eval_indices = random.sample(
+            range(len(token_pairs)),
+            int(0.01 * len(token_pairs)))
+
+        train_pairs = []
+        eval_pairs = [[token_pairs[i], decoded_pairs[i]]
+                      for i in eval_indices]
+
+        eval_indices_dict = {i: False for i in range(len(token_pairs))}
+        for i in eval_indices:
+            eval_indices_dict[i] = True
+
+        train_pairs = [[token_pairs[i], decoded_pairs[i]]
+                       for i in range(len(token_pairs))
+                       if not eval_indices_dict[i]]
+
+        return train_pairs, eval_pairs
+
+    def _load_eval_splits(self):
+        token_pairs, decoded_pairs = self._read_data(evaluation_mode=True)
+        test_pairs = tuple(zip(token_pairs, decoded_pairs))
+        return test_pairs

@@ -19,9 +19,6 @@ from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.data_service import DataService
 
-from preprocessing.ocr_preprocessing import preprocess_data
-import preprocessing.ocr_download as ocr_download
-
 
 class OCRSequenceDataset(OCRDataset):
     def __init__(
@@ -48,9 +45,9 @@ class OCRSequenceDataset(OCRDataset):
 
     @overrides
     def _get_language_data_path(
-        self,
-        file_service: FileService,
-        run_type: RunType):
+            self,
+            file_service: FileService,
+            run_type: RunType):
         output_data_path = file_service.get_data_path()
         language_data_path = os.path.join(
             output_data_path, f'{run_type.to_str()}_language_data.pickle')
@@ -61,7 +58,8 @@ class OCRSequenceDataset(OCRDataset):
             if not os.path.exists(full_data_path) or len(os.listdir(full_data_path)) == 0:
                 newseye_path = os.path.join('data', 'newseye')
                 trove_path = os.path.join('data', 'trove')
-                ocr_download.combine_data(challenge_path, newseye_path, trove_path)
+                # ocr_download.combine_data(challenge_path, newseye_path, trove_path)
+                # TODO Fix download
 
             pickles_path = file_service.get_pickles_path()
             train_data_path = file_service.get_pickles_path()
@@ -95,7 +93,7 @@ class OCRSequenceDataset(OCRDataset):
             subword_sequences=sequences,
             character_sequences=ocr_texts,
             targets=gs_texts,
-            offset_lists=None) # TODO add offset lists
+            offset_lists=None)  # TODO add offset lists
 
         batch_representation.sort_batch()
         return batch_representation

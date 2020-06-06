@@ -45,6 +45,8 @@ from services.arguments.semantic_arguments_service import SemanticArgumentsServi
 from services.arguments.arguments_service_base import ArgumentsServiceBase
 from services.arguments.pretrained_arguments_service import PretrainedArgumentsService
 
+from services.download.ocr_download_service import OCRDownloadService
+
 from services.process.process_service_base import ProcessServiceBase
 from services.process.ner_process_service import NERProcessService
 from services.process.cbow_process_service import CBOWProcessService
@@ -73,6 +75,7 @@ from services.plot_service import PlotService
 from services.experiment_service import ExperimentService
 from services.tag_metrics_service import TagMetricsService
 from services.cache_service import CacheService
+from services.string_process_service import StringProcessService
 
 import logging
 
@@ -336,7 +339,8 @@ def register_process_service(
         data_service: DataService,
         metrics_service: MetricsService,
         log_service: LogService,
-        cache_service: CacheService):
+        cache_service: CacheService,
+        ocr_download_service: OCRDownloadService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
@@ -363,7 +367,9 @@ def register_process_service(
             tokenize_service=tokenize_service,
             metrics_service=metrics_service,
             vocabulary_service=vocabulary_service,
-            log_service=log_service)
+            log_service=log_service,
+            ocr_download_service=ocr_download_service,
+            cache_service=cache_service)
 
     return process_service
 
@@ -456,6 +462,16 @@ class IocContainer(containers.DeclarativeContainer):
         file_service=file_service
     )
 
+    string_process_service = providers.Factory(
+        StringProcessService
+    )
+
+    ocr_download_service = providers.Factory(
+        OCRDownloadService,
+        data_service=data_service,
+        string_process_service=string_process_service,
+        cache_service=cache_service)
+
     process_service = register_process_service(
         challenge,
         configuration,
@@ -466,7 +482,8 @@ class IocContainer(containers.DeclarativeContainer):
         data_service=data_service,
         metrics_service=metrics_service,
         log_service=log_service,
-        cache_service=cache_service)
+        cache_service=cache_service,
+        ocr_download_service=ocr_download_service)
 
     dataset_service = providers.Factory(
         DatasetService,

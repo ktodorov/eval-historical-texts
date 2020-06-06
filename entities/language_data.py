@@ -8,25 +8,36 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 
 
 class LanguageData:
-    def __init__(
-            self,
-            ocr_inputs: List[int] = [],
-            ocr_aligned: List[int] = [],
-            gs_aligned: List[int] = [],
-            ocr_texts: List[int] = [],
-            gs_texts: List[int] = [],
-            ocr_offsets: List[int] = [],
-            gs_offsets: List[int] = []):
-
+    def __init__(self):
         self._ocr_inputs: List[int] = []  # ocr_inputs
-        self._ocr_aligned: List[int] = ocr_aligned
-        self._gs_aligned: List[int] = gs_aligned
+        self._ocr_aligned: List[int] = []
+        self._gs_aligned: List[int] = []
 
-        self._ocr_offsets: List[int] = ocr_offsets
-        self._gs_offsets: List[int] = gs_offsets
+        self._ocr_offsets: List[int] = []
+        self._gs_offsets: List[int] = []
 
-        self._ocr_texts: List[int] = ocr_texts
-        self._gs_texts: List[int] = gs_texts
+        self._ocr_texts: List[int] = []
+        self._gs_texts: List[int] = []
+
+    @classmethod
+    def from_pairs(
+            cls,
+            tokenize_service: BaseTokenizeService,
+            vocabulary_service: VocabularyService,
+            pairs: list):
+        new_obj = cls()
+
+        for pair in pairs:
+            new_obj.add_entry(
+                None,
+                pair[0][0],
+                pair[0][1],
+                pair[1][0],
+                pair[1][1],
+                tokenize_service,
+                vocabulary_service)
+
+        return new_obj
 
     def add_entry(
             self,

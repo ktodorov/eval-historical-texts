@@ -84,8 +84,10 @@ class NERProcessService(ProcessServiceBase):
             self._train_ne_collection,
             self._validation_ne_collection)
 
-        vocabulary_data = self._load_vocabulary_data(
-            language_suffix, self._data_version)
+        vocabulary_cache_key = f'char-vocabulary-{self._data_version}'
+        vocabulary_data = cache_service.get_item_from_cache(
+            item_key=vocabulary_cache_key,
+            callback_function=lambda: self._generate_vocabulary_data(language_suffix, self._data_version))
 
         vocabulary_service.initialize_vocabulary_data(vocabulary_data)
 
@@ -274,17 +276,7 @@ class NERProcessService(ProcessServiceBase):
         result = self._validation_ne_collection.lines[idx].position_changes
         return result
 
-    def _load_vocabulary_data(self, language_suffix: str, data_version: str):
-        pickles_path = self._file_service.get_pickles_path()
-        filename = f'char-vocab-{language_suffix}-{data_version}'
-        character_vocabulary_data = self._data_service.load_python_obj(
-            pickles_path,
-            filename,
-            print_on_error=False)
-
-        if character_vocabulary_data is not None:
-            return character_vocabulary_data
-
+    def _generate_vocabulary_data(self, language_suffix: str, data_version: str):
         unique_characters = set()
 
         for ne_line in self._train_ne_collection.lines:
@@ -312,12 +304,6 @@ class NERProcessService(ProcessServiceBase):
             'int2char': int2char,
             'char2int': char2int
         }
-
-        self._data_service.save_python_obj(
-            vocabulary_data,
-            pickles_path,
-            filename,
-            print_success=False)
 
         return vocabulary_data
 

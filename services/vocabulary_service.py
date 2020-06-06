@@ -18,12 +18,12 @@ class VocabularyService:
         self._data_service = data_service
         self._file_service = file_service
 
-        vocabulary_data = data_service.load_python_obj(
-            file_service.get_pickles_path(),
-            'vocabulary',
-            print_on_error=False)
+        # vocabulary_data = data_service.load_python_obj(
+        #     file_service.get_pickles_path(),
+        #     'vocabulary',
+        #     print_on_error=False)
 
-        self.initialize_vocabulary_data(vocabulary_data)
+        # self.initialize_vocabulary_data(vocabulary_data)
 
     def initialize_vocabulary_data(self, vocabulary_data):
         if vocabulary_data is None:

@@ -20,9 +20,6 @@ from services.metrics_service import MetricsService
 from services.data_service import DataService
 from services.process.ocr_character_process_service import OCRCharacterProcessService
 
-from preprocessing.ocr_preprocessing import preprocess_data
-import preprocessing.ocr_download as ocr_download
-
 
 class OCRCharacterDataset(OCRDataset):
     def __init__(
