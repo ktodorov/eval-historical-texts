@@ -564,6 +564,7 @@ class IocContainer(containers.DeclarativeContainer):
         vocabulary_service=vocabulary_service,
         plot_service=plot_service,
         data_service=data_service,
+        cache_service=cache_service,
         model=model
     )
 

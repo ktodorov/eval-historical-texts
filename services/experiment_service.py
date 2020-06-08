@@ -9,6 +9,7 @@ from MulticoreTSNE import MulticoreTSNE as TSNE
 from enums.experiment_type import ExperimentType
 
 from entities.word_neighborhood import WordNeighborhood
+from entities.batch_representation import BatchRepresentation
 
 from models.model_base import ModelBase
 
@@ -19,6 +20,7 @@ from services.tokenize.base_tokenize_service import BaseTokenizeService
 from services.vocabulary_service import VocabularyService
 from services.plot_service import PlotService
 from services.data_service import DataService
+from services.cache_service import CacheService
 
 
 class ExperimentService:
@@ -31,6 +33,7 @@ class ExperimentService:
             vocabulary_service: VocabularyService,
             plot_service: PlotService,
             data_service: DataService,
+            cache_service: CacheService,
             model: ModelBase):
 
         self._arguments_service = arguments_service
@@ -40,6 +43,7 @@ class ExperimentService:
         self._vocabulary_service = vocabulary_service
         self._plot_service = plot_service
         self._data_service = data_service
+        self._cache_service = cache_service
 
         self._model = model.to(arguments_service.device)
 
@@ -59,10 +63,13 @@ class ExperimentService:
         language_experiment_path = self._get_experiment_path(
             ExperimentType.WordSimilarity)
 
-        word_embeddings = [self._get_word_embeddings(
-            words, language_experiment_path, i+1) for i in range(2)]
+        # word_embeddings = self._cache_service.get_item_from_cache(
+        #     item_key=f'all-word-embeddings',
+        #     callback_function=lambda: self._generate_word_embeddings(words, language_experiment_path))
+        word_embeddings = self._generate_word_embeddings(words, language_experiment_path)
 
-        words_to_check = ['plane', 'player', 'gas', 'broadcast', 'awful', 'gay']#, 'player', 'lass',
+        words_to_check = ['plane', 'player', 'gas',
+                          'broadcast', 'awful', 'gay']  # , 'player', 'lass',
         # 'edge', 'gas', 'contemplation', 'donkey', 'ball', 'attack']
 
         for word in words_to_check:
@@ -89,28 +96,17 @@ class ExperimentService:
         self._plot_word_similarity(
             word_neighborhoods, language_experiment_path)
 
-    def _get_word_embeddings(self, words: List[str], language_experiment_path: str, corpus: int):
-        outputs_filename = f'word_embeddings_{corpus}'
+    def _generate_word_embeddings(self, words: List[str], language_experiment_path: str):
+        # embeddings_size = self._arguments_service.pretrained_model_size
+        embeddings_size = 300
+        outputs_1 = np.zeros((len(words), embeddings_size))
+        outputs_2 = np.zeros((len(words), embeddings_size))
 
-        outputs = self._data_service.load_python_obj(
-            language_experiment_path, outputs_filename)
-        if outputs is None:
-            raise Exception('Outputs not found')
-            # outputs = np.zeros(
-            #     (len(words), self._arguments_service.pretrained_model_size))
+        for i, word in enumerate(words):
+            word_embeddings = self._calculate_word_embeddings(word)
+            outputs_1[i], outputs_2[i] = word_embeddings
 
-            # for i, word in enumerate(words):
-            #     if i % 100 == 0:
-            #         print(f'{i}/{len(words)}            \r', end='')
-
-            #     outputs[i] = self._calculate_word_embeddings(word)
-
-            # self._data_service.save_python_obj(
-            #     outputs,
-            #     language_experiment_path,
-            #     outputs_filename)
-
-        return outputs
+        return outputs_1, outputs_2
 
     def _plot_word_similarity(
             self,
@@ -177,13 +173,17 @@ class ExperimentService:
             hide_axis=True)
 
     def _calculate_word_embeddings(self, word: str) -> List[np.array]:
-        word_tokens, _, _, _ = self._tokenize_service.encode_sequence(
-            word)
+        # word_tokens, _, _, _ = self._tokenize_service.encode_sequence(
+        #     word)
 
-        word_tokens_tensor = torch.tensor(word_tokens).unsqueeze(0).to(
-            self._arguments_service.device)
+        word_id = self._vocabulary_service.string_to_id(word)
 
-        outputs = self._model.forward(word_tokens_tensor)
+        batch = BatchRepresentation(
+            device=self._arguments_service.device,
+            batch_size=1,
+            word_sequences=[[word_id]])
+
+        outputs = self._model.forward(batch)
         return [output.mean(dim=1).detach().cpu().numpy() for output in outputs]
 
     def _get_word_neighborhood(

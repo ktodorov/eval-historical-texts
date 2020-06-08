@@ -41,6 +41,6 @@ class ModelService:
                 data_service=self._data_service,
                 process_service=self._process_service,
                 file_service=self._file_service,
-                use_only_embeddings=self._arguments_service.evaluate).to(device)
+                use_only_embeddings=(self._arguments_service.evaluate or self._arguments_service.run_experiments)).to(device)
 
         raise LookupError(f'The {str(configuration)} is not supported')

@@ -40,7 +40,7 @@ class CBOWModel(ModelBase):
         self._mask_token_idx = process_service._mask_idx
 
         pretrained_word_weights = None
-        if not arguments_service.evaluate and not arguments_service.resume_training:
+        if not arguments_service.evaluate and not arguments_service.resume_training and not arguments_service.run_experiments:
             pretrained_word_weights = process_service.get_pretrained_embedding_weights()
 
         pretrained_weight_matrix_dim = 300
