@@ -70,6 +70,6 @@ class JointModel(ModelBase):
             model.load(
                 path,
                 f'{name_prefix}_{i+1}',
-                load_model_only=True)
+                use_checkpoint_name=False)
 
         return None
