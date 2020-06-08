@@ -33,11 +33,12 @@ class OCRDownloadService:
         newseye_path = os.path.join('data', 'newseye')
         trove_path = os.path.join('data', 'trove')
 
-        newseye_2017_key = 'newseye-2017-full-dataset'
-        if not self._cache_service.item_exists(newseye_2017_key):
-            newseye_2017_path = os.path.join(newseye_path, '2017')
-            newseye_2017_data = self.process_newseye_files(language, newseye_2017_path)
-            self._cache_service.cache_item(newseye_2017_key, newseye_2017_data)
+        if language != Language.German:
+            newseye_2017_key = 'newseye-2017-full-dataset'
+            if not self._cache_service.item_exists(newseye_2017_key):
+                newseye_2017_path = os.path.join(newseye_path, '2017')
+                newseye_2017_data = self.process_newseye_files(language, newseye_2017_path)
+                self._cache_service.cache_item(newseye_2017_key, newseye_2017_data)
 
         newseye_2019_key = 'newseye-2019-train-dataset'
         if not self._cache_service.item_exists(newseye_2019_key):
@@ -214,5 +215,7 @@ class OCRDownloadService:
             return ['eng', 'EN']
         elif language == Language.French:
             return ['fr', 'FR']
+        elif language == Language.German:
+            return ['DE']
         else:
             raise NotImplementedError()
