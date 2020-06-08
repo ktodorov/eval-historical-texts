@@ -133,13 +133,14 @@ class OCREvaluationService(BaseEvaluationService):
         checkpoints_path = self._file_service.get_checkpoints_path()
         file_path = os.path.join(
             checkpoints_path, f'output-{self._arguments_service.checkpoint_name}.csv')
-        with open(file_path, 'w', encoding='utf-8') as output_file:
+        with open(file_path, 'w', encoding='utf-8', newline='') as output_file:
             csv_writer = csv.DictWriter(output_file, fieldnames=[
                 'Input',
                 'Prediction',
                 'Target',
                 'Input edit distance',
-                'Predicted edit distance'])
+                'Predicted edit distance',
+                'Difference'])
 
             csv_writer.writeheader()
             for result in self.final_results:
@@ -148,7 +149,9 @@ class OCREvaluationService(BaseEvaluationService):
                     'Prediction': result[1],
                     'Target': result[2],
                     'Input edit distance': result[3],
-                    'Predicted edit distance': result[4]
+                    'Predicted edit distance': result[4],
+                    'Difference': (result[3] - result[4])
                 })
 
+            csv_writer.writerow({'Input': f'Improvement percentage: {improvement_percentage}'})
         print(f'Improvement percentage: {improvement_percentage}')
