@@ -16,4 +16,4 @@ module load Python/3.7.5-foss-2019b
 
 source activate eval-env
 
-python run.py --device cuda --seed 13 --eval-freq 2000 --patience 100 --configuration cbow --learning-rate $LR --language $LANGUAGE --corpus $CORPUS --checkpoint-name $RESUMECORPUS-to-$CORPUS --challenge semantic-change --batch-size 64 --max-training-minutes 1440 --enable-external-logging --skip-validation --reset-training-on-early-stop --training-reset-epoch-limit 1 --resets-limit 2 --resume-training --resume-checkpoint-name BEST_$RESUMECORPUS --skip-best-metrics-on-resume
+python run.py --device cuda --seed 13 --eval-freq 2000 --patience 100 --configuration cbow --learning-rate $LR --language $LANGUAGE --corpus $CORPUS --checkpoint-name $RESUMECORPUS-to-$CORPUS --challenge semantic-change --batch-size 32 --rnn-hidden-size $HIDDENSIZE --max-training-minutes 1440 --enable-external-logging --skip-validation --reset-training-on-early-stop --training-reset-epoch-limit 1 --resets-limit 2 --resume-training --resume-checkpoint-name BEST_$RESUMECORPUS --skip-best-metrics-on-resume
