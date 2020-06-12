@@ -37,7 +37,6 @@ class SequenceDecoder(ModelBase):
             shared_embedding_layer: EmbeddingLayer = None,
             use_beam_search: bool = False,
             beam_width: int = None,
-            teacher_forcing_ratio: float = None,
             eos_token: int = None):
         super().__init__()
 
@@ -45,7 +44,6 @@ class SequenceDecoder(ModelBase):
         self._use_beam_search = use_beam_search
         self._beam_width = beam_width
         self._vocabulary_size = vocabulary_size
-        self._teacher_forcing_ratio = teacher_forcing_ratio
 
         self._eos_token = eos_token
         self._pad_idx = pad_idx

@@ -109,7 +109,6 @@ class SequenceModel(ModelBase):
             shared_embedding_layer=self._shared_embedding_layer,
             use_beam_search=self._arguments_service.use_beam_search,
             beam_width=self._arguments_service.beam_width,
-            teacher_forcing_ratio=self._arguments_service.teacher_forcing_ratio,
             eos_token=self._vocabulary_service.eos_token)
 
         self._generator = SequenceGenerator(
