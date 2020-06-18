@@ -109,6 +109,7 @@ class TrainService:
                     # we only prompt the model for changes on convergence once
                     should_start_again = not model_has_converged and self._model.on_convergence()
                     if should_start_again:
+                        model_has_converged = True
                         model_checkpoint = self._load_model()
                         if model_checkpoint is not None:
                             best_metrics = model_checkpoint.best_metrics

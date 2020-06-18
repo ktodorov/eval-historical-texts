@@ -1,5 +1,6 @@
 import pickle
 
+from copy import deepcopy
 from typing import Dict, List, Tuple
 import math
 
@@ -86,22 +87,17 @@ class LanguageData:
 
         return result
 
-    def get_entries(self, length: int) -> Tuple[List[List[int]], List[List[int]], List[List[int]]]:
+    def cut_data(self, length: int):
         if length > self.length:
             raise Exception(
                 'Length given is greater than the total items in the language data')
 
-        result = (
-            None,  # self._ocr_inputs[:length],
-            self._ocr_aligned[:length],
-            self._gs_aligned[:length],
-            self._ocr_texts[:length],
-            self._gs_texts[:length],
-            self._ocr_offsets[:length],
-            self._gs_offsets[:length]
-        )
-
-        return result
+        self._ocr_aligned = deepcopy(self._ocr_aligned[:length])
+        self._gs_aligned = deepcopy(self._gs_aligned[:length])
+        self._ocr_texts = deepcopy(self._ocr_texts[:length])
+        self._gs_texts = deepcopy(self._gs_texts[:length])
+        self._ocr_offsets = deepcopy(self._ocr_offsets[:length])
+        self._gs_offsets = deepcopy(self._gs_offsets[:length])
 
     def load_data(self, filepath: str):
         with open(filepath, 'rb') as data_file:

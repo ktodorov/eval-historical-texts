@@ -34,6 +34,7 @@ class PretrainedRepresentationsLayer(ModelBase):
         self._pretrained_model: PreTrainedModel = None
 
         self._fine_tune_pretrained = pretrained_representations_options.fine_tune_pretrained
+        self._fine_tune_after_convergence = pretrained_representations_options.fine_tune_after_convergence
 
         self._include_fasttext_model = pretrained_representations_options.include_fasttext_model
 
@@ -135,3 +136,13 @@ class PretrainedRepresentationsLayer(ModelBase):
     @overrides
     def keep_frozen(self) -> bool:
         return not self._fine_tune_pretrained
+
+
+    @overrides
+    def on_convergence(self) -> bool:
+        if self._fine_tune_after_convergence and not self._fine_tune_pretrained:
+            print('Starting to fine-tune pre-trained...')
+            self._fine_tune_pretrained = True
+            return True
+
+        return False

@@ -21,6 +21,7 @@ from services.data_service import DataService
 from services.vocabulary_service import VocabularyService
 from services.process.process_service_base import ProcessServiceBase
 from services.cache_service import CacheService
+from services.string_process_service import StringProcessService
 
 
 class NERProcessService(ProcessServiceBase):
@@ -31,13 +32,15 @@ class NERProcessService(ProcessServiceBase):
             file_service: FileService,
             tokenize_service: BaseTokenizeService,
             data_service: DataService,
-            cache_service: CacheService):
+            cache_service: CacheService,
+            string_process_service: StringProcessService):
         super().__init__()
 
         self._arguments_service = arguments_service
         self._tokenize_service = tokenize_service
         self._file_service = file_service
         self._data_service = data_service
+        self._string_process_service = string_process_service
 
         self._entity_tag_types = arguments_service.entity_tag_types
 
@@ -129,6 +132,7 @@ class NERProcessService(ProcessServiceBase):
                     if len(current_sentence.tokens) > 0:
                         current_sentence.tokenize_text(
                             self._tokenize_service,
+                            self._string_process_service,
                             replace_all_numbers=self._arguments_service.replace_all_numbers,
                             expand_targets=not self._arguments_service.merge_subwords)
 

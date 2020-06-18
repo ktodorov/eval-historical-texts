@@ -340,7 +340,8 @@ def register_process_service(
         metrics_service: MetricsService,
         log_service: LogService,
         cache_service: CacheService,
-        ocr_download_service: OCRDownloadService):
+        ocr_download_service: OCRDownloadService,
+        string_process_service: StringProcessService):
     process_service = None
     if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
@@ -350,7 +351,8 @@ def register_process_service(
             file_service=file_service,
             tokenize_service=tokenize_service,
             data_service=data_service,
-            cache_service=cache_service)
+            cache_service=cache_service,
+            string_process_service=string_process_service)
     elif challenge == Challenge.SemanticChange and configuration == Configuration.CBOW:
         process_service = providers.Singleton(
             CBOWProcessService,
@@ -483,7 +485,8 @@ class IocContainer(containers.DeclarativeContainer):
         metrics_service=metrics_service,
         log_service=log_service,
         cache_service=cache_service,
-        ocr_download_service=ocr_download_service)
+        ocr_download_service=ocr_download_service,
+        string_process_service=string_process_service)
 
     dataset_service = providers.Factory(
         DatasetService,

@@ -37,7 +37,7 @@ class StringProcessService:
         return result
 
     def replace_strings_numbers(self, texts: List[str]) -> List[str]:
-        result = [self.replace_numbers(x) for x in texts]
+        result = [self.replace_string_numbers(x) for x in texts]
         return result
 
     def remove_string_characters(self, text: str, characters: List[str]) -> str:

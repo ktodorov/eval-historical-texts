@@ -60,7 +60,8 @@ class SequenceModel(ModelBase):
             pretrained_model_size=arguments_service.pretrained_model_size,
             pretrained_weights=arguments_service.pretrained_weights,
             pretrained_model=arguments_service.pretrained_model,
-            fine_tune_pretrained=arguments_service.fine_tune_pretrained)
+            fine_tune_pretrained=arguments_service.fine_tune_pretrained,
+            fine_tune_after_convergence=arguments_service.fine_tune_after_convergence)
 
         self._shared_embedding_layer = None
         if self._arguments_service.share_embedding_layer:

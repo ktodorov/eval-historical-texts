@@ -268,7 +268,12 @@ class NERPredictor(ModelBase):
             new_metric.get_accuracy_metric(key) for key in keys
         ])
 
-        return current_best_value <= new_value
+        if current_best_value == new_value:
+            result = super().compare_metric(best_metric, new_metric)
+        else:
+            result = current_best_value < new_value
+
+        return result
 
     def _create_measure_key(
             self,

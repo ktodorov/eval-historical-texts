@@ -146,9 +146,15 @@ class ModelBase(nn.Module):
         return result
 
     def on_convergence(self) -> bool:
-        result = False
+        result = self._on_convergence(self)
+        for _, module in self.named_modules():
+            result = result or self._on_convergence(module)
 
-        for module_name, module in self.named_modules():
+        return result
+
+    def _on_convergence(self, main_module) -> bool:
+        result = False
+        for module_name, module in main_module.named_modules():
             if module_name == '':
                 continue
 

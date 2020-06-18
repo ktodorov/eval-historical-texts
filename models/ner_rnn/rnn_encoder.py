@@ -34,7 +34,6 @@ class RNNEncoder(ModelBase):
         self._device = rnn_encoder_options.device
 
         self._merge_subword_embeddings = rnn_encoder_options.merge_subword_embeddings
-        self._fine_tune_after_convergence = rnn_encoder_options.pretrained_representations_options.fine_tune_after_convergence
 
         embedding_layer_options = EmbeddingLayerOptions(
             device=rnn_encoder_options.device,
@@ -156,13 +155,3 @@ class RNNEncoder(ModelBase):
                         embeddings[i, new_positions], dim=0)
 
         return merged_rnn_output, new_lengths
-
-
-    @overrides
-    def on_convergence(self) -> bool:
-        if self._fine_tune_after_convergence and not self._embedding_layer._pretrained_layer._fine_tune_pretrained:
-            print('Starting to fine-tune BERT...')
-            self._embedding_layer._pretrained_layer._fine_tune_pretrained = True
-            return True
-
-        return False

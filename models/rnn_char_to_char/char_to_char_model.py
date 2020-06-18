@@ -56,6 +56,7 @@ class CharToCharModel(ModelBase):
                 pretrained_max_length=arguments_service.pretrained_max_length,
                 pretrained_model=arguments_service.pretrained_model,
                 fine_tune_pretrained=arguments_service.fine_tune_pretrained,
+                fine_tune_after_convergence=arguments_service.fine_tune_after_convergence,
                 include_fasttext_model=False),
             learn_character_embeddings=arguments_service.learn_new_embeddings,
             output_embedding_type=EmbeddingType.Character,
