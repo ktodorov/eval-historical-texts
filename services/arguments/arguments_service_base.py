@@ -118,6 +118,12 @@ class ArgumentsServiceBase:
         parser.add_argument('--training-reset-epoch-limit', type=int, default=1,
                             help='Until which epoch the training reset should be performed. Default is 1')
 
+
+        parser.add_argument('--save-checkpoint-on-crash', action='store_true',
+                            help='If this is set to true, then in the event of an exception or crash of the program, the model\'s checkpoint will be saved to the file system. Default is `False`')
+        parser.add_argument('--save-checkpoint-on-finish', action='store_true',
+                            help='If this is set to true, then when the model has converged, its checkpoint will be saved to the file system. Keep in mind that this will not be the best model checkpoint as the stopping will occur after some amount of iterations without any improvement. Default is `False`')
+
     def _validate_arguments(self, parser: argparse.ArgumentParser):
         pass
 
@@ -278,3 +284,11 @@ class ArgumentsServiceBase:
     @property
     def training_reset_epoch_limit(self) -> int:
         return self._get_argument('training_reset_epoch_limit')
+
+    @property
+    def save_checkpoint_on_crash(self) -> bool:
+        return self._get_argument('save_checkpoint_on_crash')
+
+    @property
+    def save_checkpoint_on_finish(self) -> bool:
+        return self._get_argument('save_checkpoint_on_finish')

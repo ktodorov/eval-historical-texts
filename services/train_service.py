@@ -140,36 +140,40 @@ class TrainService:
 
         except KeyboardInterrupt as e:
             print(f"Killed by user: {e}")
-            self._model.save(
-                self._model_path,
-                epoch,
-                0,
-                best_metrics,
-                resets_left,
-                name_prefix=f'KILLED_at_epoch_{epoch}')
+            if self._arguments_service.save_checkpoint_on_crash:
+                self._model.save(
+                    self._model_path,
+                    epoch,
+                    0,
+                    best_metrics,
+                    resets_left,
+                    name_prefix=f'KILLED_at_epoch_{epoch}')
+
             return False
         except Exception as e:
             print(e)
-            self._model.save(
-                self._model_path,
-                epoch,
-                0,
-                best_metrics,
-                resets_left,
-                name_prefix=f'CRASH_at_epoch_{epoch}')
+            if self._arguments_service.save_checkpoint_on_crash:
+                self._model.save(
+                    self._model_path,
+                    epoch,
+                    0,
+                    best_metrics,
+                    resets_left,
+                    name_prefix=f'CRASH_at_epoch_{epoch}')
             raise e
 
         # flush prints
         sys.stdout.flush()
 
-        # example last save
-        self._model.save(
-            self._model_path,
-            epoch,
-            0,
-            best_metrics,
-            resets_left,
-            name_prefix=f'FINISHED_at_epoch_{epoch}')
+        if self._arguments_service.save_checkpoint_on_finish:
+            self._model.save(
+                self._model_path,
+                epoch,
+                0,
+                best_metrics,
+                resets_left,
+                name_prefix=f'FINISHED_at_epoch_{epoch}')
+
         return True
 
     def _perform_epoch_iteration(
