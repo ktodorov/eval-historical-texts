@@ -12,17 +12,44 @@ class PostOCRArgumentsService(PretrainedArgumentsService):
 
     @overrides
     def get_configuration_name(self) -> str:
-        result = str(self.configuration)
+
+        result = 'c2c'
+        if self.configuration == Configuration.CharacterToCharacterEncoderDecoder:
+            result += '-ed'
         if self.configuration == Configuration.SequenceToCharacter:
             result = 'seq-to-char'
         elif self.configuration == Configuration.TransformerSequence:
             result = 'transformer'
 
-        if self.include_pretrained_model:
-            result += '-pretr'
+        result += f'-{str(self.language)[:2]}'
 
-        if not self.learn_new_embeddings:
-            result += '-no-emb'
+        if self.include_pretrained_model:
+            result += '-pr'
+
+        if self.include_fasttext_model:
+            result += '-ft'
+
+        if self.share_embedding_layer:
+            result += f'-sh{self.encoder_embedding_size}'
+        else:
+            result += f'-ee{self.encoder_embedding_size}'
+            result += f'-de{self.decoder_embedding_size}'
+
+        result += f'-h{self.hidden_dimension}'
+        result += f'-d{self.dropout}'
+        result += f'-l{self.number_of_layers}'
+
+        if self.bidirectional:
+            result += f'-bi'
+
+        if self.fine_tune_pretrained or self.fine_tune_after_convergence:
+            if self.fine_tune_pretrained:
+                result += '-tn'
+
+            if self.fine_tune_after_convergence:
+                result += '-tn-ac'
+
+            result += f'-{self.fine_tune_learning_rate}'
 
         return result
 
