@@ -143,7 +143,7 @@ class EmbeddingLayer(ModelBase):
             pretrained_embeddings = self._pretrained_layer.get_pretrained_representation(
                 batch_representation.subword_sequences)
 
-        if self._include_fasttext_model:
+        if self._include_fasttext_model and not skip_pretrained_representation:
             fasttext_embeddings = self._pretrained_layer.get_fasttext_representation(
                 batch_representation.tokens)
 
@@ -170,7 +170,7 @@ class EmbeddingLayer(ModelBase):
                     pretrained_embeddings,
                     batch_representation.offset_lists)
 
-            if self._include_fasttext_model:
+            if self._include_fasttext_model and not skip_pretrained_representation:
                 result_embeddings = self._add_subword_to_character_embeddings(
                     result_embeddings,
                     fasttext_embeddings,

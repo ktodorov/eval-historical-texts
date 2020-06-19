@@ -44,6 +44,7 @@ class OCRCharacterDataset(OCRDataset):
             **kwargs)
 
         self._process_service = process_service
+        self._tokenize_service = tokenize_service
         self._run_type = run_type
 
         self._language_data = process_service.get_language_data(run_type)
@@ -53,15 +54,16 @@ class OCRCharacterDataset(OCRDataset):
         result = self._language_data.get_entry(idx)
 
         _, ocr_aligned, _, ocr_text, gs_text, ocr_offsets = result
+        filtered_tokens = [token.replace('#', '') for token in self._tokenize_service.decode_tokens(ocr_aligned[1:])]
 
-        return ocr_aligned[1:], ocr_text[1:], gs_text, ocr_offsets
+        return ocr_aligned[1:], ocr_text[1:], gs_text, ocr_offsets, filtered_tokens
 
     @overrides
     def collate_function(self, batch_input):
         batch_size = len(batch_input)
         batch_split = list(zip(*batch_input))
 
-        sequences, ocr_texts, gs_texts, offset_lists = batch_split
+        sequences, ocr_texts, gs_texts, offset_lists, tokens = batch_split
 
         batch_representation = BatchRepresentation(
             device=self._device,
@@ -69,6 +71,7 @@ class OCRCharacterDataset(OCRDataset):
             subword_sequences=sequences,
             character_sequences=ocr_texts,
             targets=gs_texts,
+            tokens=tokens,
             offset_lists=offset_lists)
 
         batch_representation.sort_batch()

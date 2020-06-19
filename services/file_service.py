@@ -12,6 +12,10 @@ class FileService:
 
         self._arguments_service = arguments_service
 
+    def get_initial_data_path(self) -> str:
+        data_path = self._arguments_service.data_folder
+        return data_path
+
     def get_data_path(
         self,
         language: Language = None) -> str:

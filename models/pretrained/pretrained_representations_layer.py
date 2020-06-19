@@ -54,7 +54,7 @@ class PretrainedRepresentationsLayer(ModelBase):
         if self._include_fasttext_model:
             assert pretrained_representations_options.fasttext_model is not None, 'fast text model is not supplied when include-fasttext-model is set to true'
 
-            data_path = file_service.get_data_path()
+            data_path = file_service.get_initial_data_path()
             fasttext_path = os.path.join(
                 data_path, 'fasttext', pretrained_representations_options.fasttext_model)
             assert os.path.exists(
