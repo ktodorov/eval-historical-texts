@@ -160,6 +160,7 @@ class NERProcessService(ProcessServiceBase):
         if len(current_sentence.tokens) > 0:
             current_sentence.tokenize_text(
                 self._tokenize_service,
+                self._string_process_service,
                 replace_all_numbers=self._arguments_service.replace_all_numbers,
                 expand_targets=not self._arguments_service.merge_subwords)
 
