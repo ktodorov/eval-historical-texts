@@ -47,16 +47,16 @@ class OCRDownloadService:
                 language, newseye_2019_path, subfolder_to_use='train')
             self._cache_service.cache_item(newseye_2019_key, newseye_2019_data)
 
-        if language == Language.English:
-            trove_cache_key = 'trove-dataset'
-            if not self._cache_service.item_exists(trove_cache_key):
-                trove_items_cache_key = 'trove-item-keys'
-                cache_item_keys = self._cache_service.get_item_from_cache(
-                    item_key=trove_items_cache_key,
-                    callback_function=self._download_trove_files)
+        # if language == Language.English:
+        #     trove_cache_key = 'trove-dataset'
+        #     if not self._cache_service.item_exists(trove_cache_key):
+        #         trove_items_cache_key = 'trove-item-keys'
+        #         cache_item_keys = self._cache_service.get_item_from_cache(
+        #             item_key=trove_items_cache_key,
+        #             callback_function=self._download_trove_files)
 
-                trove_data = self._process_trove_files(cache_item_keys)
-                self._cache_service.cache_item(trove_cache_key, trove_data)
+        #         trove_data = self._process_trove_files(cache_item_keys)
+        #         self._cache_service.cache_item(trove_cache_key, trove_data)
 
     def download_test_data(self, language: Language):
         newseye_path = os.path.join('data', 'newseye', '2019')
