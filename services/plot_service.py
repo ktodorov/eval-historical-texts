@@ -5,6 +5,9 @@ from services.data_service import DataService
 from typing import List
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.pyplot import cm
+from collections import Counter
+
 plt.rcParams["figure.figsize"] = (20, 10)
 
 
@@ -37,7 +40,7 @@ class PlotService:
             ax = self.create_plot()
 
         if not number_of_bins:
-            number_of_bins = 10
+            number_of_bins = len(set(values))
 
         if not start_x:
             start_x = min(values)
@@ -50,6 +53,67 @@ class PlotService:
         bins = np.arange(start_x, end_x, distance_bin)
 
         ax.hist(values, bins=bins, edgecolor='none')
+
+        self._add_properties(
+            ax,
+            title,
+            title_padding,
+            save_path,
+            filename,
+            hide_axis)
+
+        if save_path is None or filename is None:
+            plt.show()
+
+        plt.clf()
+
+    def plot_counters_histogram(
+            self,
+            counter_labels: List[str],
+            counters: List[Counter],
+            counter_colors: List[str] = None,
+            title: str = None,
+            title_padding: float = None,
+            save_path: str = None,
+            filename: str = None,
+            xlabel: str = None,
+            ylabel: str = None,
+            ax=None,
+            hide_axis: bool = False):
+
+        if ax is None:
+            ax = self.create_plot()
+
+        unique_labels = list(
+            sorted(set([label for x in counters for label in x.keys()])))
+
+        values = []
+        for counter in counters:
+            values.append([counter[label] for label in unique_labels])
+
+        total_width = 0.8  # the width of the bars
+        dim = len(counters)
+        dimw = total_width / dim
+
+        x = np.arange(len(unique_labels))  # the label locations
+
+        if counter_colors is None:
+            counter_colors = cm.rainbow(np.linspace(0, 1, dim))
+
+        rects = []
+        for i, counter_values in enumerate(values):
+            rects.append(
+                [ax.bar(x + (i * dimw), counter_values, dimw, label=counter_labels[i], color=counter_colors[i])])
+
+        ax.set_xticks(x + (total_width - dimw) / 2)
+        ax.set_xticklabels(unique_labels)
+        ax.legend()
+
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
 
         self._add_properties(
             ax,
