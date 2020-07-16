@@ -41,12 +41,11 @@ class NEREvaluationService(BaseEvaluationService):
             evaluation_types: List[EvaluationType],
             batch_index: int) -> Dict[EvaluationType, List]:
         predictions = output[0]
-        position_changes = batch_input.position_changes
 
         result = []
         for entity_tag_type, type_predictions in predictions.items():
             for i, prediction in enumerate(type_predictions.squeeze(0).cpu().detach().tolist()):
-                predicted_entity = self._process_service.get_entity_by_label(prediction, entity_tag_type)
+                predicted_entity = self._process_service.get_entity_by_label(prediction, entity_tag_type, ignore_unknown=True)
                 if len(result) <= i:
                     result.append({})
 
@@ -61,7 +60,7 @@ class NEREvaluationService(BaseEvaluationService):
         language_suffix = self._process_service.get_language_suffix(
             self._arguments_service.language)
         dev_filepath = os.path.join(
-            data_path, f'HIPE-data-v{self._process_service._data_version}-test-masked-{language_suffix}.tsv')
+            data_path, f'HIPE-data-v{self._process_service._data_version}-test-{language_suffix}.tsv')
 
         predictions = evaluation[EvaluationType.NamedEntityRecognitionMatch]
 
@@ -73,7 +72,7 @@ class NEREvaluationService(BaseEvaluationService):
                 tokens.append(row['TOKEN'])
 
         dev_word_amount = len([x for x in tokens if not x.startswith('#')])
-        assert len(predictions) == dev_word_amount
+        assert len(predictions) == dev_word_amount, f'Got "{len(predictions)}" predictions but expected "{dev_word_amount}"'
 
         column_mapping = {
             EntityTagType.Component: 'NE-FINE-COMP',
@@ -102,3 +101,5 @@ class NEREvaluationService(BaseEvaluationService):
                     writer.writerow(row_dict)
 
                     counter += 1
+
+        return file_path

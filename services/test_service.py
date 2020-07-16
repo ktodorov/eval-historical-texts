@@ -55,8 +55,7 @@ class TestService:
 
             update_dictionaries(evaluation, batch_evaluation)
 
-        self._evaluation_service.save_results(evaluation)
-        return True
+        return self._evaluation_service.save_results(evaluation)
 
     def _load_model(self) -> ModelCheckpoint:
         checkpoints_path = self._file_service.get_checkpoints_path()

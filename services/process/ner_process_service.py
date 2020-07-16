@@ -44,7 +44,7 @@ class NERProcessService(ProcessServiceBase):
 
         self._entity_tag_types = arguments_service.entity_tag_types
 
-        self._data_version = "1.2"
+        self._data_version = "1.3"
         self.PAD_TOKEN = '[PAD]'
         self.START_TOKEN = '[CLS]'
         self.STOP_TOKEN = '[SEP]'
@@ -81,7 +81,7 @@ class NERProcessService(ProcessServiceBase):
                 callback_function=lambda: (
                     self.preprocess_data(
                         os.path.join(
-                            data_path, f'HIPE-data-v{self._data_version}-test-masked-{language_suffix}.tsv'))))
+                            data_path, f'HIPE-data-v{self._data_version}-test-{language_suffix}.tsv'))))
 
         self._entity_mappings = self._create_entity_mappings(
             self._train_ne_collection,
@@ -99,7 +99,7 @@ class NERProcessService(ProcessServiceBase):
             file_path: str,
             limit: int = None) -> NECollection:
         if not os.path.exists(file_path):
-            raise Exception('NER File not found')
+            raise Exception(f'NER File not found at "{file_path}"')
 
         collection = NECollection()
 
@@ -226,7 +226,7 @@ class NERProcessService(ProcessServiceBase):
 
         return entity_mappings
 
-    def get_entity_labels(self, ne_line: NELine) -> List[int]:
+    def get_entity_labels(self, ne_line: NELine, ignore_unknown: bool = False) -> List[int]:
         labels = {
             entity_tag_type: None for entity_tag_type in self._entity_tag_types
         }
@@ -234,27 +234,33 @@ class NERProcessService(ProcessServiceBase):
         for entity_tag_type in self._entity_tag_types:
             current_entity_tags = ne_line.get_entity_tags(entity_tag_type)
             labels[entity_tag_type] = [
-                self.get_entity_label(entity, entity_tag_type) for entity in current_entity_tags
+                self.get_entity_label(entity, entity_tag_type, ignore_unknown=ignore_unknown) for entity in current_entity_tags
             ]
 
         return labels
 
-    def get_entity_label(self, entity_tag: str, entity_tag_type: EntityTagType) -> int:
+    def get_entity_label(self, entity_tag: str, entity_tag_type: EntityTagType, ignore_unknown: bool = False) -> int:
         if entity_tag_type not in self._entity_mappings.keys():
-            raise Exception('Invalid entity tag type')
+            raise Exception(f'Invalid entity tag type - "{entity_tag_type}"')
 
         if entity_tag not in self._entity_mappings[entity_tag_type].keys():
-            raise Exception('Invalid entity tag')
+            if ignore_unknown:
+                return self._entity_mappings[entity_tag_type]['O']
+
+            raise Exception(f'Invalid entity tag - "{entity_tag}"')
 
         return self._entity_mappings[entity_tag_type][entity_tag]
 
-    def get_entity_by_label(self, label: int, entity_tag_type: EntityTagType) -> str:
+    def get_entity_by_label(self, label: int, entity_tag_type: EntityTagType, ignore_unknown: bool = False) -> str:
         if entity_tag_type not in self._entity_mappings.keys():
             raise Exception('Invalid entity tag type')
 
         for entity, entity_label in self._entity_mappings[entity_tag_type].items():
             if label == entity_label:
                 return entity
+
+        if ignore_unknown:
+            return 'O'
 
         raise Exception('Entity not found for this label')
 
