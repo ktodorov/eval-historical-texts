@@ -195,6 +195,7 @@ def register_evaluation_service(
         metrics_service: MetricsService,
         process_service: ProcessServiceBase,
         vocabulary_service: VocabularyService,
+        data_service: DataService,
         joint_model: bool,
         configuration: Configuration):
     evaluation_service = None
@@ -227,7 +228,8 @@ def register_evaluation_service(
             vocabulary_service=vocabulary_service,
             process_service=process_service,
             metrics_service=metrics_service,
-            file_service=file_service)
+            file_service=file_service,
+            data_service=data_service)
 
     return evaluation_service
 
@@ -555,6 +557,7 @@ class IocContainer(containers.DeclarativeContainer):
         metrics_service=metrics_service,
         process_service=process_service,
         vocabulary_service=vocabulary_service,
+        data_service=data_service,
         joint_model=joint_model,
         configuration=configuration)
 

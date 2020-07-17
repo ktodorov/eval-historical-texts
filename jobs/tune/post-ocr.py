@@ -57,27 +57,27 @@ finetune_patience = 20
 evaluation_frequency = 5000
 batch_size = 8
 
-# language = 'english'
-# pretrained_weights = 'bert-base-cased'
-# fast_text_model = 'en-model-skipgram-300-minc5-ws5-maxn-6.bin'
+language = 'english'
+pretrained_weights = 'bert-base-cased'
+fast_text_model = 'en-model-skipgram-300-minc5-ws5-maxn-6.bin'
 
 # language='french'
 # pretrained_weights='bert-base-multilingual-cased'
 # fast_text_model='fr-model-skipgram-300minc20-ws5-maxn-6.bin'
 
-language='german'
-pretrained_weights='bert-base-german-cased'
-fast_text_model='de-model-skipgram-300-minc20-ws5-maxn-6.bin'
+# language='german'
+# pretrained_weights='bert-base-german-cased'
+# fast_text_model='de-model-skipgram-300-minc20-ws5-maxn-6.bin'
 
 pretr_options = [True, False]
 lr_options = [1e-4]
-hidden_size_options = [512]
-embedding_size_options = [64]
-number_layers_options = [2]
-dropout_options = [0.5]
-finetune_options = [(False, False), (True, False), (False, True)]
+hidden_size_options = [256, 512]
+embedding_size_options = [64, 128]
+number_layers_options = [2, 3]
+dropout_options = [0.8]
+finetune_options = [(False, False), (True, False)]#, (False, True)]
 finetune_lr_options = [1e-4]
-fasttext_options = [True, False]
+fasttext_options = [False]#True, False]
 
 
 for include_pretr in pretr_options:
@@ -89,6 +89,9 @@ for include_pretr in pretr_options:
                         for (finetune, finetune_after_convergence) in finetune_options:
                             for finetune_lr in finetune_lr_options:
                                 for include_fast_text in fasttext_options:
+                                    # if dropout == 0.5 and number_layers == 2 and hidden_size == 512 and embedding_size == 64:
+                                    #     continue
+
                                     current_patience = patience
                                     if finetune or finetune_after_convergence:
                                         if not include_pretr:

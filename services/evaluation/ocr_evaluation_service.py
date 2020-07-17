@@ -20,6 +20,7 @@ from services.vocabulary_service import VocabularyService
 from services.metrics_service import MetricsService
 from services.file_service import FileService
 from services.process.ocr_character_process_service import OCRCharacterProcessService
+from services.data_service import DataService
 
 
 class OCREvaluationService(BaseEvaluationService):
@@ -29,7 +30,8 @@ class OCREvaluationService(BaseEvaluationService):
             vocabulary_service: VocabularyService,
             process_service: OCRCharacterProcessService,
             metrics_service: MetricsService,
-            file_service: FileService):
+            file_service: FileService,
+            data_service: DataService):
         super().__init__()
 
         self._vocabulary_service = vocabulary_service
@@ -37,6 +39,7 @@ class OCREvaluationService(BaseEvaluationService):
         self._metrics_service = metrics_service
         self._file_service = file_service
         self._arguments_service = arguments_service
+        self._data_service = data_service
 
         (self._input_strings,
          self._input_target_strings,
@@ -109,9 +112,6 @@ class OCREvaluationService(BaseEvaluationService):
         input_strings = [self._input_strings[i]
                          for i in indices_order]
 
-        input_target_strings = [
-            self._input_target_strings[i] for i in indices_order]
-
         input_distances = [
             self._original_edit_distances[i] for i in indices_order]
 
@@ -123,6 +123,8 @@ class OCREvaluationService(BaseEvaluationService):
     @overrides
     def save_results(self, evaluation: Dict[EvaluationType, List]):
         edit_distances = evaluation[EvaluationType.LevenshteinEditDistanceImprovement]
+        jaccard_similarities = evaluation[EvaluationType.JaccardSimilarity]
+
         predicted_edit_sum = sum(edit_distances)
 
         original_edit_sum = self._original_levenshtein_distance_sum
@@ -130,10 +132,25 @@ class OCREvaluationService(BaseEvaluationService):
         improvement_percentage = (
             1 - (float(predicted_edit_sum) / original_edit_sum)) * 100
 
-        checkpoints_path = self._file_service.get_checkpoints_path()
-        file_path = os.path.join(
+        checkpoints_path = self._file_service.combine_path(
+            self._file_service.get_checkpoints_path(),
+            'output',
+            create_if_missing=True)
+
+        pickle_filename = f'output-{self._arguments_service.checkpoint_name}'
+        self._data_service.save_python_obj(
+            {
+                'original-edit-distances': self._original_edit_distances,
+                'edit-distances': edit_distances,
+                'jaccard-similarities': jaccard_similarities
+            },
+            path=checkpoints_path,
+            name=pickle_filename,
+            print_success=False)
+
+        csv_file_path = os.path.join(
             checkpoints_path, f'output-{self._arguments_service.checkpoint_name}.csv')
-        with open(file_path, 'w', encoding='utf-8', newline='') as output_file:
+        with open(csv_file_path, 'w', encoding='utf-8', newline='') as output_file:
             csv_writer = csv.DictWriter(output_file, fieldnames=[
                 'Input',
                 'Prediction',
@@ -153,5 +170,8 @@ class OCREvaluationService(BaseEvaluationService):
                     'Difference': (result[3] - result[4])
                 })
 
-            csv_writer.writerow({'Input': f'Improvement percentage: {improvement_percentage}'})
+            csv_writer.writerow(
+                {'Input': f'Improvement percentage: {improvement_percentage}'})
         print(f'Improvement percentage: {improvement_percentage}')
+
+        return True

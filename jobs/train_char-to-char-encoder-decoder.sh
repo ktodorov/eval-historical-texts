@@ -104,13 +104,19 @@ then
     FTMODELARG="--fasttext-model $FASTTEXTMODEL"
 fi
 
+SEEDARG="$SEED"
+if [ -z "$SEED" ]
+then
+    SEEDARG="13"
+fi
+
 CHECKPOINTNAME=""
 if [ -z "$CHECKPOINT" ]
 then
-    CHECKPOINTNAME="$LANGUAGE-$PRETR$FT-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR$FTP"
+    CHECKPOINTNAME="$LANGUAGE-$PRETR$FT-h$HIDDENSIZE-e$EMBEDDINGSSIZE-l$NUMBERLAYERS$BIARG-d$DR$FTP-seed$SEEDARG"
 fi
 
-srun python3 -u run.py --device cuda --seed 13 --eval-freq $EVALFREQARG --patience $PATIENCEARG --configuration char-to-char-encoder-decoder --learning-rate $LEARNINGRATE --metric-types jaccard-similarity levenshtein-distance --language $LANGUAGE --challenge post-ocr-correction --batch-size $BATCHSIZEARG --hidden-dimension $HIDDENSIZE --encoder-embedding-size $EMBEDDINGSSIZE --decoder-embedding-size $EMBEDDINGSSIZE --share-embedding-layer --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $BIDIRECTIONAL --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --max-training-minutes 4300 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME $FINETUNEARG $FASTTEXT $FTMODELARG --fasttext-model-size 300
+srun python3 -u run.py --device cuda --seed $SEEDARG --eval-freq $EVALFREQARG --patience $PATIENCEARG --configuration char-to-char-encoder-decoder --learning-rate $LEARNINGRATE --metric-types jaccard-similarity levenshtein-distance --language $LANGUAGE --challenge post-ocr-correction --batch-size $BATCHSIZEARG --hidden-dimension $HIDDENSIZE --encoder-embedding-size $EMBEDDINGSSIZE --decoder-embedding-size $EMBEDDINGSSIZE --share-embedding-layer --dropout $DROPOUT --number-of-layers $NUMBERLAYERS $BIDIRECTIONAL --enable-external-logging --pretrained-weights $PRETRAINEDWEIGHTS --max-training-minutes 4300 $INCLUDEPRETR --pretrained-model-size 768 --pretrained-max-length 512  --learn-new-embeddings --checkpoint-name $CHECKPOINTNAME $FINETUNEARG $FASTTEXT $FTMODELARG --fasttext-model-size 300
 
 # cp -a "$TMPDIR"/eval-historical-texts/wandb/ $HOME/eval-historical-texts/
 # cp -a "$TMPDIR"/eval-historical-texts/results/ $HOME/eval-historical-texts/
