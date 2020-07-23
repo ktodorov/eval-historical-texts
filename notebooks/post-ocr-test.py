@@ -17,13 +17,14 @@ from enums.evaluation_type import EvaluationType
 
 main_arguments = [
     "--device cuda",
-    "--data-folder", "..\\data",
-    "--checkpoint-folder", "..\\results",
+    "--data-folder", os.path.join('..', 'data'),
+    "--checkpoint-folder", os.path.join('..', 'results'),
 
     "--seed", "13",
     "--configuration", "char-to-char-encoder-decoder",
     "--challenge", "post-ocr-correction",
     "--batch-size", "32",
+    "--learning-rate", '1e-4',
 
     "--evaluate",
     "--evaluation-type", "jaccard-similarity", "levenshtein-edit-distance-improvement",
@@ -34,24 +35,25 @@ main_arguments = [
 
     "--share-embedding-layer",
     "--learn-new-embeddings",
-    "--number-of-layers", "2",
     "--dropout", "0.5",
     "--bidirectional",
 
     "--hidden-dimension", "512",
-    "--encoder-embedding-size", "64",
-    "--decoder-embedding-size", "64",
+    "--encoder-embedding-size", "128",
+    "--decoder-embedding-size", "128",
+    "--number-of-layers", "2",
 ]
 
 
-def set_system_arguments(specific_args, language, seed, checkpoint_name):
+def set_system_arguments(specific_arg_set, language, seed, checkpoint_name):
     system_arguments = deepcopy(main_arguments)
-    system_arguments.extend(specific_args)
+    system_arguments.extend(specific_arg_set)
     system_arguments.extend(language_args[language])
     system_arguments.extend(['--seed', str(seed)])
 
     system_arguments.extend(['--checkpoint-name', checkpoint_name])
     system_arguments.extend(['--resume-checkpoint-name', checkpoint_name])
+    # print(system_arguments)
 
     sys.argv = system_arguments
 
@@ -76,68 +78,84 @@ language_args = {
 
 specific_args = {
     'none': {
-        'base_config': 'h512-e64-l2-bi-d0.50.0001',
-        'args': []
+        'base_config': 'h512-e128-l2-bi-d0.50.0001',
+        'args': [
+        ]
     },
     'fast-text': {
-        'base_config': 'ft-h512-e64-l2-bi-d0.50.0001',
+        'base_config': 'ft-h512-e128-l2-bi-d0.50.0001',
         'args': [
             "--include-fasttext-model",
         ]
     },
     'both': {
-        'base_config': 'pretr-ft-h512-e64-l2-bi-d0.50.0001',
+        'base_config': 'pretr-ft-h512-e128-l2-bi-d0.50.0001',
         'args': [
             "--include-pretrained-model",
             "--include-fasttext-model",
         ]
     },
     'bert': {
-        'base_config': 'pretr-h512-e64-l2-bi-d0.50.0001',
+        'base_config': 'pretr-h512-e128-l2-bi-d0.50.0001',
         'args': [
             "--include-pretrained-model",
         ]
     },
     'both-finetune': {
-        'base_config': 'pretr-ft-h512-e64-l2-bi-d0.5-tune0.0001',
+        'base_config': 'pretr-ft-h512-e128-l2-bi-d0.5-tune0.0001',
         'args': [
             "--include-pretrained-model",
             "--include-fasttext-model",
 
             "--fine-tune-pretrained",
-            # // "--fine-tune-after-convergence",
         ]
     },
     'bert-finetune': {
-        'base_config': 'pretr-h512-e64-l2-bi-d0.5-tune0.0001',
+        'base_config': 'pretr-h512-e128-l2-bi-d0.5-tune0.0001',
         'args': [
             "--include-pretrained-model",
             "--fine-tune-pretrained",
         ]
     },
-    'bert-large': {
-        'base_config': 'all--bert-pretr-ce16-ch32-h256-e300-l1-bi-d0.80.0001-spl',
+    'both-finetune-ac': {
+        'base_config': 'pretr-ft-h512-e128-l2-bi-d0.5-tune-ac0.0001',
         'args': [
-            "--encoder-embedding-size", "300",
-            "--decoder-embedding-size", "300",
             "--include-pretrained-model",
-        ]
-    },
-    'none-large': {
-        'base_config': 'all--bert-ce16-ch32-h512-e1068-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--encoder-embedding-size", "1068",
-            "--decoder-embedding-size", "1068",
-        ]
-    },
-    'fast-text-large': {
-        'base_config': 'all--ft-bert-ce16-ch32-h512-e768-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--encoder-embedding-size", "768",
-            "--decoder-embedding-size", "768",
             "--include-fasttext-model",
+
+            "--fine-tune-after-convergence",
         ]
-    }
+    },
+    'bert-finetune-ac': {
+        'base_config': 'pretr-h512-e128-l2-bi-d0.5-tune-ac0.0001',
+        'args': [
+            "--include-pretrained-model",
+            "--fine-tune-after-convergence",
+        ]
+    },
+    # 'bert-large': {
+    #     'base_config': 'all--bert-pretr-ce16-ch32-h256-e300-l1-bi-d0.80.0001-spl',
+    #     'args': [
+    #         "--encoder-embedding-size", "300",
+    #         "--decoder-embedding-size", "300",
+    #         "--include-pretrained-model",
+    #     ]
+    # },
+    # 'none-large': {
+    #     'base_config': 'all--bert-ce16-ch32-h512-e1068-l1-bi-d0.80.0001-spl',
+    #     'args': [
+    #         "--encoder-embedding-size", "1068",
+    #         "--decoder-embedding-size", "1068",
+    #     ]
+    # },
+    # 'fast-text-large': {
+    #     'base_config': 'all--ft-bert-ce16-ch32-h512-e768-l1-bi-d0.80.0001-spl',
+    #     'args': [
+    #         "--encoder-embedding-size", "768",
+    #         "--decoder-embedding-size", "768",
+    #         "--include-fasttext-model",
+    #     ]
+    # }
 }
 
 
@@ -194,11 +212,12 @@ languages_prefixes = {
 }
 
 languages = [
-    'french',
-    'german',
+    # 'french',
+    # 'german',
     'english'
 ]
 seeds = [13]#, 7, 25]
+
 
 for language in languages:
     for config_name, config_values in specific_args.items():
