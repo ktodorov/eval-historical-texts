@@ -9,15 +9,25 @@ from matplotlib.pyplot import cm
 from collections import Counter
 
 plt.rcParams["figure.figsize"] = (20, 10)
-
+plt.rcParams["text.usetex"] = True
+plt.rcParams['text.latex.preamble'] = [r'\usepackage[cm]{sfmath}']
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = 'cm'
+# plt.rcParams['text.latex.preamble'] = [
+#        r'\usepackage{siunitx}',   # i need upright \micro symbols, but you need...
+#        r'\sisetup{detect-all}',   # ...this to force siunitx to actually use your fonts
+#        r'\usepackage{helvet}',    # set the normal font here
+#        r'\usepackage{sansmath}',  # load up the sansmath so that math -> helvet
+#        r'\sansmath'               # <- tricky! -- gotta actually tell tex to use!
+# ]
 
 class PlotService:
     def __init__(
             self,
             data_service: DataService):
-        sns.set()
+        # sns.set()
+        sns.set(font_scale=3)  # crazy big
         sns.set_style("ticks")
-        sns.set(font_scale=1.5)  # crazy big
 
         self._data_service = data_service
 
@@ -70,8 +80,9 @@ class PlotService:
 
         return ax
 
-    def autolabel_heights(self, ax, rects):
+    def autolabel_heights(self, ax, rects, rotation: int = 0):
         """Attach a text label above each bar in *rects*, displaying its height."""
+        y_offset = 3 if rotation == 0 else 10
         for rect in rects:
             height = rect.get_height()
             if height == 0:
@@ -79,9 +90,9 @@ class PlotService:
 
             ax.annotate('{}'.format(height),
                         xy=(rect.get_x() + rect.get_width() / 2, height),
-                        xytext=(0, 3),  # 3 points vertical offset
+                        xytext=(0, y_offset),  # 3 points vertical offset
                         textcoords="offset points",
-                        ha='center', va='bottom')
+                        ha='center', va='bottom', rotation=rotation)
 
     def plot_counters_histogram(
             self,
@@ -95,6 +106,11 @@ class PlotService:
             xlabel: str = None,
             ylabel: str = None,
             plot_values_above_bars: bool = False,
+            values_above_bars_rotation: int = 0,
+            x_labels_rotation_angle: int = 0,
+            space_x_labels_vertically: bool = False,
+            tight_layout: bool = True,
+            external_legend: bool = False,
             ax=None,
             hide_axis: bool = False):
 
@@ -106,7 +122,8 @@ class PlotService:
 
         values = []
         for counter in counters:
-            values.append([(counter[label] if label in counter.keys() else 0) for label in unique_labels])
+            values.append([(counter[label] if label in counter.keys() else 0)
+                           for label in unique_labels])
 
         total_width = 0.8  # the width of the bars
         dim = len(counters)
@@ -123,20 +140,38 @@ class PlotService:
                 ax.bar(x + (i * dimw), counter_values, dimw, label=counter_labels[i], color=counter_colors[i]))
 
         ax.set_xticks(x + (total_width - dimw) / 2)
-        ax.set_xticklabels(unique_labels)
-        ax.legend()
+        labels = ax.set_xticklabels(
+            unique_labels, rotation=x_labels_rotation_angle)
+
+        if space_x_labels_vertically:
+            for i, label in enumerate(labels):
+                label.set_y(label.get_position()[1] - (i % 2) * 0.075)
+
+        if external_legend:
+            ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+        else:
+            ax.legend()
+
+        # fontweight = 'bold'
+        # fontproperties = {
+        #     'family': 'sans-serif',
+        #     'sans-serif': ['Helvetica'],
+        #     'weight': fontweight
+        # }
 
         if ylabel is not None:
-            ax.set_ylabel(ylabel)
+            ax.set_ylabel(ylabel, fontweight='bold')
 
         if xlabel is not None:
-            ax.set_xlabel(xlabel)
+            ax.set_xlabel(xlabel, fontweight='bold')
 
         if plot_values_above_bars:
             for rect in rects:
-                self.autolabel_heights(ax, rect)
-                x1,x2,y1,y2 = ax.axis()
-                ax.axis((x1,x2,y1,y2 + 5))
+                self.autolabel_heights(
+                    ax, rect, rotation=values_above_bars_rotation)
+
+        x1, x2, y1, y2 = ax.axis()
+        ax.axis((x1, x2, y1, y2 + 5))
 
         self._add_properties(
             ax,
@@ -144,7 +179,8 @@ class PlotService:
             title_padding,
             save_path,
             filename,
-            hide_axis)
+            hide_axis,
+            tight_layout)
 
         if save_path is None or filename is None:
             plt.show()
@@ -177,6 +213,106 @@ class PlotService:
             save_path,
             filename,
             hide_axis)
+
+        if show_plot and (save_path is None or filename is None):
+            plt.show()
+
+        if show_plot or (save_path is not None and filename is not None):
+            plt.clf()
+
+        return ax
+
+    def plot_overlapping_bars(
+            self,
+            numbers_per_type: List[List[int]],
+            bar_titles: List[str],
+            colors: List[str] = None,
+            show_legend: bool = False,
+            title: str = None,
+            title_padding: float = None,
+            save_path: str = None,
+            filename: str = None,
+            ax=None,
+            show_plot: bool = True,
+            hide_axis: bool = False,
+            tight_layout: bool = False,
+            ylim: float = None,
+            xlim: float = None,
+            ylabel: str = None,
+            xlabel: str = None):
+
+        if ax is None:
+            ax = self.create_plot()
+
+        unique_numbers = set([item for v in numbers_per_type for item in v])
+        counters_per_type = {bar_titles[i]: Counter(
+            v) for i, v in enumerate(numbers_per_type)}
+
+        normalized_counters_per_type = {
+            type_name: Counter({
+                n: (float(v)/sum(unnormalized_counter.values())) * 100
+                for n, v in unnormalized_counter.items()
+            })
+            for type_name, unnormalized_counter in counters_per_type.items()
+        }
+
+        # print(normalized_counters_per_type)
+
+        argmaxes = {}
+        for i, number in enumerate(unique_numbers):
+            occs = np.array([x[number]
+                             for _, x in normalized_counters_per_type.items()])
+            arg_sort = np.argsort(np.argsort(occs, kind='heapsort'))
+            sorted_occs = sorted(occs)
+
+            a = np.zeros(len(occs))
+            for i, index in enumerate(arg_sort):
+                if index == 0:
+                    a[i] = 0
+                else:
+                    a[i] = sorted_occs[index-1]
+
+            argmaxes[number] = a
+
+        for i, counter_values in enumerate(normalized_counters_per_type.values()):
+            x = list(sorted(counter_values.keys()))
+
+            y = np.array([counter_values[key] for key in x])
+            p = np.array([argmaxes[a][i] for a in x])
+            norm_y = y - p
+
+            ax.bar(x, norm_y, width=x[1]-x[0], color=colors[i], bottom=p)
+
+        if ylim is not None:
+            ax.set_ylim(top=ylim)
+
+        if xlim is not None:
+            ax.set_xlim(right=xlim)
+
+        # fontweight = 'bold'
+        # fontproperties = {
+        #     'family': 'sans-serif',
+        #     'sans-serif': ['Helvetica'],
+        #     'weight': fontweight
+        # }
+
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+
+        if show_legend:
+            ax.legend(bar_titles)
+
+        self._add_properties(
+            ax,
+            title,
+            title_padding,
+            save_path,
+            filename,
+            hide_axis,
+            tight_layout)
 
         if show_plot and (save_path is None or filename is None):
             plt.show()
@@ -324,7 +460,6 @@ class PlotService:
 
         return ax
 
-
     def plot_heatmap(
             self,
             values: np.array,
@@ -396,7 +531,11 @@ class PlotService:
             title_padding: float = None,
             save_path: str = None,
             filename: str = None,
-            hide_axis: bool = False):
+            hide_axis: bool = False,
+            tight_layout: bool = True):
+
+        if tight_layout:
+            plt.tight_layout()
 
         if hide_axis:
             ax.axis('off')

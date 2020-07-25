@@ -35,7 +35,6 @@ class CacheService:
             item_key: str,
             callback_function: Callable = None,
             time_to_keep: Timespan = None) -> object:
-
         # try to get the cached object
         cached_object = self._data_service.load_python_obj(
             self._cache_folder,
