@@ -78,213 +78,196 @@ language_args = {
 }
 
 specific_args = {
-    'none-no-char': {
-        'base_config': 'all--bert-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    # 'none-no-char': {
+    #     'base_config': 'all--bert-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64"
-        ]
-    },
-    'none': {
-        'base_config': 'all--bert-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64"
+    #     ]
+    # },
+    # 'none': {
+    #     'base_config': 'all--bert-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32"
-        ]
-    },
-    'fast-text': {
-        'base_config': 'all--ft-bert-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32"
+    #     ]
+    # },
+    # 'fast-text': {
+    #     'base_config': 'all--ft-bert-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-fasttext-model",
-        ]
-    },
-    'both': {
-        'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
+    # 'both': {
+    #     'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    },
-    'both-no-new': {
-        'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-nonew-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
+    # 'both-no-new': {
+    #     'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-nonew-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    },
-    'bert': {
-        'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
+    # 'bert': {
+    #     'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "256",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "256",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-        ]
-    },
-    'bert-no-new': {
-        'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.80.0001-nonew-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--include-pretrained-model",
+    #     ]
+    # },
+    # 'bert-no-new': {
+    #     'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.50.0001-nonew-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--hidden-dimension", "256",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "256",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
-            "--include-pretrained-model",
-        ]
-    },
-    'both-finetune': {
-        'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.8-tune0.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
+    #         "--include-pretrained-model",
+    #     ]
+    # },
+    # 'both-finetune': {
+    #     'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.5-tune0.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
 
-            "--fine-tune-pretrained",
-        ]
-    },
-    'both-finetune-no-new': {
-        'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.8-tune0.0001-nonew-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--fine-tune-pretrained",
+    #     ]
+    # },
+    # 'both-finetune-no-new': {
+    #     'base_config': 'all--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.5-tune0.0001-nonew-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
 
-            "--fine-tune-pretrained",
-        ]
-    },
-    'bert-finetune': {
-        'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.8-tune0.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--fine-tune-pretrained",
+    #     ]
+    # },
+    # 'bert-finetune': {
+    #     'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.5-tune0.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "256",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "256",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
+    #         "--include-pretrained-model",
 
-            "--fine-tune-pretrained",
-        ]
-    },
-    'bert-no-new-finetune': {
-        'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.8-tune0.0001-nonew-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
+    #         "--fine-tune-pretrained",
+    #     ]
+    # },
+    # 'bert-no-new-finetune': {
+    #     'base_config': 'all--bert-pretr-ce16-ch32-h256-e64-l1-bi-d0.5-tune0.0001-nonew-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--hidden-dimension", "256",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "256",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
-            "--include-pretrained-model",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
+    #         "--include-pretrained-model",
 
-            "--fine-tune-pretrained",
-        ]
-    },
-    'bert-large-finetune': {
-        'base_config': 'all--bert-pretr-ce16-ch32-h256-e300-l1-bi-d0.8-tune0.0001-nonew-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
-
-            "--learn-new-embeddings",
-            "--hidden-dimension", "256",
-            "--embeddings-size", "300",
-
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
-            "--include-pretrained-model",
-
-            "--fine-tune-pretrained",
-        ]
-    },
+    #         "--fine-tune-pretrained",
+    #     ]
+    # },
     'bert-large': {
-        'base_config': 'all--bert-pretr-ce16-ch32-h256-e300-l1-bi-d0.80.0001-spl',
+        'base_config': 'all--bert-pretr-ce16-ch32-h256-e364-l1-bi-d0.5-spl',
         'args': [
             "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
             "--learn-new-embeddings",
 
             "--hidden-dimension", "256",
-            "--embeddings-size", "300",
+            "--embeddings-size", "364",
 
             "--learn-character-embeddings",
             "--character-embeddings-size", "16",
@@ -294,14 +277,14 @@ specific_args = {
         ]
     },
     'none-large': {
-        'base_config': 'all--bert-ce16-ch32-h512-e1068-l1-bi-d0.80.0001-spl',
+        'base_config': 'all--bert-ce16-ch32-h512-e1132-l1-bi-d0.5-spl',
         'args': [
             "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
             "--learn-new-embeddings",
 
             "--hidden-dimension", "512",
-            "--embeddings-size", "1068",
+            "--embeddings-size", "1132",
 
             "--learn-character-embeddings",
             "--character-embeddings-size", "16",
@@ -309,136 +292,135 @@ specific_args = {
         ]
     },
     'fast-text-large': {
-        'base_config': 'all--ft-bert-ce16-ch32-h512-e768-l1-bi-d0.80.0001-spl',
+            'base_config': 'all--ft-bert-ce16-ch32-h512-e832-l1-bi-d0.5-spl',
         'args': [
             "--entity-tag-types", "literal-fine", "literal-coarse", "metonymic-fine", "metonymic-coarse", "component", "nested",
 
             "--learn-new-embeddings",
 
             "--hidden-dimension", "512",
-            "--embeddings-size", "768",
+            "--embeddings-size", "832",
 
             "--learn-character-embeddings",
             "--character-embeddings-size", "16",
             "--character-hidden-size", "32",
 
-            "--include-fasttext-model",
+            "--include-fasttext-model"
         ]
     },
     
-    'both-single-lit-fine': {
-        'base_config': '1--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-fine",
+    # 'both-single-lit-fine': {
+    #     'base_config': '1--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-fine",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    },
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
     
-    'both-single-lit-coarse': {
-        'base_config': '2--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "literal-coarse",# "metonymic-fine", "metonymic-coarse", "component", "nested",
+    # 'both-single-lit-coarse': {
+    #     'base_config': '2--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "literal-coarse",# "metonymic-fine", "metonymic-coarse", "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    },
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
     
-    'both-single-met-fine': {
-        'base_config': '3--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "metonymic-fine",
+    # 'both-single-met-fine': {
+    #     'base_config': '3--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "metonymic-fine",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    },
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
     
-    'both-single-met-coarse': {
-        'base_config': '4--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "metonymic-coarse",# "component", "nested",
+    # 'both-single-met-coarse': {
+    #     'base_config': '4--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "metonymic-coarse",# "component", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    },
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
     
-    'both-single-component': {
-        'base_config': '5--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "component",
+    # 'both-single-component': {
+    #     'base_config': '5--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "component",# "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    },
-    
-    'both-single-nested': {
-        'base_config': '6--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.80.0001-spl',
-        'args': [
-            "--entity-tag-types", "nested",
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # },
+    # 'both-single-nested': {
+    #     'base_config': '6--ft-bert-pretr-ce16-ch32-h512-e64-l1-bi-d0.50.0001-spl',
+    #     'args': [
+    #         "--entity-tag-types", "nested",
 
-            "--learn-new-embeddings",
+    #         "--learn-new-embeddings",
 
-            "--hidden-dimension", "512",
-            "--embeddings-size", "64",
+    #         "--hidden-dimension", "512",
+    #         "--embeddings-size", "64",
 
-            "--learn-character-embeddings",
-            "--character-embeddings-size", "16",
-            "--character-hidden-size", "32",
+    #         "--learn-character-embeddings",
+    #         "--character-embeddings-size", "16",
+    #         "--character-hidden-size", "32",
 
-            "--include-pretrained-model",
-            "--include-fasttext-model",
-        ]
-    }
+    #         "--include-pretrained-model",
+    #         "--include-fasttext-model",
+    #     ]
+    # }
 }
 
 
@@ -541,19 +523,24 @@ def get_test_scores(coarse_path, fine_path, results_path, conf_name):
                     scores.extend(get_test_metrics(
                         json_data, col_name, scoring_type))
 
+    scores = [x if x is not None and x != '' else '.0' for x in scores]
     results_str = ' & '.join(scores)
+    fine_results_str = ''
+    if len(scores) > 12:
+        results_str = ' & '.join(scores[:12])
+        fine_results_str = ' & '.join(scores[12:])
 
     if not os.path.exists(results_path):
         with open(results_path, 'w') as results_file:
-            results_file.write('conf-name,results\n')
+            results_file.write('conf-name,coarse-results,fine-results\n')
 
     with open(results_path, 'a') as results_file:
-        results_file.write(f'{conf_name},{results_str}\n')
+        results_file.write(f'{conf_name},{results_str},{fine_results_str}\n')
 
 
 languages = [
-    # 'french',
-    # 'german',
+    'french',
+    'german',
     'english'
 ]
 seeds = [13, 7, 25]
