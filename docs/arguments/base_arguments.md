@@ -1,3 +1,5 @@
+[< go back to main page](../../README.md)
+
 # Base arguments
 
 ## Description
@@ -46,6 +48,7 @@ These arguments are generic and applicable to every configuration and challenge.
 | `training-reset-epoch-limit` | `int` | 1 | Until which epoch the training reset should be performed |
 | `save-checkpoint-on-crash` | `bool` | False | If this is set to true, then in the event of an exception or crash of the program, the model's checkpoint will be saved to the file system |
 | `save-checkpoint-on-finish` | `bool` | False | If this is set to true, then when the model has converged, its checkpoint will be saved to the file system. Keep in mind that this will not be the best model checkpoint as the stopping will occur after some amount of iterations without any improvement |
+
 Additionally, the following arguments infer from [`PretrainedArgumentsService`](../../services/arguments/pretrained_arguments_service.py) and are used currently in all implemented challenge argument services
 
 | Parameter     | Type          | Default value  | Description |

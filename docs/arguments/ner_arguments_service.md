@@ -1,3 +1,5 @@
+[< go back to main page](../../README.md)
+
 # Named entity recognition arguments
 
 ## Description
