@@ -21,7 +21,7 @@ main_arguments = [
     "--checkpoint-folder", "..\\results",
     "--epochs", "100000",
     "--eval-freq", "30",
-    "--configuration", "rnn-simple",
+    "--configuration", "bi-lstm-crf",
     "--learning-rate", "1e-2",
     "--metric-types", "f1-score", "precision", "recall",
     "--challenge", "named-entity-recognition",
