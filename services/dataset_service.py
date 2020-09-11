@@ -70,7 +70,7 @@ class DatasetService:
                     self._tokenize_service,
                     self._file_service,
                     self._vocabulary_service)
-            elif configuration == Configuration.RNNSimple:
+            elif configuration == Configuration.BiLSTMCRF:
                 return NERDataset(
                     self._arguments_service,
                     self._vocabulary_service,
@@ -133,7 +133,7 @@ class DatasetService:
                     self._data_service,
                     self._process_service,
                     run_type)
-            elif configuration == Configuration.RNNSimple:
+            elif configuration == Configuration.BiLSTMCRF:
                 result = NERDataset(
                     self._arguments_service,
                     self._vocabulary_service,

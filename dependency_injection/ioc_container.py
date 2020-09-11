@@ -92,14 +92,14 @@ def initialize_seed(seed: int, device: str):
 
 def get_argument_service_type(challenge: Challenge, configuration: Configuration):
     argument_service_type = None
-    if challenge == Challenge.PostOCRCorrection or challenge == Challenge.PostOCRErrorDetection:
+    if challenge == Challenge.PostOCRCorrection:
         if configuration == Configuration.TransformerSequence:
             argument_service_type = TransformerArgumentsService
         elif configuration == Configuration.SequenceToCharacter or configuration == Configuration.CharacterToCharacterEncoderDecoder:
             argument_service_type = PostOCRArgumentsService
         elif configuration == Configuration.CharacterToCharacter:
             argument_service_type = PostOCRCharactersArgumentsService
-    elif challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
+    elif challenge == Challenge.NamedEntityRecognition:
         argument_service_type = NERArgumentsService
     elif challenge == Challenge.SemanticChange:
         argument_service_type = SemanticArgumentsService
@@ -145,7 +145,7 @@ def register_optimizer(
                 arguments_service=arguments_service,
                 model=model
             )
-        elif configuration == Configuration.RNNSimple:
+        elif configuration == Configuration.BiLSTMCRF:
             optimizer = providers.Singleton(
                 AdamOptimizer,
                 arguments_service=arguments_service,
@@ -178,7 +178,7 @@ def register_loss(
             loss_function = providers.Singleton(SequenceLoss)
         elif configuration == Configuration.TransformerSequence:
             loss_function = providers.Singleton(TransformerSequenceLoss)
-        elif configuration == Configuration.RNNSimple:
+        elif configuration == Configuration.BiLSTMCRF:
             loss_function = providers.Singleton(NERLoss)
         elif configuration == Configuration.CBOW:
             loss_function = providers.Singleton(CBOWLoss)
@@ -208,7 +208,7 @@ def register_evaluation_service(
             plot_service=plot_service,
             metrics_service=metrics_service
         )
-    elif configuration == Configuration.RNNSimple:
+    elif configuration == Configuration.BiLSTMCRF:
         evaluation_service = providers.Factory(
             NEREvaluationService,
             arguments_service=arguments_service,
@@ -308,7 +308,7 @@ def register_model(
                     file_service=file_service,
                     log_service=log_service,
                     process_service=process_service)
-        elif configuration == Configuration.RNNSimple:
+        elif configuration == Configuration.BiLSTMCRF:
             model = providers.Singleton(
                 NERPredictor,
                 arguments_service=arguments_service,
@@ -345,7 +345,7 @@ def register_process_service(
         ocr_download_service: OCRDownloadService,
         string_process_service: StringProcessService):
     process_service = None
-    if challenge == Challenge.NamedEntityLinking or challenge == Challenge.NamedEntityRecognition:
+    if challenge == Challenge.NamedEntityRecognition:
         process_service = providers.Singleton(
             NERProcessService,
             arguments_service=arguments_service,

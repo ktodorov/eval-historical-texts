@@ -54,9 +54,8 @@ class NERDataset(DatasetBase):
         item: NELine = self.ne_collection[idx]
 
         entity_labels = []
-        if self._run_type != RunType.Test:
-            entity_labels = self._ner_process_service.get_entity_labels(
-                item)
+        if self._arguments_service.evaluate or self._run_type != RunType.Test:
+            entity_labels = self._ner_process_service.get_entity_labels(item, ignore_unknown=(self._run_type == RunType.Test))
 
         filtered_tokens = [token.replace('#', '') for token in item.tokens]
         character_sequence = [self._vocabulary_service.string_to_ids(
@@ -101,7 +100,7 @@ class NERDataset(DatasetBase):
          document_ids,
          segment_ids) = batch_split
 
-        if self._run_type == RunType.Test:
+        if not self._arguments_service.evaluate and self._run_type == RunType.Test:
             targets = None
 
         pad_idx = self._ner_process_service.pad_idx

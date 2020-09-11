@@ -6,7 +6,7 @@ class Configuration(ArgumentEnum):
     MultiFit = 'multi-fit'
     SequenceToCharacter = 'sequence-to-char'
     TransformerSequence = 'transformer-sequence'
-    RNNSimple = 'rnn-simple'
+    BiLSTMCRF = 'bi-lstm-crf'
     CharacterToCharacter = 'char-to-char'
     CharacterToCharacterEncoderDecoder = 'char-to-char-encoder-decoder'
     CBOW = 'cbow'
