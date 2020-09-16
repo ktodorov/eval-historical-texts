@@ -6,6 +6,21 @@
 
 This page describes the arguments used in the `post-ocr-correction` challenge and `char-to-char-encoder-decoder` configuration. These derive from the [PostOCRArgumentsService](../../services/arguments/postocr_arguments_service.py).
 
+## Model
+
+We combine the embedding layer with an encoder-decoder architecture with attention (similar to [this one](https://arxiv.org/abs/1409.0473)). Thus we consider the raw OCR version of a text and ground truth as two distinct languages. We then train the model to translate from the first to the latter. Our architecture works at a character level and thus also concatenates pre-trained sub-word information to every character. This is visible in the first figure below. The second figure shows an example pass through the decoder.
+
+<table>
+    <tr>
+        <td style='border-right: 1px solid black;'>
+            <img src="../images/subword-to-char.png">
+        </td>
+        <td style='border-left: 1px solid black;'>
+            <img src="../images/decoder-attention-pass.png">
+        </td>
+    </tr>
+</table>
+
 ## Arguments
 
 | Argument     | Type          | Default value  | Description |
@@ -36,3 +51,7 @@ python run.py --challenge post-ocr-correction --configuration char-to-char-encod
 ```bash
 python run.py --challenge post-ocr-correction --configuration char-to-char-encoder-decoder --device cuda --seed 13 --language english --batch-size 32 --checkpoint-name english-post-ocr --evaluate --evaluation-type jaccard-similarity levenshtein-edit-distance-improvement --pretrained-weights bert-base-cased --include-pretrained-model --fine-tune-pretrained --fine-tune-learning-rate 1e-4 --pretrained-model-size 768 --pretrained-max-length 512 --include-fasttext-model --fasttext-model en-ft.bin --fasttext-model-size 300 --learn-new-embeddings --share-embedding-layer --hidden-dimension 512 --encoder-embedding-size 64 --decoder-embedding-size 64 --dropout 0.5 --number-of-layers 2 --bidirectional
 ```
+
+## Data
+
+The data which is provided by the organizers of the ICDAR 2019 challenge includes noisy OCR of printed texts from different sources and ten languages. We focus on English, German and French. We additionally make use of the full French and English data from the ICDAR 2017 challenge. Finally we use Overproof data in English ([link to website](https://overproof.projectcomputing.com/)) to further increase our dataset size.

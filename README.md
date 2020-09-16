@@ -5,10 +5,6 @@
 [![PyTorch 1.3](https://img.shields.io/badge/PyTorch-1.3-EE4C2C.svg?logo=pytorch)](https://pytorch.org/docs/1.3.1/) 
 [![MIT](https://img.shields.io/badge/License-MIT-3DA639.svg?logo=open-source-initiative)](LICENSE)
 
-## Description
-
-This is a repository presenting a highly modular architecture that we use for evaluating Transfer Learning applicability over historical texts. Due to the nature of it, we design our system so that implementation of additional modules is eased and encouraged.
-
 ## Abstract
 
 _Transfer learning has recently delivered substantial gains across a wide variety of tasks. In Natural Language Processing, mainly in the form of pre-trained language models, it was proven beneficial as well, helping the community push forward many low-resource languages and domains. Thus, naturally, scholars and practitioners working with OCR'd historical corpora are increasingly exploring the use of pre-trained language models. Nevertheless, the specific challenges posed by documents from the past, including OCR quality and language change, call for a critical assessment over the use of pre-trained language models in this setting._
@@ -16,6 +12,14 @@ _Transfer learning has recently delivered substantial gains across a wide variet
 _We find that pre-trained language models help with NER but not with post-OCR correction. Furthermore, we show that this improvement is not coming from the increase of the network size but precisely from the transferred knowledge. We further show how multi-task learning can speed up historical training while achieving similar results for NER. In all challenges, we investigate the importance of data quality and size, with them emerging as one of the fragments currently hindering progress in the historical domain the most. Moreover, for LSC we see that due to the lack of standardised evaluation criteria and introduced bias during annotation, important encoded knowledge can be left out. Finally, we share with community our implemented modular setup which can be used to further assess and conclude the current state of transfer learning applicability over ancient documents._
 
 _As a conclusion, we emphasise that pre-trained language models should be used critically when working with OCR'd historical corpora._
+
+## Description
+
+This is a repository presenting a highly modular architecture that we use for evaluating Transfer Learning applicability over historical texts. Due to the nature of it, we design our system so that implementation of additional modules is eased and encouraged. The generic module can be seen below. Additional architectures and figures of task-specific models can be seen in the respective documentation for each task
+
+<div style='text-align: center;'>
+    <img src="docs/images/base-model.png" alt="NER multi-task model architecture" width="300"/>
+</div>
 
 ## Publications
 

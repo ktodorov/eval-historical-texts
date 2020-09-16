@@ -6,6 +6,10 @@
 
 This page describes the arguments used in the `semantic-change` challenge and `kbert` or `cbow` configuration. These derive from the [SemanticArgumentsService](../../services/arguments/semantic_arguments_service.py).
 
+## Model
+
+We simply fine-tune BERT and a simple CBOW model. These two are selected using the `configuration` argument.
+
 ## Arguments
 
 | Argument     | Type          | Default value  | Description |
@@ -33,3 +37,22 @@ python run.py --challenge semantic-change --configuration cbow --device cuda --e
 ```bash
 python run.py --challenge semantic-change --configuration cbow --device cuda --seed 13 --corpus 1 --language english --batch-size 1 --joint-model --evaluate --evaluation-type cosine-distance euclidean-distance --word-distance-threshold-calculation median
 ```
+
+## Results
+
+We showcase below two of the target words in the challenge and the lexical semantic change that BERT captures for the two time periods. For each time period, the neighbourhood (five closest words) for the target word is shown.
+
+<table>
+    <tr>
+        <td style='border-right: 1px solid black;'>
+            <img src="../images/plane-neighborhood-change.png">
+        </td>
+        <td style='border-left: 1px solid black;'>
+            <img src="../images/land-neighborhood-change.png">
+        </td>
+    </tr>
+</table>
+
+## Data
+
+Data consists of four languages (English, German, Latin and Swedish) and documents from two time periods for each language.

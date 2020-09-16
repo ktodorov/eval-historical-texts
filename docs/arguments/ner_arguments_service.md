@@ -6,6 +6,14 @@
 
 This section describes the arguments used in the `named-entity-recognition` challenge and `bi-lstm-crf` configuration. These derive from the [NERArgumentsService](../../services/arguments/ner_arguments_service.py).
 
+## Model
+
+We combine our modular embedding layer with a Bi-LSTM-CRF model, which also introduces a multi-task learning approach by repeating the last two layers (fully connected and CRF) for every different tag type and sharing all other layers. The model architecture can be seen in the figure below.
+
+<div style='text-align: center;'>
+    <img src="../images/ner-multi-task-model.png" alt="NER multi-task model architecture" width="400"/>
+</div>
+
 ## Arguments
 
 | Parameter     | Type          | Default value  | Description |
@@ -41,3 +49,7 @@ python run.py --challenge named-entity-recognition --configuration bi-lstm-crf -
 ```bash
 python run.py --challenge named-entity-recognition --configuration bi-lstm-crf --device cuda --seed 13 --metric-types f1-score --language german  --checkpoint-name german-ner --batch-size 1 --evaluate --pretrained-weights bert-base-german-cased --pretrained-model bert --include-pretrained-model --pretrained-model-size 768 --pretrained-max-length 512 --include-fasttext-model --fasttext-model de-ft-model.bin --fasttext-model-size 300 --hidden-dimension 512 --embeddings-size 128 --number-of-layers 1 --dropout 0.5 --bidirectional-rnn --no-attention --learn-character-embeddings --character-embeddings-size 16 --character-hidden-size 32 --replace-all-numbers --merge-subwords --split-type document --entity-tag-types literal-fine
 ```
+
+## Data
+
+Data consists of Swiss, Luxembourgish and American historical newspapers written in French, German and English respectively. This is provided by CLEF-HIPE-2020 challenge organizers, in particular v1.3. This can be found [here](https://github.com/impresso/CLEF-HIPE-2020/tree/master/data). For English language, we used [this dataset](https://www.kaggle.com/abhinavwalia95/entity-annotated-corpus), a modification of the original Groningen Meaning Bank (GMB), for training data.
