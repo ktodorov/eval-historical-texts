@@ -17,9 +17,9 @@ _As a conclusion, we emphasise that pre-trained language models should be used c
 
 This is a repository presenting a highly modular architecture that we use for evaluating Transfer Learning applicability over historical texts. Due to the nature of it, we design our system so that implementation of additional modules is eased and encouraged. The generic module can be seen below. Additional architectures and figures of task-specific models can be seen in the respective documentation for each task
 
-<div style='text-align: center;'>
+<p align="center">
     <img src="docs/images/base-model.png" alt="NER multi-task model architecture" width="300"/>
-</div>
+</p>
 
 ## Publications
 
