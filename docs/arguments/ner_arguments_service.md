@@ -11,7 +11,7 @@ This section describes the arguments used in the `named-entity-recognition` chal
 We combine our modular embedding layer with a Bi-LSTM-CRF model, which also introduces a multi-task learning approach by repeating the last two layers (fully connected and CRF) for every different tag type and sharing all other layers. The model architecture can be seen in the figure below.
 
 <p align="center">
-    <img src="../images/ner-multi-task-model.png" alt="NER multi-task model architecture" width="400"/>
+    <img src="../images/ner-multi-task-model.png" alt="NER multi-task model architecture" width="450"/>
 </p>
 
 ## Arguments
