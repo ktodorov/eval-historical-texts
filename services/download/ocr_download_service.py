@@ -33,7 +33,8 @@ class OCRDownloadService:
         newseye_path = os.path.join('data', 'newseye')
         trove_path = os.path.join('data', 'trove')
 
-        if language != Language.German:
+        # TODO Change language check
+        if language != Language.German and language != Language.Dutch:
             newseye_2017_key = 'newseye-2017-full-dataset'
             if not self._cache_service.item_exists(newseye_2017_key):
                 newseye_2017_path = os.path.join(newseye_path, '2017')
@@ -217,5 +218,7 @@ class OCRDownloadService:
             return ['fr', 'FR']
         elif language == Language.German:
             return ['DE']
+        elif language == Language.Dutch:
+            return ['NL']
         else:
             raise NotImplementedError()
