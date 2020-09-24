@@ -13,11 +13,9 @@ We combine the embedding layer with an encoder-decoder architecture with attenti
 <table>
     <tr>
         <td style='border-right: 1px solid black;'>
-            <img src="../images/subword-to-char.png">
-        </td>
+            <img src="../images/subword-to-char.png"></td>
         <td style='border-left: 1px solid black;'>
-            <img src="../images/decoder-attention-pass.png">
-        </td>
+            <img src="../images/decoder-attention-pass.png"></td>
     </tr>
 </table>
 
@@ -55,3 +53,338 @@ python run.py --challenge post-ocr-correction --configuration char-to-char-encod
 ## Data
 
 The data which is provided by the organizers of the ICDAR 2019 challenge includes noisy OCR of printed texts from different sources and ten languages. We focus on English, German and French. We additionally make use of the full French and English data from the ICDAR 2017 challenge. Finally we use Overproof data in English ([link to website](https://overproof.projectcomputing.com/)) to further increase our dataset size.
+
+## Results
+
+Our results, ordered by the inclusion of the different embedding modules, are displayed below.
+
+<table>
+    <tr>
+        <td colspan="5">
+            <i>French. Best result per table and column is given in bold, second best is underlined</i>
+        </td>
+    </tr>
+    <tr>
+        <th rowspan="2">Configuration</th>
+        <th colspan="2">Levenshtein distance</th>
+        <th colspan="2">Normalized Jaccard similarity</th>
+    </tr>
+    <tr>
+        <th>Average</th>
+        <th>% improvement</th>
+        <th>Average</th>
+        <th>% improvement</th>
+    </tr>
+    <tr>
+        <td>No correction</td>
+        <td>3.568</td>
+        <td>-</td>
+        <td>0.926</td>
+        <td>-</td>
+    </tr>
+    <tr>
+        <td>Base</td>
+        <td><b>3.369</b></td>
+        <td><b>5.579</b></td>
+        <td>0.93</td>
+        <td>0.824</td>
+    </tr>
+    <tr>
+        <td>Base + FT</td>
+        <td>3.442</td>
+        <td>3.522</td>
+        <td>0.93</td>
+        <td>0.855</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>3.393</td>
+        <td>4.896</td>
+        <td>0.93</td>
+        <td>0.881</td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td><i>3.389</i></td>
+        <td><i>5.020</i></td>
+        <td>0.934</td>
+        <td>0.850</td>
+    </tr>
+    <tr>
+        <td colspan="5">+ Fine-tuning (unfreezing, from start) BERT</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>3.441</td>
+        <td>3.565</td>
+        <td>0.930</td>
+        <td>0.722</td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>3.397</td>
+        <td>4.784</td>
+        <td><b>0.936</b></td>
+        <td><b>1.008</b></td>
+    </tr>
+    <tr>
+        <td colspan="5">
+            + Fine-tuning (unfreezing, after initial convergence) BERT</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>3.401</td>
+        <td>4.668</td>
+        <td><i>0.935</i></td>
+        <td><i>0.923</i></td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>3.448</td>
+        <td>3.347</td>
+        <td><i>0.935</i></td>
+        <td>0.900</td>
+    </tr>
+</table>
+
+<br/>
+<br/>
+
+<table>
+    <tr>
+        <td colspan="5">
+            <i>German. Best result per table and column is given in bold, second best is underlined</i></td>
+    </tr>
+    <tr>
+        <th rowspan="2">Configuration</th>
+        <th colspan="2">Levenshtein distance</th>
+        <th colspan="2">Normalized Jaccard similarity</th>
+    </tr>
+    <tr>
+        <th>Average</th>
+        <th>% improvement</th>
+        <th>Average</th>
+        <th>% improvement</th>
+    </tr>
+    <tr>
+        <td>No correction</td>
+        <td>12.008</td>
+        <td>-</td>
+        <td>0.656</td>
+        <td>-</td>
+    </tr>
+    <tr>
+        <td>Base</td>
+        <td><i>4.302</i></td>
+        <td><i>64.172</i></td>
+        <td><b>0.900</b></td>
+        <td><i>37.290</i></td>
+    </tr>
+    <tr>
+        <td>Base + FT</td>
+        <td>4.439</td>
+        <td>63.034</td>
+        <td>0.896</td>
+        <td>36.584</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>4.464</td>
+        <td>62.827</td>
+        <td>0.896</td>
+        <td>36.630</td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>5.393</td>
+        <td>55.088</td>
+        <td>0.872</td>
+        <td>32.938</td>
+    </tr>
+    <tr>
+        <td colspan="5">+ Fine-tuning (unfreezing, from start) BERT</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td><b>4.283</b></td>
+        <td><b>64.334</b></td>
+        <td><b>0.900</b></td>
+        <td><b>37.324</b></td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>4.340</td>
+        <td>63.863</td>
+        <td>0.899</td>
+        <td>37.131</td>
+    </tr>
+    <tr>
+        <td colspan="5">+ Fine-tuning (unfreezing, after initial convergence) BERT}</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>4.344</td>
+        <td>63.828</td>
+        <td>0.898</td>
+        <td>37.039</td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>4.411</td>
+        <td>63.271</td>
+        <td>0.898</td>
+        <td>36.908</td>
+    </tr>
+</table>
+
+<br/>
+<br/>
+
+<table>
+    <tr>
+        <td colspan="5">
+            <i>English. Best result per table and column is given in bold, second best is underlined</i></td>
+    </tr>
+    <tr>
+        <th rowspan="2">Configuration</th>
+        <th colspan="2">Levenshtein distance</th>
+        <th colspan="2">Normalized Jaccard similarity</th>
+    </tr>
+    <tr>
+        <th>Average</th>
+        <th>% improvement</th>
+        <th>Average</th>
+        <th>% improvement</th>
+    </tr>
+    <tr>
+        <td>No correction</td>
+        <td><b>9.397</b></td>
+        <td>-</td>
+        <td>0.825</td>
+        <td>-</td>
+    </tr>
+    <tr>
+        <td>Base</td>
+        <td>9.955</td>
+        <td>-5.944</td>
+        <td>0.822</td>
+        <td>-0.310</td>
+    </tr>
+    <tr>
+        <td>Base + FT</td>
+        <td>9.864</td>
+        <td>-4.971</td>
+        <td>0.825</td>
+        <td>-0.005</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>10.228</td>
+        <td>-8.840</td>
+        <td>0.822</td>
+        <td>-0.364</td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>9.992</td>
+        <td>-6.338</td>
+        <td>0.825</td>
+        <td>-0.006</td>
+    </tr>
+    <tr>
+        <td colspan="5">+ Fine-tuning (unfreezing, from start) BERT</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>9.835</td>
+        <td>-4.665</td>
+        <td>0.825</td>
+        <td>0.062</td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>9.787</td>
+        <td><i>-4.151</i></td>
+        <td>0.825</td>
+        <td>0.078</td>
+    </tr>
+    <tr>
+        <td colspan="5">+ Fine-tuning (unfreezing, after initial convergence) BERT</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td><i>9.724</i></td>
+        <td><b>-3.483</b></td>
+        <td><b>0.829</b></td>
+        <td><b>0.510</b></td>
+    </tr>
+    <tr>
+        <td>Base + FT + BERT</td>
+        <td>9.927</td>
+        <td>-5.639</td>
+        <td><i>0.826</i></td>
+        <td><i>0.108</i></td>
+    </tr>
+</table>
+
+<br/>
+<br/>
+
+<table>
+    <tr>
+        <td colspan="5">
+            <i>Dutch. Best result per table and column is given in bold, second best is underlined</i></td>
+    </tr>
+    <tr>
+        <th rowspan="2">Configuration</th>
+        <th colspan="2">Levenshtein distance</th>
+        <th colspan="2">Normalized Jaccard similarity</th>
+    </tr>
+    <tr>
+        <th>Average</th>
+        <th>% improvement</th>
+        <th>Average</th>
+        <th>% improvement</th>
+    </tr>
+    <tr>
+        <td>No correction</td>
+        <td><b>12.984</b></td>
+        <td>-</td>
+        <td>0.726</td>
+        <td>-</td>
+    </tr>
+    <tr>
+        <td>Base</td>
+        <td>11.119</td>
+        <td>14.364</td>
+        <td>0.799</td>
+        <td>10.09</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td>11.055</td>
+        <td>14.862</td>
+        <td>0.798</td>
+        <td>9.977</td>
+    </tr>
+    <tr>
+        <td colspan="5">+ Fine-tuning (unfreezing, from start) BERT</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="5">+ Fine-tuning (unfreezing, after initial convergence) BERT</td>
+    </tr>
+    <tr>
+        <td>Base + BERT</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
