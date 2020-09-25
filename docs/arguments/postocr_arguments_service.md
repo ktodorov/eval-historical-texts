@@ -58,12 +58,9 @@ The data which is provided by the organizers of the ICDAR 2019 challenge include
 
 Our results, ordered by the inclusion of the different embedding modules, are displayed below.
 
+### French
+
 <table>
-    <tr>
-        <td colspan="5">
-            <i>French. Best result per table and column is given in bold, second best is underlined</i>
-        </td>
-    </tr>
     <tr>
         <th rowspan="2">Configuration</th>
         <th colspan="2">Levenshtein distance</th>
@@ -150,11 +147,9 @@ Our results, ordered by the inclusion of the different embedding modules, are di
 <br/>
 <br/>
 
+### German
+
 <table>
-    <tr>
-        <td colspan="5">
-            <i>German. Best result per table and column is given in bold, second best is underlined</i></td>
-    </tr>
     <tr>
         <th rowspan="2">Configuration</th>
         <th colspan="2">Levenshtein distance</th>
@@ -240,11 +235,9 @@ Our results, ordered by the inclusion of the different embedding modules, are di
 <br/>
 <br/>
 
+### English
+
 <table>
-    <tr>
-        <td colspan="5">
-            <i>English. Best result per table and column is given in bold, second best is underlined</i></td>
-    </tr>
     <tr>
         <th rowspan="2">Configuration</th>
         <th colspan="2">Levenshtein distance</th>
@@ -330,11 +323,9 @@ Our results, ordered by the inclusion of the different embedding modules, are di
 <br/>
 <br/>
 
+### Dutch
+
 <table>
-    <tr>
-        <td colspan="5">
-            <i>Dutch. Best result per table and column is given in bold, second best is underlined</i></td>
-    </tr>
     <tr>
         <th rowspan="2">Configuration</th>
         <th colspan="2">Levenshtein distance</th>
