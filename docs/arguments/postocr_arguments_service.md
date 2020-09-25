@@ -348,17 +348,17 @@ Our results, ordered by the inclusion of the different embedding modules, are di
     </tr>
     <tr>
         <td>No correction</td>
-        <td><b>12.984</b></td>
+        <td>12.984</td>
         <td>-</td>
         <td>0.726</td>
         <td>-</td>
     </tr>
     <tr>
         <td>Base</td>
-        <td>11.119</td>
-        <td>14.364</td>
-        <td>0.799</td>
-        <td>10.09</td>
+        <td>11.011</td>
+        <td>15.195</td>
+        <td><b>0.801</b></td>
+        <td><b>10.394</b></td>
     </tr>
     <tr>
         <td>Base + BERT</td>
@@ -372,19 +372,19 @@ Our results, ordered by the inclusion of the different embedding modules, are di
     </tr>
     <tr>
         <td>Base + BERT</td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><i>10.877</i></td>
+        <td><i>16.229</i></td>
+        <td><b>0.801</b></td>
+        <td><b>10.394</b></td>
     </tr>
     <tr>
         <td colspan="5">+ Fine-tuning (unfreezing, after initial convergence) BERT</td>
     </tr>
     <tr>
         <td>Base + BERT</td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td><b>10.785</b></td>
+        <td><b>16.938</b></td>
+        <td><i>0.799</i></td>
+        <td><i>10.123</i></td>
     </tr>
 </table>
