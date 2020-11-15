@@ -26,7 +26,7 @@ This is a repository presenting a highly modular architecture that we use for ev
 The code was used in the following papers and documents.
 
 - **Improving historical language modelling using Transfer Learning** - My MSc Thesis, University of Amsterdam, 2020 (link: [here](https://scripties.uba.uva.nl/search?id=717875))
-- **Transfer learning for historical corpora: An assessment on post-OCR correction and named entity recognition** - Online workshop on Computational Humanities Research, 2020 (link: TBD)
+- **Transfer learning for historical corpora: An assessment on post-OCR correction and named entity recognition** - Online workshop on Computational Humanities Research, 2020 (link: [here](http://ceur-ws.org/Vol-2723/long32.pdf))
 - **Transfer Learning for Named Entity Recognition in Historical Corpora** - CLEF-HIPE-2020 (link: [here](http://ceur-ws.org/Vol-2696/paper_168.pdf))
 
 ## Requirements
